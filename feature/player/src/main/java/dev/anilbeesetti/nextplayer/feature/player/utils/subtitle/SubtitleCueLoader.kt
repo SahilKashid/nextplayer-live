@@ -97,9 +97,19 @@ object SubtitleCueLoader {
             configs.firstOrNull { it.label == label }?.uri?.let { return it }
         }
 
-        // Single external configuration and one selected text track — use it.
+        // Single external configuration: only treat it as selected when the
+        // player format looks like that external track (not an embedded one).
         if (configs.size == 1) {
-            return configs.first().uri
+            val only = configs.first()
+            val looksExternal =
+                (!formatId.isNullOrBlank() && (formatId == only.id || formatId == only.uri.toString())) ||
+                    (!label.isNullOrBlank() && label == only.label) ||
+                    (
+                        format.sampleMimeType != MimeTypes.APPLICATION_MEDIA3_CUES &&
+                            only.mimeType != null &&
+                            format.sampleMimeType == only.mimeType
+                        )
+            if (looksExternal) return only.uri
         }
         return null
     }
