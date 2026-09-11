@@ -3,8 +3,10 @@ package dev.anilbeesetti.nextplayer.feature.player.ui
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,10 +38,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.common.Utils
 import dev.anilbeesetti.nextplayer.core.ui.R
@@ -49,21 +52,18 @@ import dev.anilbeesetti.nextplayer.feature.player.state.LiveSubtitlesState
 /**
  * Right-side live subtitles timeline for landscape playback.
  *
- * Auto-scrolls to the active cue while [LiveSubtitlesState.isFollowing] is true.
- * User scrolling pauses follow for ~3s (or until "jump to current").
+ * Auto-scrolls so the active cue sits near the vertical center while
+ * [LiveSubtitlesState.isFollowing] is true. User scrolling pauses follow for ~3s
+ * (or until "jump to current").
  */
 @Composable
 fun LiveSubtitlesPanel(
     state: LiveSubtitlesState,
-    positionMs: Long,
     modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(positionMs, state.cues, state.subtitleDelayMs) {
-        state.updateCurrentCueIndex(positionMs)
-    }
-
     val listState = rememberLazyListState()
     val currentIndex = state.currentCueIndex
+    val density = LocalDensity.current
     val userScrollConnection = remember(state) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -75,50 +75,24 @@ fun LiveSubtitlesPanel(
         }
     }
 
-    LaunchedEffect(currentIndex, state.isFollowing) {
-        if (!state.isFollowing) return@LaunchedEffect
-        if (currentIndex !in state.cues.indices) return@LaunchedEffect
-        listState.animateScrollToItem(index = currentIndex)
-    }
-
     Surface(
         modifier = modifier.fillMaxHeight(),
         color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
         tonalElevation = 3.dp,
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.live_subtitles),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (!state.isFollowing && state.cues.isNotEmpty()) {
-                    IconButton(onClick = state::jumpToCurrent) {
-                        Icon(
-                            imageVector = NextIcons.Focus,
-                            contentDescription = stringResource(R.string.jump_to_current_cue),
-                        )
-                    }
-                }
-                IconButton(onClick = { state.updatePanelVisible(false) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_close),
-                        contentDescription = stringResource(R.string.hide_live_subtitles),
-                    )
-                }
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val halfViewportPx = constraints.maxHeight / 2
+            val halfViewportDp = with(density) { halfViewportPx.toDp() }
+
+            LaunchedEffect(currentIndex, state.isFollowing, halfViewportPx, state.cues.size) {
+                if (!state.isFollowing) return@LaunchedEffect
+                if (currentIndex !in state.cues.indices) return@LaunchedEffect
+                // Snappy centering while following live — avoid animate lag that feels late.
+                listState.scrollItemTopToCenter(currentIndex)
             }
 
             when {
-                state.isLoading -> {
+                state.isLoading && state.cues.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(modifier = Modifier.size(36.dp))
                     }
@@ -146,12 +120,16 @@ fun LiveSubtitlesPanel(
                 }
 
                 else -> {
+                    // Half-viewport padding lets first/last cues scroll to center.
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(userScrollConnection),
                         state = listState,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = 8.dp,
+                            vertical = halfViewportDp,
+                        ),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         itemsIndexed(
@@ -167,7 +145,42 @@ fun LiveSubtitlesPanel(
                     }
                 }
             }
+
+            // Floating close / jump controls — no full header bar.
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (!state.isFollowing && state.cues.isNotEmpty()) {
+                    IconButton(onClick = state::jumpToCurrent) {
+                        Icon(
+                            imageVector = NextIcons.Focus,
+                            contentDescription = stringResource(R.string.jump_to_current_cue),
+                        )
+                    }
+                }
+                IconButton(onClick = { state.updatePanelVisible(false) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = stringResource(R.string.hide_live_subtitles),
+                    )
+                }
+            }
         }
+    }
+}
+
+/** Scroll so [index]'s top edge sits at the vertical center of the viewport. */
+private suspend fun LazyListState.scrollItemTopToCenter(index: Int) {
+    scrollToItem(index)
+    val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val viewportCenter =
+        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+    val delta = item.offset - viewportCenter
+    if (delta != 0) {
+        scrollBy(delta.toFloat())
     }
 }
 

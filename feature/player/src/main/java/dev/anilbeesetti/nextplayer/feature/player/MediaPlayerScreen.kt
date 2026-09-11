@@ -219,6 +219,7 @@ fun MediaPlayerScreen(
     val liveSubtitlesState = rememberLiveSubtitlesState(
         player = player,
         subtitleDelayMs = subtitleOptionsState.delayMilliseconds,
+        subtitleSpeed = subtitleOptionsState.speedMultiplier,
     )
     val configuration = LocalConfiguration.current
     val isLandscape = !configuration.isPortrait
@@ -541,7 +542,6 @@ fun MediaPlayerScreen(
             if (showLiveSubtitlesPanel) {
                 LiveSubtitlesPanel(
                     state = liveSubtitlesState,
-                    positionMs = mediaPresentationState.position,
                     modifier = Modifier
                         .weight(0.35f)
                         .fillMaxHeight(),

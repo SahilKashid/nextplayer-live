@@ -49,7 +49,12 @@ object EmbeddedSubtitleCueExtractor {
 
         val dataSource: DataSource = DefaultDataSource.Factory(context).createDataSource()
         return try {
-            val tracks = demuxTextTracks(dataSource, mediaUri)
+            val tracks = demuxTextTracks(
+                dataSource = dataSource,
+                mediaUri = mediaUri,
+                selectedFormat = selectedFormat,
+                preferredTextTrackIndex = preferredTextTrackIndex,
+            )
             val matched = selectBestTextTrack(tracks, selectedFormat, preferredTextTrackIndex)
                 ?: return emptyList()
             if (isBitmapSubtitle(matched.format)) return emptyList()
@@ -135,8 +140,13 @@ object EmbeddedSubtitleCueExtractor {
         return listOf(TimedCue(startMs = startMs, endMs = endMs, text = text))
     }
 
-    private fun demuxTextTracks(dataSource: DataSource, mediaUri: Uri): List<CollectedTextTrack> {
-        val output = CollectingExtractorOutput()
+    private fun demuxTextTracks(
+        dataSource: DataSource,
+        mediaUri: Uri,
+        selectedFormat: Format,
+        preferredTextTrackIndex: Int,
+    ): List<CollectedTextTrack> {
+        val output = CollectingExtractorOutput(selectedFormat, preferredTextTrackIndex)
         // Text-track transcoding defaults to enabled in Media3 1.11 and emits
         // APPLICATION_MEDIA3_CUES samples decoded via DefaultSubtitleParserFactory.
         val extractorsFactory = DefaultExtractorsFactory()
@@ -271,10 +281,14 @@ object EmbeddedSubtitleCueExtractor {
         val data: ByteArray,
     )
 
-    private class CollectingExtractorOutput : ExtractorOutput {
+    private class CollectingExtractorOutput(
+        private val selectedFormat: Format,
+        private val preferredTextTrackIndex: Int,
+    ) : ExtractorOutput {
         private val textTrackOutputs = linkedMapOf<Int, CollectingTrackOutput>()
         private val discarding = DiscardingTrackOutput()
         private val textOrder = mutableListOf<Int>()
+        private var selectedId: Int? = null
 
         override fun track(id: Int, type: Int): TrackOutput {
             if (type != C.TRACK_TYPE_TEXT) return discarding
@@ -284,28 +298,61 @@ object EmbeddedSubtitleCueExtractor {
             }
         }
 
-        override fun endTracks() = Unit
+        override fun endTracks() {
+            pruneToSelectedTrack()
+        }
 
         override fun seekMap(seekMap: SeekMap) = Unit
 
-        fun textTracksInOrder(): List<CollectedTextTrack> =
-            textOrder.mapNotNull { id ->
+        fun textTracksInOrder(): List<CollectedTextTrack> {
+            pruneToSelectedTrack()
+            return textOrder.mapNotNull { id ->
                 val output = textTrackOutputs[id] ?: return@mapNotNull null
+                if (output.discardSamples) return@mapNotNull null
                 val format = output.format ?: return@mapNotNull null
                 CollectedTextTrack(format = format, samples = output.samples.toList())
             }
+        }
+
+        private fun pruneToSelectedTrack() {
+            if (textTrackOutputs.isEmpty()) return
+            val scored = textOrder.mapIndexedNotNull { index, id ->
+                val output = textTrackOutputs[id] ?: return@mapIndexedNotNull null
+                val format = output.format ?: return@mapIndexedNotNull null
+                id to scoreTrack(format, selectedFormat, index, preferredTextTrackIndex)
+            }
+            if (scored.isEmpty()) return
+            val bestId = scored.maxBy { it.second }.first
+            selectedId = bestId
+            textTrackOutputs.forEach { (id, output) ->
+                if (id != bestId) {
+                    output.discardSamples = true
+                    output.clearSamples()
+                }
+            }
+        }
     }
 
     private class CollectingTrackOutput : TrackOutput {
         var format: Format? = null
             private set
         val samples = mutableListOf<Sample>()
+        var discardSamples: Boolean = false
 
         private var sampleData = ByteArray(0)
         private var sampleDataBytes = 0
 
+        fun clearSamples() {
+            samples.clear()
+            sampleDataBytes = 0
+        }
+
         override fun format(format: Format) {
             this.format = format
+            if (isBitmapSubtitle(format)) {
+                discardSamples = true
+                clearSamples()
+            }
         }
 
         override fun sampleData(
@@ -337,6 +384,10 @@ object EmbeddedSubtitleCueExtractor {
             offset: Int,
             cryptoData: TrackOutput.CryptoData?,
         ) {
+            if (discardSamples) {
+                sampleDataBytes = 0
+                return
+            }
             val end = sampleDataBytes - offset
             val start = end - size
             if (start < 0 || end > sampleDataBytes) {

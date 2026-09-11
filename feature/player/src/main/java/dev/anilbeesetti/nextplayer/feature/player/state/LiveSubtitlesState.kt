@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,32 +15,42 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.listen
+import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleCueLoader
+import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val AutoFollowResumeDelay = 3.seconds
+private val FastHighlightTick = 50.milliseconds
+private val IdleHighlightTick = 500.milliseconds
 
 @UnstableApi
 @Composable
 fun rememberLiveSubtitlesState(
     player: Player,
     subtitleDelayMs: Long = 0L,
+    subtitleSpeed: Float = 1f,
 ): LiveSubtitlesState {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = remember(player) { LiveSubtitlesState(player, context, scope) }
     LaunchedEffect(player) { state.observe() }
-    LaunchedEffect(subtitleDelayMs) {
+    LaunchedEffect(subtitleDelayMs, subtitleSpeed) {
         state.subtitleDelayMs = subtitleDelayMs
-        state.updateCurrentCueIndex()
+        state.subtitleSpeed = subtitleSpeed
+        // Delay/speed only affect the position fallback path — EVENT_CUES already
+        // reflect nextlib's OffsetRenderer adjustment.
+        state.updateCurrentCueIndexFromPlayer()
     }
     return state
 }
@@ -71,6 +82,8 @@ class LiveSubtitlesState(
 
     var subtitleDelayMs: Long = 0L
 
+    var subtitleSpeed: Float by mutableFloatStateOf(1f)
+
     private var loadJob: Job? = null
     private var resumeFollowJob: Job? = null
     private var lastTrackSignature: String? = null
@@ -80,6 +93,7 @@ class LiveSubtitlesState(
         if (isPanelVisible) {
             isFollowing = true
             resumeFollowJob?.cancel()
+            updateCurrentCueIndexFromPlayer()
         }
     }
 
@@ -88,6 +102,7 @@ class LiveSubtitlesState(
         if (visible) {
             isFollowing = true
             resumeFollowJob?.cancel()
+            updateCurrentCueIndexFromPlayer()
         }
     }
 
@@ -112,38 +127,128 @@ class LiveSubtitlesState(
 
     suspend fun observe() {
         reloadIfNeeded(force = true)
-        updateCurrentCueIndex()
+        updateCurrentCueIndexFromPlayer()
 
-        player.listen { events ->
-            if (events.containsAny(
-                    Player.EVENT_TRACKS_CHANGED,
-                    Player.EVENT_MEDIA_ITEM_TRANSITION,
-                    Player.EVENT_TIMELINE_CHANGED,
-                )
-            ) {
-                reloadIfNeeded(force = false)
+        coroutineScope {
+            launch {
+                player.listen { events ->
+                    if (events.containsAny(
+                            Player.EVENT_TRACKS_CHANGED,
+                            Player.EVENT_MEDIA_ITEM_TRANSITION,
+                            Player.EVENT_TIMELINE_CHANGED,
+                        )
+                    ) {
+                        reloadIfNeeded(force = false)
+                    }
+                    if (events.contains(Player.EVENT_CUES)) {
+                        updateCurrentCueIndexFromCues()
+                    }
+                    if (events.containsAny(
+                            Player.EVENT_POSITION_DISCONTINUITY,
+                            Player.EVENT_PLAYBACK_STATE_CHANGED,
+                            Player.EVENT_IS_PLAYING_CHANGED,
+                        )
+                    ) {
+                        updateCurrentCueIndexFromPlayer()
+                    }
+                }
             }
-            if (events.containsAny(
-                    Player.EVENT_POSITION_DISCONTINUITY,
-                    Player.EVENT_PLAYBACK_STATE_CHANGED,
-                    Player.EVENT_IS_PLAYING_CHANGED,
-                )
-            ) {
-                updateCurrentCueIndex()
+
+            // Fast position fallback while the panel is visible so highlight stays
+            // in lockstep even between EVENT_CUES (and when currentCues is empty).
+            while (true) {
+                delay(if (isPanelVisible) FastHighlightTick else IdleHighlightTick)
+                if (!isPanelVisible) continue
+                updateCurrentCueIndexFromPlayer()
             }
         }
     }
 
-    fun updateCurrentCueIndex(positionMs: Long = player.currentPosition) {
+    /**
+     * Prefer Media3 current cues (same source as the on-video overlay). Fall back to
+     * a delay-adjusted position match when no cue is active.
+     */
+    fun updateCurrentCueIndexFromPlayer() {
+        val active = player.currentCues.cues
+        if (active.isNotEmpty() && matchCuesToIndex(active)) {
+            return
+        }
+        updateCurrentCueIndexFromPosition(player.currentPosition)
+    }
+
+    fun updateCurrentCueIndexFromCues() {
+        val active = player.currentCues.cues
+        if (active.isNotEmpty() && matchCuesToIndex(active)) {
+            return
+        }
+        updateCurrentCueIndexFromPosition(player.currentPosition)
+    }
+
+    /**
+     * Position-based fallback matching nextlib OffsetRenderer semantics:
+     * `effectiveUs = positionUs * speed - delayMs * 1000`.
+     * Do **not** use this path for EVENT_CUES text matches (delay already applied).
+     */
+    fun updateCurrentCueIndexFromPosition(positionMs: Long = player.currentPosition) {
         if (cues.isEmpty()) {
             currentCueIndex = -1
             return
         }
-        val effective = positionMs - subtitleDelayMs
+        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
         val index = cues.indexOfLast { cue ->
             effective >= cue.startMs && effective < cue.endMs
         }.takeIf { it >= 0 } ?: cues.indexOfLast { cue -> effective >= cue.startMs }
         currentCueIndex = index
+    }
+
+    /** @deprecated Use [updateCurrentCueIndexFromPlayer]. Kept for older call sites. */
+    fun updateCurrentCueIndex(positionMs: Long = player.currentPosition) {
+        updateCurrentCueIndexFromPosition(positionMs)
+    }
+
+    private fun matchCuesToIndex(activeCues: List<Cue>): Boolean {
+        if (cues.isEmpty()) return false
+        val activeTexts = activeCues.mapNotNull { cue ->
+            cue.text?.toString()?.normalizeCueText()?.takeIf { it.isNotEmpty() }
+        }
+        if (activeTexts.isEmpty()) return false
+
+        val joined = activeTexts.joinToString("\n")
+        val candidates = ArrayList<Int>()
+        for (i in cues.indices) {
+            val normalized = cues[i].text.normalizeCueText()
+            if (normalized == joined || activeTexts.any { it == normalized }) {
+                candidates += i
+            }
+        }
+        if (candidates.isEmpty()) {
+            // Soft match: timed cue contains / is contained by active text.
+            for (i in cues.indices) {
+                val normalized = cues[i].text.normalizeCueText()
+                if (activeTexts.any { active ->
+                        normalized.contains(active) || active.contains(normalized)
+                    }
+                ) {
+                    candidates += i
+                }
+            }
+        }
+        if (candidates.isEmpty()) return false
+
+        if (candidates.size == 1) {
+            currentCueIndex = candidates[0]
+            return true
+        }
+
+        // Disambiguate duplicate texts near the delay-adjusted position.
+        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val effective = (player.currentPosition.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
+        currentCueIndex = candidates.minBy { idx ->
+            val cue = cues[idx]
+            abs((cue.startMs + cue.endMs) / 2L - effective)
+        }
+        return true
     }
 
     private fun reloadIfNeeded(force: Boolean) {
@@ -152,13 +257,25 @@ class LiveSubtitlesState(
         lastTrackSignature = signature
         loadJob?.cancel()
         loadJob = scope.launch {
-            isLoading = true
-            val loaded = SubtitleCueLoader.loadSelectedTrackCues(context, player)
-            withContext(Dispatchers.Main.immediate) {
-                cues = loaded
-                isUnsupportedTrack = signature != "none" && loaded.isEmpty()
+            if (signature == "none") {
+                cues = emptyList()
+                isUnsupportedTrack = false
                 isLoading = false
-                updateCurrentCueIndex()
+                currentCueIndex = -1
+                return@launch
+            }
+
+            // Only spin when we have nothing to show yet. Cache hits return immediately
+            // from memory/disk inside the loader so reopen / track reselect stays snappy.
+            if (cues.isEmpty()) {
+                isLoading = true
+            }
+            val result = SubtitleCueLoader.loadSelectedTrackCuesDetailed(context, player)
+            withContext(Dispatchers.Main.immediate) {
+                cues = result.cues
+                isUnsupportedTrack = result.cues.isEmpty()
+                isLoading = false
+                updateCurrentCueIndexFromPlayer()
             }
         }
     }
@@ -170,9 +287,18 @@ class LiveSubtitlesState(
         val format = selected.getTrackFormat(0)
         return listOf(
             player.currentMediaItem?.mediaId.orEmpty(),
+            player.currentMediaItem?.localConfiguration?.uri?.toString().orEmpty(),
             format.id.orEmpty(),
+            format.language.orEmpty(),
             format.label.orEmpty(),
             format.sampleMimeType.orEmpty(),
+            format.codecs.orEmpty(),
         ).joinToString("|")
     }
 }
+
+private fun String.normalizeCueText(): String =
+    trim()
+        .replace(Regex("""\s+"""), " ")
+        .replace(Regex("""</?[^>]+>"""), "")
+        .replace(Regex("""\{[^}]*\}"""), "")

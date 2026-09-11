@@ -21,18 +21,52 @@ import kotlinx.coroutines.withContext
  * External SRT/VTT (and other Media3-parseable text files) are read from their URI.
  * Embedded in-container text tracks are demuxed on a background thread via
  * [EmbeddedSubtitleCueExtractor]. MediaController player APIs stay on Main.
+ *
+ * Results are cached in-memory (session LRU) and on disk under `subtitleCacheDir`.
  */
 @UnstableApi
 object SubtitleCueLoader {
 
     private val media3SubtitleParserFactory = DefaultSubtitleParserFactory()
 
-    suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> {
+    data class LoadResult(
+        val cues: List<TimedCue>,
+        val cacheKey: String,
+        val fromCache: Boolean,
+    )
+
+    suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> =
+        loadSelectedTrackCuesDetailed(context, player).cues
+
+    suspend fun loadSelectedTrackCuesDetailed(context: Context, player: Player): LoadResult {
         val selection = withContext(Dispatchers.Main.immediate) {
             resolveSelectedSubtitle(player)
-        } ?: return emptyList()
+        } ?: return LoadResult(emptyList(), "none", fromCache = false)
 
-        return withContext(Dispatchers.IO) {
+        val mediaId = withContext(Dispatchers.Main.immediate) {
+            player.currentMediaItem?.mediaId
+        }
+        val cacheKey = LiveSubtitleCueCache.buildKey(
+            mediaId = mediaId,
+            mediaUri = selection.mediaUri,
+            externalUri = selection.externalUri,
+            format = selection.format,
+            textTrackIndex = selection.textTrackIndex,
+            context = context,
+        )
+
+        LiveSubtitleCueCache.getMemoryOnly(cacheKey)?.let {
+            return LoadResult(it, cacheKey, fromCache = true)
+        }
+
+        val diskHit = withContext(Dispatchers.IO) {
+            LiveSubtitleCueCache.get(context, cacheKey)
+        }
+        if (diskHit != null) {
+            return LoadResult(diskHit, cacheKey, fromCache = true)
+        }
+
+        val loaded = withContext(Dispatchers.IO) {
             when {
                 selection.externalUri != null -> loadExternalCues(context, selection.externalUri)
                 selection.mediaUri != null && selection.format != null -> {
@@ -46,6 +80,10 @@ object SubtitleCueLoader {
                 else -> emptyList()
             }
         }
+        withContext(Dispatchers.IO) {
+            LiveSubtitleCueCache.put(context, cacheKey, loaded)
+        }
+        return LoadResult(loaded, cacheKey, fromCache = false)
     }
 
     /**
