@@ -3,6 +3,8 @@ package dev.anilbeesetti.nextplayer.core.media.network.datasource
 import android.content.ContentResolver
 import android.content.Context
 import android.content.res.AssetFileDescriptor
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -25,7 +27,8 @@ import java.io.InterruptedIOException
  * Opens via [ContentResolver.openAssetFileDescriptor] / PFD and always returns
  * [C.LENGTH_UNSET]. On EOF, reopens the descriptor and seeks back to [readPosition] if more
  * bytes became available; polls ~50ms and only signals end-of-input after a longer stable idle
- * (see [GrowingFileDataSource] for shared finish heuristics).
+ * (~30s), matching [GrowingFileDataSource] VLC-style wait through downloader buffer pauses.
+ * Recent last-modified (when queryable) or recent length growth also blocks EOF.
  *
  * Never uses Media3's fixed-length [androidx.media3.datasource.ContentDataSource] for this path.
  */
@@ -231,6 +234,13 @@ class GrowingContentDataSource(
             return false
         }
         val now = System.currentTimeMillis()
+        val lastModified = queryLastModified(uri)
+        if (lastModified != null) {
+            val mtimeAge = now - lastModified
+            if (mtimeAge in 0 until RECENT_MTIME_MS) {
+                return false
+            }
+        }
         if (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) {
             return false
         }
@@ -266,8 +276,13 @@ class GrowingContentDataSource(
                     return false
                 }
             }
+            val loopNow = System.currentTimeMillis()
+            val loopMtime = queryLastModified(uri)
+            if (loopMtime != null && loopNow - loopMtime in 0 until RECENT_MTIME_MS) {
+                return false
+            }
             if (lastGrowthElapsedMs > 0L &&
-                System.currentTimeMillis() - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
+                loopNow - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
             ) {
                 return false
             }
@@ -333,6 +348,37 @@ class GrowingContentDataSource(
         }
     }
 
+    /**
+     * Best-effort last-modified for content URIs (Documents / MediaStore). Returns null when
+     * unavailable so callers fall back to length-stability heuristics only.
+     */
+    private fun queryLastModified(uri: Uri): Long? {
+        val columns = arrayOf(
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+            MediaStore.MediaColumns.DATE_MODIFIED,
+        )
+        for (column in columns) {
+            try {
+                resolver.query(uri, arrayOf(column), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(column)
+                        if (idx >= 0 && !cursor.isNull(idx)) {
+                            var value = cursor.getLong(idx)
+                            // MediaStore DATE_MODIFIED is seconds; Documents is millis.
+                            if (column == MediaStore.MediaColumns.DATE_MODIFIED && value < 10_000_000_000L) {
+                                value *= 1000L
+                            }
+                            if (value > 0L) return value
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // try next column
+            }
+        }
+        return null
+    }
+
     private fun queryDisplayName(uri: Uri): String? {
         var cursor: Cursor? = null
         return try {
@@ -371,8 +417,10 @@ class GrowingContentDataSource(
 
     companion object {
         private const val POLL_INTERVAL_MS = 50L
-        private const val STABLE_DURATION_MS = 6_000L
-        private const val RECENT_GROWTH_WINDOW_MS = 10_000L
+        /** Match [GrowingFileDataSource]: wait through downloader buffer pauses. */
+        private const val STABLE_DURATION_MS = 30_000L
+        private const val RECENT_GROWTH_WINDOW_MS = 15_000L
+        private const val RECENT_MTIME_MS = 180_000L
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
         private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
 

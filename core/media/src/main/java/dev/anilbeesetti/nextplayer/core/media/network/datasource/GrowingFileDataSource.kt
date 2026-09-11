@@ -19,9 +19,10 @@ import java.io.RandomAccessFile
  *
  * Unlike Media3 [androidx.media3.datasource.FileDataSource], [open] always returns
  * [C.LENGTH_UNSET] so ExoPlayer does not treat the then-current EOF as the end of the stream.
- * [read] blocks (polling ~50ms) until more bytes appear; it only returns
- * [C.RESULT_END_OF_INPUT] once size and mtime have been stable for ~6s, the name does not look
- * like a partial download, and nothing has grown within the last ~10s.
+ * [read] blocks (polling ~50ms) until more bytes appear — VLC-style wait through downloader
+ * buffer pauses. It only returns [C.RESULT_END_OF_INPUT] once size and mtime have been stable
+ * for ~30s, the name does not look like a partial download, mtime is older than ~3 minutes,
+ * and nothing has grown within the recent-growth window.
  *
  * Tiny / empty files still open successfully (with [C.LENGTH_UNSET]) so the extractors / load
  * retry policy can wait for headers (e.g. MP4 `moov`) rather than failing at the DataSource.
@@ -248,14 +249,22 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     /**
      * Treat the file as finished when its length and mtime have not changed for
-     * [STABLE_DURATION_MS], nothing grew within [RECENT_GROWTH_WINDOW_MS], and the name does not
-     * look like a partial download artifact.
+     * [STABLE_DURATION_MS], mtime is older than [RECENT_MTIME_MS], nothing grew within
+     * [RECENT_GROWTH_WINDOW_MS], and the name does not look like a partial download artifact.
+     *
+     * Download managers often pause longer than a few seconds between flushes; we wait through
+     * those pauses (VLC-style) rather than declaring EOF mid-cluster.
      */
     private fun isDownloadFinished(file: File): Boolean {
         if (looksPartialFileName(file.name)) {
             return false
         }
         val now = System.currentTimeMillis()
+        val mtimeAge = now - file.lastModified()
+        // Still being written / touched recently — keep waiting (never EOF on a fresh mtime).
+        if (mtimeAge in 0 until RECENT_MTIME_MS) {
+            return false
+        }
         if (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) {
             return false
         }
@@ -275,9 +284,13 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             if (size > readPosition) {
                 return false
             }
+            val loopNow = System.currentTimeMillis()
+            if (loopNow - mtime in 0 until RECENT_MTIME_MS) {
+                return false
+            }
             // Growth within window (e.g. size bumped then stalled) still blocks EOF.
             if (lastGrowthElapsedMs > 0L &&
-                System.currentTimeMillis() - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
+                loopNow - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
             ) {
                 return false
             }
@@ -346,9 +359,16 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     companion object {
         private const val POLL_INTERVAL_MS = 50L
-        /** Idle stability before treating a growing file as finished (was 2s; too short for downloader buffer pauses). */
-        private const val STABLE_DURATION_MS = 6_000L
-        private const val RECENT_GROWTH_WINDOW_MS = 10_000L
+        /**
+         * Idle stability before treating a growing file as finished.
+         * Download managers often pause well beyond a few seconds between flushes — wait
+         * through those (VLC-style) rather than EOF mid-cluster.
+         */
+        private const val STABLE_DURATION_MS = 30_000L
+        /** Keep waiting if length grew this recently. */
+        private const val RECENT_GROWTH_WINDOW_MS = 15_000L
+        /** Keep waiting if lastModified is within this window (downloader still active). */
+        private const val RECENT_MTIME_MS = 180_000L
         /** Far seeks (e.g. Matroska Cues near EOF) beyond current length + this gap fail fast. */
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
         private const val CUE_SEEK_FAIL_FAST_MS = 1_500L

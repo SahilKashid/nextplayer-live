@@ -36,9 +36,10 @@ import java.io.IOException
  * surface immediately as "Source error" / "Can't play video" when the file is opened
  * before any usable header bytes exist.
  *
- * Caps are hard (~8 attempts at ~500–750ms): a few seconds total, not tens of seconds.
- * If the file is already large enough to sniff, length-stable across a short poll, and
- * does not look like a partial download name, errors surface immediately.
+ * Caps are hard (~14 attempts at ~500–700ms): enough for a header to land after a short
+ * downloader pause, not tens of seconds. If the file is already large enough to sniff,
+ * length-stable across a short poll, and does not look like a partial download name,
+ * errors surface immediately.
  */
 @UnstableApi
 class GrowingFileLoadErrorHandlingPolicy(
@@ -186,7 +187,7 @@ class GrowingFileLoadErrorHandlingPolicy(
     }
 
     companion object {
-        /** ~500–750ms between attempts; 8 × 600ms ≈ a few seconds total. */
+        /** ~500–700ms between attempts; 14 × 600ms ≈ enough for header after a short pause. */
         private const val RETRY_DELAY_MS = 600L
         private const val STABLE_POLL_MS = 200L
         /** Below this size, headers may not be snifftable yet — allow brief retries. */
@@ -194,8 +195,8 @@ class GrowingFileLoadErrorHandlingPolicy(
         /**
          * Floor for ExoPlayer's minimum loadable retry count — matches [MAX_GROWING_RETRIES].
          */
-        private const val MIN_GROWING_LOADABLE_RETRIES = 8
-        /** Hard cap on growing-local retries (not the old ~45 / 300 long demux wait). */
-        const val MAX_GROWING_RETRIES = 8
+        private const val MIN_GROWING_LOADABLE_RETRIES = 14
+        /** Hard cap on growing-local retries (not a long demux wait). */
+        const val MAX_GROWING_RETRIES = 14
     }
 }

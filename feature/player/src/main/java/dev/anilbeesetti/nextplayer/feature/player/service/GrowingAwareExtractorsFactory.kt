@@ -16,16 +16,20 @@ import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileData
 import java.io.File
 
 /**
- * [ExtractorsFactory] that disables Matroska end-of-file cue seeking when the URI looks like a
- * still-growing local download.
+ * [ExtractorsFactory] that disables Matroska end-of-file cue seeking for local URIs unless the
+ * file is clearly a finished download.
  *
- * Media3 [MatroskaExtractor] seeks to the Cues element near EOF when SeekHead points there.
- * On incomplete MKVs that seek hits EOF / fails while the file is still growing. With
+ * VLC (libmatroska) plays Clusters without requiring Cues at EOF. Media3 [MatroskaExtractor]
+ * seeks to the Cues element near EOF when SeekHead points there (ExoPlayer#8935); on incomplete
+ * MKVs that seek hits EOF / fails while the file is still growing. With
  * [MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES], playback can start as soon as the header and
- * early clusters are present — without a long demux wait — matching VLC-style
- * play-while-download (unseekable until the file finishes / cues become available).
+ * early clusters are present — matching VLC-style play-while-download (unseekable until the file
+ * finishes / cues become available).
  *
- * Finished MKVs keep default flags (0) so cue-based seeking still works.
+ * For local `file://` / `content://` / path URIs we **default to disabling cue-seek** whenever
+ * the file might still be downloading. Cue-seek stays enabled only when the file is clearly
+ * finished (exists, non-partial name, mtime age ≥ 5 minutes, and a short length poll shows no
+ * growth). Missing files, partial suffixes, and unresolved `content://` URIs always disable cues.
  */
 @UnstableApi
 class GrowingAwareExtractorsFactory(
@@ -57,13 +61,13 @@ class GrowingAwareExtractorsFactory(
     }
 
     companion object {
-        private const val RECENT_MTIME_MS = 90_000L
-        private const val VERY_FRESH_MTIME_MS = 20_000L
-        private const val LENGTH_POLL_MS = 175L
+        /** Only treat as finished after this mtime age (plus a no-growth poll). */
+        private const val CLEARLY_FINISHED_MTIME_MS = 300_000L
+        private const val LENGTH_POLL_MS = 250L
 
         /**
-         * Heuristics for play-while-download: partial suffixes, recent mtime, growing length,
-         * or unresolved content:// downloads (prefer cue-seek disable when unsure).
+         * VLC-like default: assume a local file may still be downloading and disable cue-seek,
+         * unless it is clearly finished (old mtime + stable length + non-partial name).
          */
         fun isLikelyGrowing(context: Context, uri: Uri): Boolean {
             val scheme = uri.scheme
@@ -81,27 +85,28 @@ class GrowingAwareExtractorsFactory(
                 ) {
                     return true
                 }
-                if (!file.exists()) return false
+                // Missing file → still may appear; keep cues disabled.
+                if (!file.exists()) return true
                 val now = System.currentTimeMillis()
                 val age = now - file.lastModified()
-                if (age < 0L) return false
-                if (age < VERY_FRESH_MTIME_MS) {
+                // Clock skew / future mtime — treat as growing.
+                if (age < 0L) return true
+                // Not clearly finished until mtime is old enough.
+                if (age < CLEARLY_FINISHED_MTIME_MS) {
                     return true
                 }
-                if (age < RECENT_MTIME_MS) {
-                    val length1 = file.length()
-                    try {
-                        Thread.sleep(LENGTH_POLL_MS)
-                    } catch (_: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        return true
-                    }
-                    return file.length() > length1
+                // Age ≥ 5 minutes: confirm length is not still growing.
+                val length1 = file.length()
+                try {
+                    Thread.sleep(LENGTH_POLL_MS)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return true
                 }
-                return false
+                return file.length() > length1
             }
 
-            // content:// without resolvable path — prefer FLAG_DISABLE_SEEK_FOR_CUES when unsure.
+            // content:// without resolvable path — always disable cue-seek (may be downloading).
             if (ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)) {
                 val displayName = queryDisplayName(context, uri)
                 if (GrowingContentDataSource.looksPartialName(displayName) ||
