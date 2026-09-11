@@ -33,6 +33,9 @@ import kotlinx.coroutines.withContext
 private val AutoFollowResumeDelay = 3.seconds
 private val FastHighlightTick = 50.milliseconds
 private val IdleHighlightTick = 500.milliseconds
+// Start centering the upcoming cue slightly before it becomes active so the
+// slide finishes as bold/highlight lands (matches scroll animation length).
+private val ScrollLeadMs = 380L
 private val PartialCoalesceWindow = 48.milliseconds
 
 @UnstableApi
@@ -67,6 +70,10 @@ class LiveSubtitlesState(
         private set
 
     var currentCueIndex: Int by mutableIntStateOf(-1)
+        private set
+
+    /** Index the list should center on — may lead [currentCueIndex] for early scroll. */
+    var scrollTargetIndex: Int by mutableIntStateOf(-1)
         private set
 
     var isPanelVisible: Boolean by mutableStateOf(false)
@@ -172,6 +179,7 @@ class LiveSubtitlesState(
     fun updateCurrentCueIndexFromPlayer() {
         val active = player.currentCues.cues
         if (active.isNotEmpty() && matchCuesToIndex(active)) {
+            updateScrollTarget()
             return
         }
         updateCurrentCueIndexFromPosition(player.currentPosition)
@@ -180,6 +188,7 @@ class LiveSubtitlesState(
     fun updateCurrentCueIndexFromCues() {
         val active = player.currentCues.cues
         if (active.isNotEmpty() && matchCuesToIndex(active)) {
+            updateScrollTarget()
             return
         }
         updateCurrentCueIndexFromPosition(player.currentPosition)
@@ -201,6 +210,29 @@ class LiveSubtitlesState(
             effective >= cue.startMs && effective < cue.endMs
         }.takeIf { it >= 0 } ?: cues.indexOfLast { cue -> effective >= cue.startMs }
         currentCueIndex = index
+        updateScrollTarget(positionMs)
+    }
+
+
+    /**
+     * Lead the auto-scroll toward the next cue shortly before it becomes current,
+     * so the slide into center feels on-time with bold/highlight.
+     */
+    fun updateScrollTarget(positionMs: Long = player.currentPosition) {
+        val current = currentCueIndex
+        if (current !in cues.indices) {
+            scrollTargetIndex = current
+            return
+        }
+        val next = current + 1
+        if (next !in cues.indices) {
+            scrollTargetIndex = current
+            return
+        }
+        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
+        val untilNext = cues[next].startMs - effective
+        scrollTargetIndex = if (untilNext in 0..ScrollLeadMs) next else current
     }
 
     /** @deprecated Use [updateCurrentCueIndexFromPlayer]. Kept for older call sites. */
@@ -327,6 +359,7 @@ class LiveSubtitlesState(
             val remapped = newCues.indexOfFirst { it.identityKey() == previousIdentity }
             if (remapped >= 0) {
                 currentCueIndex = remapped
+                updateScrollTarget()
                 return
             }
         }

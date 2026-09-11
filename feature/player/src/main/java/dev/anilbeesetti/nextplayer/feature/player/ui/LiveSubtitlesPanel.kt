@@ -57,13 +57,14 @@ import dev.anilbeesetti.nextplayer.feature.player.state.LiveSubtitlesState
 import kotlin.math.abs
 
 private val ScrollAnimation = tween<Float>(durationMillis = 320, easing = FastOutSlowInEasing)
-private val HighlightAnimation = tween<Float>(durationMillis = 280, easing = FastOutSlowInEasing)
+private val HighlightAnimation = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
 
 /**
  * Right-side live subtitles timeline for landscape playback.
  *
- * Auto-scrolls so the active cue is vertically centered while
- * [LiveSubtitlesState.isFollowing] is true. User scrolling pauses follow for ~3s
+ * Auto-scrolls so the upcoming/active cue is vertically centered while
+ * [LiveSubtitlesState.isFollowing] is true. Scroll leads the bold highlight
+ * slightly so the slide feels on-time. User scrolling pauses follow for ~3s
  * (or until "jump to current").
  */
 @Composable
@@ -94,27 +95,31 @@ fun LiveSubtitlesPanel(
             val halfViewportPx = constraints.maxHeight / 2
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
-            val activeCue = state.cues.getOrNull(currentIndex)
-            val activeIdentity = activeCue?.identityKey()
+            // Bold/highlight tracks currentCueIndex (on-time with overlay).
+            // Scroll targets scrollTargetIndex, which leads the next cue so the
+            // slide into center finishes as that line goes bold.
+            val scrollIndex = state.scrollTargetIndex
+            val scrollCue = state.cues.getOrNull(scrollIndex)
+            val scrollIdentity = scrollCue?.identityKey()
             var lastScrolledIdentity by remember { mutableStateOf<String?>(null) }
 
-            LaunchedEffect(activeIdentity, state.isFollowing, halfViewportPx) {
+            LaunchedEffect(scrollIdentity, state.isFollowing, halfViewportPx) {
                 if (!state.isFollowing) return@LaunchedEffect
-                if (activeIdentity == null) return@LaunchedEffect
-                val index = state.currentCueIndex
+                if (scrollIdentity == null) return@LaunchedEffect
+                val index = state.scrollTargetIndex
                 if (index !in state.cues.indices) return@LaunchedEffect
                 val cue = state.cues[index]
-                if (cue.identityKey() != activeIdentity) return@LaunchedEffect
+                if (cue.identityKey() != scrollIdentity) return@LaunchedEffect
 
                 // Identity unchanged and we already scrolled to it — do not restart.
-                if (activeIdentity == lastScrolledIdentity &&
+                if (scrollIdentity == lastScrolledIdentity &&
                     listState.isItemNearViewportCenter(index)
                 ) {
                     return@LaunchedEffect
                 }
 
                 listState.animateItemCenterToViewportCenter(index)
-                lastScrolledIdentity = activeIdentity
+                lastScrolledIdentity = scrollIdentity
             }
 
             when {
