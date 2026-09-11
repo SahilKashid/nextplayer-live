@@ -379,6 +379,19 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             lastSeenLength = length
             lastGrowthElapsedMs = System.currentTimeMillis()
         }
+        publishReadableTip(length)
+    }
+
+    /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for approximate seeking. */
+    private fun publishReadableTip(readableEnd: Long) {
+        val path = this.path ?: return
+        val declared = try {
+            File(path).length()
+        } catch (_: Exception) {
+            -1L
+        }
+        ReadableTipTracker.update(path, readableEnd, declared)
+        uri?.let { ReadableTipTracker.update(it.toString(), readableEnd, declared) }
     }
 
     private fun openFileAt(path: String, position: Long) {

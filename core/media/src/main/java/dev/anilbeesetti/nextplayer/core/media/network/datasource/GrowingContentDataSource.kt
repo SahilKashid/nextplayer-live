@@ -435,6 +435,13 @@ class GrowingContentDataSource(
             lastObservedLength = length
             lastGrowthElapsedMs = System.currentTimeMillis()
         }
+        publishReadableTip(length)
+    }
+
+    /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for approximate seeking. */
+    private fun publishReadableTip(readableEnd: Long) {
+        val key = uri?.toString() ?: return
+        ReadableTipTracker.update(key, readableEnd, lastDeclaredLength)
     }
 
     private fun closeDescriptorQuietly() {

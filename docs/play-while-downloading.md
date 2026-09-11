@@ -54,6 +54,24 @@ advancing. A small cap applies when the tip is stuck. Complete files fail fast.
 Far cue-style seeks past the current tip fail fast so load can proceed without waiting for
 end-of-file cues.
 
+## Incomplete MKV seeking (estimated)
+
+With cue-EOF seek disabled, Media3 normally emits an unseekable `SeekMap`, so scrubbing does
+nothing. Next Player Live wraps incomplete Matroska extractors with
+`IncompleteMatroskaSeekExtractor`:
+
+1. `GrowingFileDataSource` / `GrowingContentDataSource` publish the sparse/zero-tail aware tip
+   via `ReadableTipTracker`.
+2. When the delegate reports an unseekable map that still has a known duration, it is replaced
+   with `ApproximateByteSeekMap` (full Info duration on the timeline; byte positions use
+   declared-length mapping clamped to the current tip — seeking toward the end of a partially
+   downloaded file lands near the latest available data).
+3. On seek, the byte position is snapped back to the nearest preceding Cluster (`1F 43 B6 75`)
+   within a 2 MiB scan so demux stays in sync.
+
+This is **estimated** seeking within the downloaded tip (VLC-like). It may be less accurate than
+VLC until real cues exist at EOF; finished files keep normal cue-based seeking and are not wrapped.
+
 ## Limitations
 
 - Works best with **streamable / growing-friendly containers** (MKV, TS, many incomplete
@@ -61,6 +79,8 @@ end-of-file cues.
 - **MP4/MOV without an early `moov`** may not start until that metadata is present; the load
   retry policy waits briefly while the download grows.
 - **Duration and seek range** may update only as more media is parsed.
+- **Incomplete MKV scrubbing** is estimated within the downloaded tip and may be less accurate
+  than VLC until cues exist.
 - **API 24–25**: `SEEK_HOLE` requires API 26+; zero-tail last-non-zero scanning still covers
   non-sparse preallocation.
 
@@ -68,5 +88,5 @@ end-of-file cues.
 
 1. Start a download of a video (preferably MKV/TS) with any download manager.
 2. While the file is still growing — stored anywhere — open it in Next Player Live.
-3. Playback should start and continue as more bytes are written into the tip; seeking far ahead of
-   the downloaded range waits until that offset exists (or errors if the download finishes short).
+3. Playback should start and continue as more bytes are written into the tip; scrubbing within
+   the timeline seeks approximately within the downloaded tip (clamped), and snaps to a Cluster.
