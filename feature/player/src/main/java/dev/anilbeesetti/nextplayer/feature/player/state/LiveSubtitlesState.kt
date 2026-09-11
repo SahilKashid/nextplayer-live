@@ -217,6 +217,9 @@ class LiveSubtitlesState(
     /**
      * Lead the auto-scroll toward the next cue shortly before it becomes current,
      * so the slide into center feels on-time with bold/highlight.
+     *
+     * Lead is adaptive: short/rapid cue gaps get little or no lead so we don't
+     * thrash between current and next during fast scenes.
      */
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex
@@ -231,8 +234,14 @@ class LiveSubtitlesState(
         }
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
         val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
+        val gapToNext = (cues[next].startMs - cues[current].startMs).coerceAtLeast(0L)
+        val leadMs = when {
+            gapToNext <= 280L -> 0L
+            gapToNext <= 560L -> gapToNext / 3
+            else -> ScrollLeadMs
+        }
         val untilNext = cues[next].startMs - effective
-        scrollTargetIndex = if (untilNext in 0..ScrollLeadMs) next else current
+        scrollTargetIndex = if (leadMs > 0L && untilNext in 0..leadMs) next else current
     }
 
     /** @deprecated Use [updateCurrentCueIndexFromPlayer]. Kept for older call sites. */

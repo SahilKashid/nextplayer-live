@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -55,6 +58,8 @@ import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import dev.anilbeesetti.nextplayer.feature.player.state.LiveSubtitlesState
 import kotlin.math.abs
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val ScrollAnimation = tween<Float>(durationMillis = 320, easing = FastOutSlowInEasing)
 private val HighlightAnimation = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
@@ -96,30 +101,32 @@ fun LiveSubtitlesPanel(
             val halfViewportPx = constraints.maxHeight / 2
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
-            // Scroll + highlight both use scrollTargetIndex (~380ms lead) so the
-            // color change and center slide land together on the upcoming cue.
-            val scrollIndex = state.scrollTargetIndex
-            val scrollCue = state.cues.getOrNull(scrollIndex)
-            val scrollIdentity = scrollCue?.identityKey()
-            var lastScrolledIdentity by remember { mutableStateOf<String?>(null) }
+            // Scroll + highlight share scrollTargetIndex. collectLatest cancels an
+            // in-flight slide when the target jumps again (fast scenes); short cue
+            // gaps snap instead of stacking incomplete animations.
+            var rapidFollow by remember { mutableStateOf(false) }
 
-            LaunchedEffect(scrollIdentity, state.isFollowing, halfViewportPx) {
+            LaunchedEffect(state.isFollowing, halfViewportPx) {
                 if (!state.isFollowing) return@LaunchedEffect
-                if (scrollIdentity == null) return@LaunchedEffect
-                val index = state.scrollTargetIndex
-                if (index !in state.cues.indices) return@LaunchedEffect
-                val cue = state.cues[index]
-                if (cue.identityKey() != scrollIdentity) return@LaunchedEffect
-
-                // Identity unchanged and we already scrolled to it — do not restart.
-                if (scrollIdentity == lastScrolledIdentity &&
-                    listState.isItemNearViewportCenter(index)
-                ) {
-                    return@LaunchedEffect
+                snapshotFlow {
+                    val index = state.scrollTargetIndex
+                    val identity = state.cues.getOrNull(index)?.identityKey()
+                    index to identity
                 }
-
-                listState.animateItemCenterToViewportCenter(index)
-                lastScrolledIdentity = scrollIdentity
+                    .distinctUntilChanged()
+                    .collectLatest { (index, identity) ->
+                        if (!state.isFollowing) return@collectLatest
+                        if (identity == null || index !in state.cues.indices) return@collectLatest
+                        if (state.cues[index].identityKey() != identity) return@collectLatest
+                        if (listState.isItemNearViewportCenter(index)) {
+                            rapidFollow = false
+                            return@collectLatest
+                        }
+                        val snap = state.cues.isRapidGapTo(index)
+                        rapidFollow = snap
+                        listState.centerItemInViewport(index, animated = !snap)
+                        rapidFollow = false
+                    }
             }
 
             when {
@@ -170,6 +177,7 @@ fun LiveSubtitlesPanel(
                             LiveSubtitleCueRow(
                                 cue = cue,
                                 isCurrent = index == highlightIndex,
+                                animateHighlight = !rapidFollow,
                                 onClick = { state.seekToCue(cue) },
                             )
                         }
@@ -204,8 +212,15 @@ fun LiveSubtitlesPanel(
 }
 
 private const val NearCenterTolerancePx = 8f
+/** Cue start gaps below this use snap-follow instead of a slide. */
+private const val RapidCueGapMs = 450L
 
 private fun TimedCue.identityKey(): String = "$startMs|$endMs|$text"
+
+private fun List<TimedCue>.isRapidGapTo(index: Int): Boolean {
+    if (index <= 0 || index !in indices) return false
+    return (this[index].startMs - this[index - 1].startMs) < RapidCueGapMs
+}
 
 private fun LazyListState.isItemNearViewportCenter(index: Int): Boolean {
     val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return false
@@ -215,26 +230,31 @@ private fun LazyListState.isItemNearViewportCenter(index: Int): Boolean {
     return abs(itemCenter - viewportCenter) <= NearCenterTolerancePx
 }
 
+private fun LazyListState.itemCenterDelta(index: Int): Float? {
+    val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return null
+    val viewportCenter =
+        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2f
+    return item.offset + item.size / 2f - viewportCenter
+}
+
 /**
- * One smooth center animation: bring the item into view instantly if needed, then
- * a single [animateScrollBy] so the cue midpoint lands at the viewport center.
+ * Center [index] in the viewport. Animated slides are used for normal pacing;
+ * rapid cue bursts snap so cancelled mid-slides don't flicker.
  */
-private suspend fun LazyListState.animateItemCenterToViewportCenter(index: Int) {
+private suspend fun LazyListState.centerItemInViewport(index: Int, animated: Boolean) {
     if (isItemNearViewportCenter(index)) return
 
     val alreadyVisible = layoutInfo.visibleItemsInfo.any { it.index == index }
     if (!alreadyVisible) {
-        // Instant jump into view — avoids a second competing scroll animation.
         scrollToItem(index)
     }
 
-    val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
-    val viewportCenter =
-        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2f
-    val itemCenter = item.offset + item.size / 2f
-    val delta = itemCenter - viewportCenter
-    if (abs(delta) > NearCenterTolerancePx) {
+    val delta = itemCenterDelta(index) ?: return
+    if (abs(delta) <= NearCenterTolerancePx) return
+    if (animated) {
         animateScrollBy(delta, animationSpec = ScrollAnimation)
+    } else {
+        scrollBy(delta)
     }
 }
 
@@ -242,15 +262,22 @@ private suspend fun LazyListState.animateItemCenterToViewportCenter(index: Int) 
 private fun LiveSubtitleCueRow(
     cue: TimedCue,
     isCurrent: Boolean,
+    animateHighlight: Boolean,
     onClick: () -> Unit,
 ) {
+    val colorSpec = if (animateHighlight) {
+        tween<Color>(durationMillis = 200, easing = FastOutSlowInEasing)
+    } else {
+        tween<Color>(durationMillis = 0)
+    }
+    val floatSpec = if (animateHighlight) HighlightAnimation else tween<Float>(durationMillis = 0)
     val background by animateColorAsState(
         targetValue = if (isCurrent) {
             MaterialTheme.colorScheme.primaryContainer
         } else {
             MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         },
-        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+        animationSpec = colorSpec,
         label = "cueBackground",
     )
     val contentColor by animateColorAsState(
@@ -259,17 +286,17 @@ private fun LiveSubtitleCueRow(
         } else {
             MaterialTheme.colorScheme.onSurface
         },
-        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+        animationSpec = colorSpec,
         label = "cueContent",
     )
     val scale by animateFloatAsState(
         targetValue = if (isCurrent) 1.03f else 1f,
-        animationSpec = HighlightAnimation,
+        animationSpec = floatSpec,
         label = "cueScale",
     )
     val alpha by animateFloatAsState(
         targetValue = if (isCurrent) 1f else 0.72f,
-        animationSpec = HighlightAnimation,
+        animationSpec = floatSpec,
         label = "cueAlpha",
     )
     val timeLabel = remember(cue.startMs) { Utils.formatDurationMillis(cue.startMs) }
