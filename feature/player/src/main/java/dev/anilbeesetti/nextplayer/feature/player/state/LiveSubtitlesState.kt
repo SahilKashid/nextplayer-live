@@ -78,6 +78,20 @@ class LiveSubtitlesState(
     var scrollTargetIndex: Int by mutableIntStateOf(-1)
         private set
 
+    /**
+     * Stable identity of the bold/color highlighted cue (never the early-lead scroll
+     * target). Survives remux index shifts without visual chatter.
+     */
+    var highlightedCueKey: String? by mutableStateOf(null)
+        private set
+
+    /**
+     * Stable identity of the cue the list should center on. Scroll effects key on
+     * this (not index) so a completed remux that only remaps indexes does not flicker.
+     */
+    var scrollTargetKey: String? by mutableStateOf(null)
+        private set
+
     var isPanelVisible: Boolean by mutableStateOf(false)
         private set
 
@@ -223,7 +237,8 @@ class LiveSubtitlesState(
      */
     fun updateCurrentCueIndexFromPosition(positionMs: Long = player.currentPosition) {
         if (cues.isEmpty()) {
-            currentCueIndex = -1
+            commitCurrentCueIndex(-1)
+            commitScrollTargetIndex(-1)
             return
         }
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
@@ -231,31 +246,31 @@ class LiveSubtitlesState(
         val index = cues.indexOfLast { cue ->
             effective >= cue.startMs && effective < cue.endMs
         }.takeIf { it >= 0 } ?: cues.indexOfLast { cue -> effective >= cue.startMs }
-        currentCueIndex = index
+        commitCurrentCueIndex(index)
         updateScrollTarget(positionMs)
     }
 
 
     /**
-     * Lead the auto-scroll/highlight toward the next cue shortly before it becomes
-     * current. Adaptive lead + hysteresis avoid chatter after rewind (crossing the
-     * lead threshold repeatedly) and during fast scenes.
+     * Lead **scroll only** toward the next cue shortly before it becomes current.
+     * Bold/color use [highlightedCueKey] from the true current cue and never lead.
+     * Adaptive lead + hysteresis avoid scroll chatter after rewind.
      */
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex
         if (current !in cues.indices) {
-            scrollTargetIndex = current
+            commitScrollTargetIndex(current)
             return
         }
         val next = current + 1
         if (next !in cues.indices) {
-            scrollTargetIndex = current
+            commitScrollTargetIndex(current)
             return
         }
 
         // After seek/rewind, stick to the true current cue until lead re-enables.
         if (android.os.SystemClock.elapsedRealtime() < leadDisabledUntilElapsedMs) {
-            scrollTargetIndex = current
+            commitScrollTargetIndex(current)
             return
         }
 
@@ -268,20 +283,21 @@ class LiveSubtitlesState(
             else -> ScrollLeadMs
         }
         if (leadMs <= 0L) {
-            scrollTargetIndex = current
+            commitScrollTargetIndex(current)
             return
         }
 
         val untilNext = cues[next].startMs - effective
-        val alreadyLeading = scrollTargetIndex == next
+        val alreadyLeading = scrollTargetKey == cues.getOrNull(next)?.identityKey()
         val enterLead = untilNext in 0..leadMs
         // Leave lead only after we're clearly outside the window (+ hysteresis).
         val leaveLead = untilNext > leadMs + ScrollLeadHysteresisMs || untilNext < 0L
-        scrollTargetIndex = when {
+        val target = when {
             alreadyLeading && !leaveLead -> next
             !alreadyLeading && enterLead -> next
             else -> current
         }
+        commitScrollTargetIndex(target)
     }
 
     /** @deprecated Use [updateCurrentCueIndexFromPlayer]. Kept for older call sites. */
@@ -320,17 +336,19 @@ class LiveSubtitlesState(
         if (candidates.isEmpty()) return false
 
         if (candidates.size == 1) {
-            currentCueIndex = candidates[0]
+            commitCurrentCueIndex(candidates[0])
             return true
         }
 
         // Disambiguate duplicate texts near the delay-adjusted position.
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
         val effective = (player.currentPosition.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
-        currentCueIndex = candidates.minBy { idx ->
-            val cue = cues[idx]
-            abs((cue.startMs + cue.endMs) / 2L - effective)
-        }
+        commitCurrentCueIndex(
+            candidates.minBy { idx ->
+                val cue = cues[idx]
+                abs((cue.startMs + cue.endMs) / 2L - effective)
+            },
+        )
         return true
     }
 
@@ -345,6 +363,9 @@ class LiveSubtitlesState(
                 isUnsupportedTrack = false
                 isLoading = false
                 currentCueIndex = -1
+                scrollTargetIndex = -1
+                highlightedCueKey = null
+                scrollTargetKey = null
                 return@launch
             }
 
@@ -402,17 +423,59 @@ class LiveSubtitlesState(
      * back to player matching when that cue disappeared from the new list.
      */
     private fun applyCuesPreservingActiveIdentity(newCues: List<TimedCue>) {
-        val previousIdentity = cues.getOrNull(currentCueIndex)?.identityKey()
+        // Preserve by identity strings so remux completion does not change keys
+        // (and therefore does not flash bold/color or restart scroll).
+        val prevHighlight = highlightedCueKey
+            ?: cues.getOrNull(currentCueIndex)?.identityKey()
+        val prevScroll = scrollTargetKey
+            ?: cues.getOrNull(scrollTargetIndex)?.identityKey()
+
         cues = newCues
-        if (previousIdentity != null) {
-            val remapped = newCues.indexOfFirst { it.identityKey() == previousIdentity }
-            if (remapped >= 0) {
-                currentCueIndex = remapped
+
+        if (prevHighlight != null) {
+            val highlightIndex = newCues.indexOfFirst { it.identityKey() == prevHighlight }
+            if (highlightIndex >= 0) {
+                currentCueIndex = highlightIndex
+                // Keep the same key instance/string — no highlight recomposition flash.
+                if (highlightedCueKey != prevHighlight) {
+                    highlightedCueKey = prevHighlight
+                }
+
+                if (prevScroll != null) {
+                    val scrollIndex = newCues.indexOfFirst { it.identityKey() == prevScroll }
+                    if (scrollIndex >= 0) {
+                        scrollTargetIndex = scrollIndex
+                        if (scrollTargetKey != prevScroll) {
+                            scrollTargetKey = prevScroll
+                        }
+                        return
+                    }
+                }
+                // Scroll identity gone (rare) — recompute lead from current highlight.
                 updateScrollTarget()
                 return
             }
         }
         updateCurrentCueIndexFromPlayer()
+    }
+
+
+    /** Update current cue + highlight key. Highlight key only changes when identity changes. */
+    private fun commitCurrentCueIndex(index: Int) {
+        currentCueIndex = index
+        val key = cues.getOrNull(index)?.identityKey()
+        if (highlightedCueKey != key) {
+            highlightedCueKey = key
+        }
+    }
+
+    /** Update scroll target index + key. Key only changes when identity changes. */
+    private fun commitScrollTargetIndex(index: Int) {
+        scrollTargetIndex = index
+        val key = cues.getOrNull(index)?.identityKey()
+        if (scrollTargetKey != key) {
+            scrollTargetKey = key
+        }
     }
 
     private fun TimedCue.identityKey(): String = "$startMs|$endMs|$text"
