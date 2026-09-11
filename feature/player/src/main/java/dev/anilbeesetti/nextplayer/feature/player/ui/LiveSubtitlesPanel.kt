@@ -33,7 +33,9 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,10 +94,27 @@ fun LiveSubtitlesPanel(
             val halfViewportPx = constraints.maxHeight / 2
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
-            LaunchedEffect(currentIndex, state.isFollowing, halfViewportPx, state.cues.size) {
+            val activeCue = state.cues.getOrNull(currentIndex)
+            val activeIdentity = activeCue?.identityKey()
+            var lastScrolledIdentity by remember { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(activeIdentity, state.isFollowing, halfViewportPx) {
                 if (!state.isFollowing) return@LaunchedEffect
-                if (currentIndex !in state.cues.indices) return@LaunchedEffect
-                listState.animateItemCenterToViewportCenter(currentIndex)
+                if (activeIdentity == null) return@LaunchedEffect
+                val index = state.currentCueIndex
+                if (index !in state.cues.indices) return@LaunchedEffect
+                val cue = state.cues[index]
+                if (cue.identityKey() != activeIdentity) return@LaunchedEffect
+
+                // Identity unchanged and we already scrolled to it — do not restart.
+                if (activeIdentity == lastScrolledIdentity &&
+                    listState.isItemNearViewportCenter(index)
+                ) {
+                    return@LaunchedEffect
+                }
+
+                listState.animateItemCenterToViewportCenter(index)
+                lastScrolledIdentity = activeIdentity
             }
 
             when {
@@ -141,7 +160,7 @@ fun LiveSubtitlesPanel(
                     ) {
                         itemsIndexed(
                             items = state.cues,
-                            key = { index, cue -> "${cue.startMs}-${cue.endMs}-$index" },
+                            key = { _, cue -> cue.identityKey() },
                         ) { index, cue ->
                             LiveSubtitleCueRow(
                                 cue = cue,
@@ -179,16 +198,37 @@ fun LiveSubtitlesPanel(
     }
 }
 
-/** Animate so [index]'s vertical midpoint sits at the viewport center. */
+private const val NearCenterTolerancePx = 8f
+
+private fun TimedCue.identityKey(): String = "$startMs|$endMs|$text"
+
+private fun LazyListState.isItemNearViewportCenter(index: Int): Boolean {
+    val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return false
+    val viewportCenter =
+        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2f
+    val itemCenter = item.offset + item.size / 2f
+    return abs(itemCenter - viewportCenter) <= NearCenterTolerancePx
+}
+
+/**
+ * One smooth center animation: bring the item into view instantly if needed, then
+ * a single [animateScrollBy] so the cue midpoint lands at the viewport center.
+ */
 private suspend fun LazyListState.animateItemCenterToViewportCenter(index: Int) {
-    animateScrollToItem(index)
-    // Layout may need a frame after animateScrollToItem before offsets are final.
+    if (isItemNearViewportCenter(index)) return
+
+    val alreadyVisible = layoutInfo.visibleItemsInfo.any { it.index == index }
+    if (!alreadyVisible) {
+        // Instant jump into view — avoids a second competing scroll animation.
+        scrollToItem(index)
+    }
+
     val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
     val viewportCenter =
         (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2f
     val itemCenter = item.offset + item.size / 2f
     val delta = itemCenter - viewportCenter
-    if (abs(delta) > 1f) {
+    if (abs(delta) > NearCenterTolerancePx) {
         animateScrollBy(delta, animationSpec = ScrollAnimation)
     }
 }

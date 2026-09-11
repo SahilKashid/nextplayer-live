@@ -33,6 +33,7 @@ import kotlinx.coroutines.withContext
 private val AutoFollowResumeDelay = 3.seconds
 private val FastHighlightTick = 50.milliseconds
 private val IdleHighlightTick = 500.milliseconds
+private val PartialCoalesceWindow = 48.milliseconds
 
 @UnstableApi
 @Composable
@@ -222,8 +223,9 @@ class LiveSubtitlesState(
                 candidates += i
             }
         }
-        if (candidates.isEmpty()) {
-            // Soft match: timed cue contains / is contained by active text.
+        // Soft contains matching can oscillate across progressive partial lists.
+        // Prefer exact normalized matches; only soft-match once loading is finished.
+        if (candidates.isEmpty() && !isLoading) {
             for (i in cues.indices) {
                 val normalized = cues[i].text.normalizeCueText()
                 if (activeTexts.any { active ->
@@ -272,6 +274,9 @@ class LiveSubtitlesState(
                 isLoading = true
             }
             val loadGeneration = lastTrackSignature
+            // Coalesce progressive Main updates so Compose is not flooded every partial.
+            var pendingPartial: List<TimedCue>? = null
+            var coalesceJob: Job? = null
             val result = SubtitleCueLoader.loadSelectedTrackCuesDetailed(
                 context = context,
                 player = player,
@@ -281,22 +286,54 @@ class LiveSubtitlesState(
                         if (lastTrackSignature != loadGeneration) return@launch
                         if (partial.isEmpty()) return@launch
                         // Prefer larger / newer snapshots so phase merges don't regress.
+                        val latestPending = pendingPartial
                         if (cues.isNotEmpty() && partial.size < cues.size) return@launch
-                        cues = partial
-                        isUnsupportedTrack = false
-                        updateCurrentCueIndexFromPlayer()
+                        if (latestPending != null && partial.size < latestPending.size) return@launch
+                        pendingPartial = partial
+                        if (coalesceJob?.isActive == true) return@launch
+                        coalesceJob = scope.launch(Dispatchers.Main.immediate) {
+                            delay(PartialCoalesceWindow)
+                            val toApply = pendingPartial ?: return@launch
+                            pendingPartial = null
+                            if (lastTrackSignature != loadGeneration) return@launch
+                            if (toApply.isEmpty()) return@launch
+                            if (cues.isNotEmpty() && toApply.size < cues.size) return@launch
+                            applyCuesPreservingActiveIdentity(toApply)
+                            isUnsupportedTrack = false
+                        }
                     }
                 },
             )
             withContext(Dispatchers.Main.immediate) {
                 if (lastTrackSignature != loadGeneration) return@withContext
-                cues = result.cues
+                coalesceJob?.cancel()
+                pendingPartial = null
+                applyCuesPreservingActiveIdentity(result.cues)
                 isUnsupportedTrack = result.cues.isEmpty()
                 isLoading = false
-                updateCurrentCueIndexFromPlayer()
             }
         }
     }
+
+    /**
+     * Replace the cue list while keeping highlight on the same cue identity when
+     * Phase-B prepends earlier cues (index shifts, identity unchanged). Only fall
+     * back to player matching when that cue disappeared from the new list.
+     */
+    private fun applyCuesPreservingActiveIdentity(newCues: List<TimedCue>) {
+        val previousIdentity = cues.getOrNull(currentCueIndex)?.identityKey()
+        cues = newCues
+        if (previousIdentity != null) {
+            val remapped = newCues.indexOfFirst { it.identityKey() == previousIdentity }
+            if (remapped >= 0) {
+                currentCueIndex = remapped
+                return
+            }
+        }
+        updateCurrentCueIndexFromPlayer()
+    }
+
+    private fun TimedCue.identityKey(): String = "$startMs|$endMs|$text"
 
     private fun trackSignature(): String {
         val selected = player.currentTracks.groups.firstOrNull {
