@@ -18,8 +18,7 @@ import java.io.File
  * Wraps a Matroska/WebM [Extractor] for incomplete local files:
  * - Replaces an unseekable seek map that still has a known duration with an
  *   EBML-validated [IndexSeekMap] of Cluster start positions (cue-EOF stays disabled).
- * - Falls back to the original [SeekMap.Unseekable] when fewer than two Clusters can
- *   be validated — never an approximate byte map.
+ * - Falls back to the original [SeekMap.Unseekable] when fewer than two Clusters validate.
  * - On [seek], clamps to the safe readable tip and snaps to the nearest indexed
  *   Cluster at or before the target.
  *
@@ -29,7 +28,6 @@ import java.io.File
 class IncompleteMatroskaSeekExtractor(
     private val delegate: Extractor,
     private val tipProvider: () -> Long,
-    @Suppress("unused") private val declaredProvider: () -> Long = { -1L },
     private val filePathProvider: () -> String? = { null },
 ) : Extractor {
 

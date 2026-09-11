@@ -70,8 +70,6 @@ import dev.anilbeesetti.nextplayer.feature.player.extensions.switchTrack
 import dev.anilbeesetti.nextplayer.feature.player.extensions.uriToSubtitleConfiguration
 import dev.anilbeesetti.nextplayer.feature.player.extensions.videoZoom
 import dev.anilbeesetti.nextplayer.feature.player.model.DecoderTrackType
-import dev.anilbeesetti.nextplayer.feature.player.utils.PlaybackFailureLog
-import dev.anilbeesetti.nextplayer.feature.player.utils.PlaybackFailureLogStore
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderManager
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderMode
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
@@ -361,7 +359,6 @@ class PlayerService : MediaSessionService() {
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            capturePlaybackFailure(error)
             if (!error.isDecoderFailure) {
                 decoderRecoveryManager.onNonDecoderError()
                 return
@@ -849,17 +846,6 @@ class PlayerService : MediaSessionService() {
         }.awaitAll()
     }
 
-
-    private fun capturePlaybackFailure(error: PlaybackException) {
-        val mediaItem = mediaSession?.player?.currentMediaItem
-        val report = PlaybackFailureLog.build(
-            error = error,
-            mediaUri = mediaItem?.localConfiguration?.uri,
-            mediaId = mediaItem?.mediaId,
-            context = applicationContext,
-        )
-        PlaybackFailureLogStore.save(applicationContext, report)
-    }
 
     private fun publishDecoderState() {
         val session = mediaSession ?: return

@@ -438,7 +438,7 @@ class GrowingContentDataSource(
         publishReadableTip(length)
     }
 
-    /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for approximate seeking. */
+    /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for incomplete-MKV cluster seeking. */
     private fun publishReadableTip(readableEnd: Long) {
         val u = uri ?: return
         val key = u.toString()

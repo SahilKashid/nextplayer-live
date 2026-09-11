@@ -1,7 +1,5 @@
 package dev.anilbeesetti.nextplayer.feature.player
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
@@ -25,15 +23,12 @@ import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -70,7 +65,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -112,7 +106,6 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberVideoZoomAndCont
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightnessGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeState
 import dev.anilbeesetti.nextplayer.feature.player.extensions.formatted
-import dev.anilbeesetti.nextplayer.feature.player.utils.PlaybackFailureLogStore
 import dev.anilbeesetti.nextplayer.feature.player.extensions.nameRes
 import dev.anilbeesetti.nextplayer.feature.player.state.seekAmountFormatted
 import dev.anilbeesetti.nextplayer.feature.player.state.seekToPositionFormated
@@ -611,17 +604,6 @@ fun MediaPlayerScreen(
                 errorState.playbackError != null
         )
     if (showPlayerError) {
-        val fallbackMessage = errorState.playbackError?.message
-            ?: stringResource(
-                if (allDecoderModesFailed) {
-                    coreUiR.string.no_supported_decoder
-                } else {
-                    coreUiR.string.unknown_error
-                },
-            )
-        val diagnosticDump = PlaybackFailureLogStore.latest()
-        val dialogText = if (!diagnosticDump.isNullOrBlank()) diagnosticDump else fallbackMessage
-        val diagnosticScroll = rememberScrollState()
         AlertDialog(
             onDismissRequest = { },
             title = {
@@ -629,26 +611,17 @@ fun MediaPlayerScreen(
             },
             text = {
                 Text(
-                    text = dialogText,
-                    modifier = Modifier
-                        .heightIn(max = 240.dp)
-                        .verticalScroll(diagnosticScroll),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    text = errorState.playbackError?.message
+                        ?: stringResource(
+                            if (allDecoderModesFailed) {
+                                coreUiR.string.no_supported_decoder
+                            } else {
+                                coreUiR.string.unknown_error
+                            },
+                        ),
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        context.getSystemService(ClipboardManager::class.java)
-                            ?.setPrimaryClip(
-                                ClipData.newPlainText("playback-failure", dialogText),
-                            )
-                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
-                    },
-                ) {
-                    Text(text = stringResource(coreUiR.string.copy))
-                }
                 if (player.hasNextMediaItem()) {
                     TextButton(
                         onClick = {

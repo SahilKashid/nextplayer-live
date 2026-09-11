@@ -384,7 +384,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         publishReadableTip(length)
     }
 
-    /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for approximate seeking. */
+    /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for incomplete-MKV cluster seeking. */
     private fun publishReadableTip(readableEnd: Long) {
         val path = this.path ?: return
         val declared = try {

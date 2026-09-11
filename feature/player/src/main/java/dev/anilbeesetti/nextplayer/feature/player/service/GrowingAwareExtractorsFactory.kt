@@ -71,7 +71,6 @@ class GrowingAwareExtractorsFactory(
                 IncompleteMatroskaSeekExtractor(
                     delegate = extractor,
                     tipProvider = { tipForKey(tipKey, path) },
-                    declaredProvider = { declaredForKey(tipKey, path) },
                     filePathProvider = pathProvider,
                 )
             } else {
@@ -188,21 +187,6 @@ class GrowingAwareExtractorsFactory(
                         ReadableTipTracker.update(key, snap.readableEnd, snap.declaredLength)
                     }
                     return snap.readableEnd
-                }
-            }
-            return -1L
-        }
-
-        private fun declaredForKey(tipKey: String, path: String?): Long {
-            for (key in tipLookupKeys(tipKey, path)) {
-                val tracked = ReadableTipTracker.declaredFor(key)
-                if (tracked > 0L) return tracked
-            }
-            if (path != null) {
-                val file = File(path)
-                if (file.exists()) {
-                    val declared = file.length()
-                    if (declared > 0L) return declared
                 }
             }
             return -1L
