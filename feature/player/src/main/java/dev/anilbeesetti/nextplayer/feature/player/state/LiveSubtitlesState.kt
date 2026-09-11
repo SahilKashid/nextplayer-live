@@ -19,6 +19,8 @@ import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleCueLoader
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -152,10 +154,12 @@ class LiveSubtitlesState(
         loadJob = scope.launch {
             isLoading = true
             val loaded = SubtitleCueLoader.loadSelectedTrackCues(context, player)
-            cues = loaded
-            isUnsupportedTrack = signature != "none" && loaded.isEmpty()
-            isLoading = false
-            updateCurrentCueIndex()
+            withContext(Dispatchers.Main.immediate) {
+                cues = loaded
+                isUnsupportedTrack = signature != "none" && loaded.isEmpty()
+                isLoading = false
+                updateCurrentCueIndex()
+            }
         }
     }
 

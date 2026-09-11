@@ -16,18 +16,23 @@ import kotlinx.coroutines.withContext
  * Loads a full cue timeline for the currently selected external subtitle track.
  *
  * Embedded (in-container) text tracks do not expose a parseable URI; those return empty.
+ * MediaController player APIs must run on the application thread; file I/O stays on IO.
  */
 @UnstableApi
 object SubtitleCueLoader {
 
-    suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> =
-        withContext(Dispatchers.IO) {
-            val uri = resolveSelectedSubtitleUri(player) ?: return@withContext emptyList()
+    suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> {
+        val uri = withContext(Dispatchers.Main.immediate) {
+            resolveSelectedSubtitleUri(player)
+        } ?: return emptyList()
+
+        return withContext(Dispatchers.IO) {
             val mimeType = uri.getSubtitleMime()
             if (!isSupportedMime(mimeType)) return@withContext emptyList()
             val content = readText(context, uri) ?: return@withContext emptyList()
             SubtitleCueParser.parse(content, mimeType)
         }
+    }
 
     fun resolveSelectedSubtitleUri(player: Player): Uri? {
         val selectedGroup = player.currentTracks.groups.firstOrNull {
