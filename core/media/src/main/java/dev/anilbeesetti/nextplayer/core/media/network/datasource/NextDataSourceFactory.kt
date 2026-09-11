@@ -21,13 +21,18 @@ import javax.inject.Singleton
  *
  * - Local `file://` (and path-resolvable `content://`) media uses [GrowingFileDataSource] so
  *   incomplete/growing downloads can play while still being written (VLC-style).
+ * - Unresolvable `content://` media uses [GrowingContentDataSource] (PFD / AFD with
+ *   [androidx.media3.common.C.LENGTH_UNSET]) — never Media3's fixed-length ContentDataSource
+ *   for video playback when growing support is desired.
  * - Other local / http(s) media uses Media3 [DefaultDataSource].
  * - `smb`/`ftp`/`sftp`/`webdav` use [NetworkDataSource].
  *
  * ## Growing-file limitations
  * Best with streamable containers (MKV, TS, many progressive downloads). MP4/MOV without an
- * early `moov` may not start until metadata is present. Duration/seek range may grow as more
- * media is parsed.
+ * early `moov` may need load retries until metadata is present (player
+ * `GrowingFileLoadErrorHandlingPolicy`). Duration/seek range may grow as more media is parsed.
+ * `content://` is supported via the growing content source when a filesystem path cannot be
+ * resolved.
  */
 @UnstableApi
 @Singleton
@@ -39,6 +44,7 @@ class NextDataSourceFactory @Inject constructor(
     override fun createDataSource(): DataSource = SchemeDispatchingDataSource(
         context = context,
         growingFile = GrowingFileDataSource.Factory().createDataSource(),
+        growingContent = GrowingContentDataSource.Factory(context).createDataSource(),
         default = DefaultDataSource.Factory(context).createDataSource(),
         network = NetworkDataSource(sessions),
     )
@@ -55,6 +61,7 @@ class NextDataSourceFactory @Inject constructor(
 private class SchemeDispatchingDataSource(
     private val context: Context,
     private val growingFile: DataSource,
+    private val growingContent: DataSource,
     private val default: DataSource,
     private val network: DataSource,
 ) : DataSource {
@@ -72,7 +79,8 @@ private class SchemeDispatchingDataSource(
                     // Rewrite to file:// so GrowingFileDataSource can open via RandomAccessFile.
                     growingFile to dataSpec.withUri(File(path).toUri())
                 } else {
-                    default to dataSpec
+                    // Path unresolved — grow via ContentResolver AFD/PFD, never fixed ContentDataSource.
+                    growingContent to dataSpec
                 }
             }
             else -> default to dataSpec
@@ -93,6 +101,7 @@ private class SchemeDispatchingDataSource(
 
     override fun addTransferListener(transferListener: TransferListener) {
         growingFile.addTransferListener(transferListener)
+        growingContent.addTransferListener(transferListener)
         default.addTransferListener(transferListener)
         network.addTransferListener(transferListener)
     }

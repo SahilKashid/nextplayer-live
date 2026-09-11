@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,5 +76,30 @@ class GrowingFileDataSourceTest {
     fun resolvePath_supportsFileUriAndRawPath() {
         assertEquals("/tmp/video.mkv", GrowingFileDataSource.resolvePath("file:///tmp/video.mkv".toUri()))
         assertEquals("/tmp/video.mkv", GrowingFileDataSource.resolvePath("/tmp/video.mkv".toUri()))
+    }
+
+    @Test
+    fun looksPartialFileName_detectsDownloaderSuffixes() {
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.mp4.part"))
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.mp4.crdownload"))
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.mp4.!ut"))
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.tmp"))
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.download"))
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.aria2"))
+        assertTrue(GrowingFileDataSource.looksPartialFileName("movie.bc!"))
+        assertFalse(GrowingFileDataSource.looksPartialFileName("movie.mp4"))
+    }
+
+    @Test
+    fun open_succeedsForTinyFileWithLengthUnset() {
+        val file = File.createTempFile("growing-tiny", ".bin")
+        file.writeBytes(byteArrayOf(1))
+        val source = GrowingFileDataSource()
+        try {
+            assertEquals(C.LENGTH_UNSET.toLong(), source.open(DataSpec(file.toUri())))
+        } finally {
+            source.close()
+            file.delete()
+        }
     }
 }

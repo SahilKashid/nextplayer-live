@@ -692,7 +692,9 @@ class PlayerService : MediaSessionService() {
             .setRenderersFactory(renderersFactory)
             .setTrackSelector(trackSelector)
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(applicationContext).setDataSourceFactory(dataSourceFactory),
+                DefaultMediaSourceFactory(applicationContext)
+                    .setDataSourceFactory(dataSourceFactory)
+                    .setLoadErrorHandlingPolicy(GrowingFileLoadErrorHandlingPolicy()),
             )
             .setAudioAttributes(
                 AudioAttributes.Builder()

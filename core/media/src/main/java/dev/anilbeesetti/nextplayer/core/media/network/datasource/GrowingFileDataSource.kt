@@ -20,14 +20,19 @@ import java.io.RandomAccessFile
  * Unlike Media3 [androidx.media3.datasource.FileDataSource], [open] always returns
  * [C.LENGTH_UNSET] so ExoPlayer does not treat the then-current EOF as the end of the stream.
  * [read] blocks (polling ~50ms) until more bytes appear; it only returns
- * [C.RESULT_END_OF_INPUT] once size and mtime have been stable for ~2s.
+ * [C.RESULT_END_OF_INPUT] once size and mtime have been stable for ~6s, the name does not look
+ * like a partial download, and nothing has grown within the last ~10s.
+ *
+ * Tiny / empty files still open successfully (with [C.LENGTH_UNSET]) so the extractors / load
+ * retry policy can wait for headers (e.g. MP4 `moov`) rather than failing at the DataSource.
  *
  * ## Limitations
  * - Works best with streamable / growing-friendly containers (MKV, TS, many incomplete
  *   progressive downloads).
- * - MP4/MOV without an early `moov` atom may not play until that metadata is present
- *   (same as most players; VLC is more aggressive about demuxing incomplete MP4s).
+ * - MP4/MOV without an early `moov` atom may need load retries until that metadata is present
+ *   (see player `GrowingFileLoadErrorHandlingPolicy`).
  * - Reported duration and seekable range may update only as more media is parsed.
+ * - Unresolvable `content://` URIs use [GrowingContentDataSource] instead.
  *
  * See ExoPlayer issues #10472 / #7070.
  */
@@ -43,6 +48,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     @Volatile
     private var closed = false
+
+    /** Wall-clock millis when on-disk length last increased. */
+    private var lastGrowthElapsedMs: Long = 0L
+    private var lastSeenLength: Long = -1L
 
     private val lock = Any()
 
@@ -63,6 +72,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 dataSpec.length
             } else {
                 C.LENGTH_UNSET.toLong()
+            }
+            val existing = File(resolvedPath)
+            if (existing.exists()) {
+                noteLength(existing.length())
             }
         } catch (e: InterruptedIOException) {
             throw e
@@ -94,6 +107,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
             val localFile = File(path)
             val lengthOnDisk = localFile.length()
+            noteLength(lengthOnDisk)
             val available = lengthOnDisk - readPosition
 
             if (available > 0) {
@@ -162,9 +176,17 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             }
             val size = f.length()
             val mtime = f.lastModified()
+            noteLength(size)
             // Seek is OK at or before current EOF; past a finished file is an error.
             if (size >= position) {
                 return
+            }
+            if (looksPartialFileName(f.name)) {
+                stableSize = size
+                stableMtime = mtime
+                stableSince = System.currentTimeMillis()
+                sleepInterruptibly(POLL_INTERVAL_MS)
+                continue
             }
             if (size == stableSize && mtime == stableMtime) {
                 if (stableSince == 0L) {
@@ -185,7 +207,12 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         var absentSince = 0L
         while (true) {
             throwIfClosedOrInterrupted()
-            if (File(path).exists()) return
+            val f = File(path)
+            if (f.exists()) {
+                // Tiny / empty files are fine — LENGTH_UNSET lets sniff/retry wait for headers.
+                noteLength(f.length())
+                return
+            }
             if (absentSince == 0L) {
                 absentSince = System.currentTimeMillis()
             } else if (System.currentTimeMillis() - absentSince >= STABLE_DURATION_MS) {
@@ -197,9 +224,18 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     /**
      * Treat the file as finished when its length and mtime have not changed for
-     * [STABLE_DURATION_MS]. Download managers typically stop updating both when done.
+     * [STABLE_DURATION_MS], nothing grew within [RECENT_GROWTH_WINDOW_MS], and the name does not
+     * look like a partial download artifact.
      */
     private fun isDownloadFinished(file: File): Boolean {
+        if (looksPartialFileName(file.name)) {
+            return false
+        }
+        val now = System.currentTimeMillis()
+        if (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) {
+            return false
+        }
+
         var lastSize = file.length()
         var lastMtime = file.lastModified()
         val start = System.currentTimeMillis()
@@ -208,16 +244,33 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             sleepInterruptibly(POLL_INTERVAL_MS)
             val size = file.length()
             val mtime = file.lastModified()
+            noteLength(size)
             if (size != lastSize || mtime != lastMtime) {
                 return false
             }
             if (size > readPosition) {
                 return false
             }
+            // Growth within window (e.g. size bumped then stalled) still blocks EOF.
+            if (lastGrowthElapsedMs > 0L &&
+                System.currentTimeMillis() - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
+            ) {
+                return false
+            }
             lastSize = size
             lastMtime = mtime
         }
         return file.length() <= readPosition
+    }
+
+    private fun noteLength(length: Long) {
+        if (length < 0L) return
+        if (length > lastSeenLength) {
+            lastSeenLength = length
+            lastGrowthElapsedMs = System.currentTimeMillis()
+        } else if (lastSeenLength < 0L) {
+            lastSeenLength = length
+        }
     }
 
     private fun openFileAt(path: String, position: Long) {
@@ -269,7 +322,26 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     companion object {
         private const val POLL_INTERVAL_MS = 50L
-        private const val STABLE_DURATION_MS = 2000L
+        /** Idle stability before treating a growing file as finished (was 2s; too short for downloader buffer pauses). */
+        private const val STABLE_DURATION_MS = 6_000L
+        private const val RECENT_GROWTH_WINDOW_MS = 10_000L
+
+        private val PARTIAL_SUFFIXES = listOf(
+            ".part",
+            ".crdownload",
+            ".!ut",
+            ".tmp",
+            ".download",
+            ".aria2",
+            ".bc!",
+        )
+
+        /** True when [name] looks like an in-progress download artifact. */
+        fun looksPartialFileName(name: String?): Boolean {
+            if (name.isNullOrEmpty()) return false
+            val lower = name.lowercase()
+            return PARTIAL_SUFFIXES.any { lower.endsWith(it) }
+        }
 
         /** Resolves `file://` URIs and raw filesystem paths. */
         fun resolvePath(uri: Uri): String? {
