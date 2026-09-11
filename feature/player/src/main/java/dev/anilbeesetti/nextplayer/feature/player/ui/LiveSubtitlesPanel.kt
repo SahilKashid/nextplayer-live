@@ -73,7 +73,8 @@ fun LiveSubtitlesPanel(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    val currentIndex = state.currentCueIndex
+    // Highlight leads with scrollTargetIndex (same ~380ms head start as the slide).
+    val highlightIndex = state.scrollTargetIndex
     val density = LocalDensity.current
     val userScrollConnection = remember(state) {
         object : NestedScrollConnection {
@@ -95,9 +96,8 @@ fun LiveSubtitlesPanel(
             val halfViewportPx = constraints.maxHeight / 2
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
-            // Bold/highlight tracks currentCueIndex (on-time with overlay).
-            // Scroll targets scrollTargetIndex, which leads the next cue so the
-            // slide into center finishes as that line goes bold.
+            // Scroll + highlight both use scrollTargetIndex (~380ms lead) so the
+            // color change and center slide land together on the upcoming cue.
             val scrollIndex = state.scrollTargetIndex
             val scrollCue = state.cues.getOrNull(scrollIndex)
             val scrollIdentity = scrollCue?.identityKey()
@@ -169,7 +169,7 @@ fun LiveSubtitlesPanel(
                         ) { index, cue ->
                             LiveSubtitleCueRow(
                                 cue = cue,
-                                isCurrent = index == currentIndex,
+                                isCurrent = index == highlightIndex,
                                 onClick = { state.seekToCue(cue) },
                             )
                         }
