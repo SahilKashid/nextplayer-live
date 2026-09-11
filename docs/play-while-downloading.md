@@ -6,9 +6,15 @@ regardless of where it is stored on the device.
 ## How it works
 
 `GrowingFileDataSource` replaces Media3 `FileDataSource` for `file://` URIs (and for `content://`
-URIs that resolve to a readable filesystem path). On `open()` it returns `C.LENGTH_UNSET` so
-ExoPlayer does not treat the then-current EOF as the end of the stream. On `read()` it polls
-(~50ms) until more bytes appear.
+URIs that resolve to a readable filesystem path) **while the file still looks incomplete**.
+On `open()` it returns `C.LENGTH_UNSET` so ExoPlayer does not treat the then-current EOF as
+the end of the stream. On `read()` it polls (~50ms) until more bytes appear.
+
+Once the file is **settled-complete** — not a partial name, readable tip has caught the
+declared length (or the last ~256KiB already has real bytes and any `SEEK_HOLE` is far from
+EOF), and mtime is stable or a short poll sees no further growth — `NextDataSourceFactory`
+routes it to Media3 `DefaultDataSource`. Playback then uses a finite length, normal Matroska
+cue-seek, and no incomplete-MKV wrapper.
 
 Unresolvable `content://` URIs use `GrowingContentDataSource` (AFD / PFD, same `LENGTH_UNSET` +
 reopen-on-EOF semantics). Media3’s fixed-length `ContentDataSource` is not used for this path.
@@ -25,12 +31,16 @@ because of a folder name:
 2. `SEEK_HOLE` readable end is behind the declared `File.length()`
 3. The last ~256KiB is all zeros, and the last-non-zero tip (`zeroPaddedReadableEnd`) is behind
    the declared length
-4. Optional: declared / readable length grew across a short poll
+4. Optional: declared / readable length grew across a short poll (only if mtime is recent)
 
 `IncompleteLocalMedia` is the single helper used by the growing datasources, extractors factory,
 and load-error policy. A zero-preallocated incomplete MKV under `/Movies/` behaves the same as
-one under any other directory. A finished MKV whose tail has real cues / non-zero data is **not**
-incomplete.
+one under any other directory.
+
+A finished file is **not** incomplete when the tip has caught the declared length, or when the
+last ~256KiB already contains real cues / media (a leftover `SEEK_HOLE` far from EOF is ignored).
+`shouldPlayAsGrowing` is false for those files once mtime is stable (or a 250ms poll sees no
+growth), so they take the finite-length path.
 
 ## Sparse holes and zero-filled tails
 

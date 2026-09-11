@@ -45,9 +45,25 @@ object SparseAwareFileLength {
      * Pure selection logic (unit-testable without Android Os):
      * if `0 < holeOffset < declaredLength`, the first hole / tip is the readable end; otherwise
      * use [declaredLength] (no hole, hole at EOF, or invalid probe).
+     *
+     * When [tailHasRealData] is true and the hole sits **before** the last
+     * [ZERO_TAIL_QUICK_CHECK_BYTES], treat the file as finished: a sequential
+     * download that has written the tail cannot still have a hole that far from
+     * EOF, so SEEK_HOLE is a false positive on a complete file.
+     * A hole *inside* the tail window is still the real sequential tip.
      */
-    fun chooseReadableEnd(declaredLength: Long, holeOffset: Long): Long {
+    fun chooseReadableEnd(
+        declaredLength: Long,
+        holeOffset: Long,
+        tailHasRealData: Boolean = false,
+    ): Long {
         if (declaredLength <= 0L) return 0L
+        if (tailHasRealData &&
+            holeOffset > 0L &&
+            holeOffset < declaredLength - ZERO_TAIL_QUICK_CHECK_BYTES
+        ) {
+            return declaredLength
+        }
         return if (holeOffset > 0L && holeOffset < declaredLength) {
             holeOffset
         } else {
@@ -60,10 +76,46 @@ object SparseAwareFileLength {
         declaredLength > 0L && readableEnd >= 0L && readableEnd < declaredLength
 
     /**
+     * True when the last [ZERO_TAIL_QUICK_CHECK_BYTES] of a large file contain a
+     * non-zero byte (cues / real media). Small files return false (unknown).
+     */
+    fun tailHasRealData(raf: RandomAccessFile, declaredLength: Long): Boolean {
+        if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
+        return !quickTailIsAllZeros(raf, declaredLength)
+    }
+
+    fun tailHasRealData(path: String, declaredLength: Long, fd: FileDescriptor?): Boolean {
+        if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
+        return try {
+            if (fd != null) {
+                tailHasRealData(declaredLength, fd)
+            } else {
+                RandomAccessFile(path, "r").use { raf ->
+                    tailHasRealData(raf, declaredLength)
+                }
+            }
+        } catch (_: IOException) {
+            false
+        } catch (_: RuntimeException) {
+            false
+        }
+    }
+
+    fun tailHasRealData(declaredLength: Long, fd: FileDescriptor?): Boolean {
+        if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES || fd == null) return false
+        return try {
+            !quickTailIsAllZerosFd(fd, declaredLength)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
      * Readable end for [path] / optional open [fd].
      *
-     * Order: SEEK_HOLE (API 26+) → optional zero-tail scan when [preferZeroTailScan] or the last
-     * [ZERO_TAIL_QUICK_CHECK_BYTES] are all zeros on a large file.
+     * Order: SEEK_HOLE (API 26+) → ignore a far hole when the tail already has
+     * real bytes (finished file) → optional zero-tail scan when [preferZeroTailScan]
+     * or the last [ZERO_TAIL_QUICK_CHECK_BYTES] are all zeros on a large file.
      *
      * @param path filesystem path (used to open a temporary FD / RAF when [fd] is null)
      * @param declaredLength [java.io.File.length] / AFD reported length
@@ -78,7 +130,10 @@ object SparseAwareFileLength {
     ): Long {
         if (declaredLength <= 0L) return 0L
         val holeBased = holeReadableEnd(path, declaredLength, fd)
-        if (holeBased < declaredLength) return holeBased
+        val tailData = !preferZeroTailScan && tailHasRealData(path, declaredLength, fd)
+        val chosen = chooseReadableEnd(declaredLength, holeBased, tailData)
+        if (tailData && chosen >= declaredLength) return declaredLength
+        if (chosen < declaredLength) return chosen
         return zeroTailOrDeclared(path, declaredLength, fd, preferZeroTailScan)
     }
 
@@ -93,7 +148,10 @@ object SparseAwareFileLength {
         if (declaredLength <= 0L) return 0L
         if (fd == null) return declaredLength
         val holeBased = holeReadableEndWithFd(declaredLength, fd)
-        if (holeBased < declaredLength) return holeBased
+        val tailData = !preferZeroTailScan && tailHasRealData(declaredLength, fd)
+        val chosen = chooseReadableEnd(declaredLength, holeBased, tailData)
+        if (tailData && chosen >= declaredLength) return declaredLength
+        if (chosen < declaredLength) return chosen
         return zeroTailOrDeclaredWithFd(declaredLength, fd, preferZeroTailScan)
     }
 

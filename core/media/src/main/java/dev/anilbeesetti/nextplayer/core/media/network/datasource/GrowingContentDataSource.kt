@@ -398,9 +398,15 @@ class GrowingContentDataSource(
     private fun resolveReadableTip(declared: Long, fd: FileDescriptor?): Long {
         if (fd == null) return declared
         val hole = SparseAwareFileLength.sparseHoleReadableEnd(declared, fd)
-        if (hole < declared) {
-            cachedZeroTailTip = hole
-            return hole
+        val tailData = SparseAwareFileLength.tailHasRealData(declared, fd)
+        val chosen = SparseAwareFileLength.chooseReadableEnd(declared, hole, tailData)
+        if (tailData && chosen >= declared) {
+            cachedZeroTailTip = declared
+            return declared
+        }
+        if (chosen < declared) {
+            cachedZeroTailTip = chosen
+            return chosen
         }
         val now = System.currentTimeMillis()
         if (cachedZeroTailTip < 0L) {

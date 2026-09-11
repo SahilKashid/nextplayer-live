@@ -19,8 +19,11 @@ import javax.inject.Singleton
 /**
  * The player's data source factory.
  *
- * - Local `file://` (and path-resolvable `content://`) media uses [GrowingFileDataSource] so
- *   incomplete/growing downloads can play while still being written (VLC-style).
+ * - Local `file://` (and path-resolvable `content://`) media that still looks incomplete
+ *   uses [GrowingFileDataSource] so downloads can play while being written (VLC-style).
+ * - The same URIs, once settled-complete (tip caught up / real tail, mtime not growing),
+ *   use Media3 [DefaultDataSource] so ExoPlayer sees a **finite** length, normal
+ *   Matroska cue-seek, and no incomplete wrapper.
  * - Unresolvable `content://` media uses [GrowingContentDataSource] (PFD / AFD with
  *   [androidx.media3.common.C.LENGTH_UNSET]) — never Media3's fixed-length ContentDataSource
  *   for video playback when growing support is desired.
@@ -72,12 +75,26 @@ private class SchemeDispatchingDataSource(
         val uri = dataSpec.uri
         val (target, effectiveSpec) = when {
             NetworkUri.isNetworkUri(uri) -> network to dataSpec
-            isFileUri(uri) -> growingFile to dataSpec
+            isFileUri(uri) -> {
+                val path = GrowingFileDataSource.resolvePath(uri)
+                if (path != null && File(path).canRead() &&
+                    !IncompleteLocalMedia.shouldPlayAsGrowing(path)
+                ) {
+                    default to dataSpec
+                } else {
+                    growingFile to dataSpec
+                }
+            }
             isContentUri(uri) -> {
                 val path = context.getPath(uri)
                 if (path != null && File(path).canRead()) {
-                    // Rewrite to file:// so GrowingFileDataSource can open via RandomAccessFile.
-                    growingFile to dataSpec.withUri(File(path).toUri())
+                    if (!IncompleteLocalMedia.shouldPlayAsGrowing(path)) {
+                        // Finished: finite-length DefaultDataSource (File/Content).
+                        default to dataSpec
+                    } else {
+                        // Rewrite to file:// so GrowingFileDataSource can open via RandomAccessFile.
+                        growingFile to dataSpec.withUri(File(path).toUri())
+                    }
                 } else {
                     // Path unresolved — grow via ContentResolver AFD/PFD, never fixed ContentDataSource.
                     growingContent to dataSpec

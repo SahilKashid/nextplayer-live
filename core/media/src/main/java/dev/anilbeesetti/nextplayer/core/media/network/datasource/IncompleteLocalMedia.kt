@@ -13,10 +13,16 @@ import java.io.FileDescriptor
  *    is behind the declared length
  * 4. Optional: declared / readable length grew across a short poll
  *
+ * A file that **was** growing is treated as settled-complete when it is not a
+ * partial name and the readable tip has caught the declared length (or the last
+ * ~256KiB already has real bytes and any SEEK_HOLE is far from EOF — a false
+ * hole on a finished file). Recent mtime alone does not keep it growing: a short
+ * poll must still see the tip / declared length advance.
+ *
  * Never keys off directory names (`1DM`, `Download`, `ADM`, …). A zero-preallocated
  * incomplete MKV under `/Movies/` is treated the same as one under any other folder.
  * A finished MKV whose tail contains real cues / non-zero data is **not** incomplete,
- * so Matroska cue-seek stays enabled.
+ * so playback uses a finite-length source and Matroska cue-seek stays enabled.
  */
 object IncompleteLocalMedia {
 
@@ -43,6 +49,13 @@ object IncompleteLocalMedia {
         /** Content-based incomplete: partial name **or** tip behind declared length. */
         val incomplete: Boolean
             get() = partialName || tipBehindDeclared
+
+        /**
+         * Finished: not a partial name, declared size is known, and the readable
+         * tip has caught up (SEEK_HOLE / zero-tail no longer behind).
+         */
+        val settledComplete: Boolean
+            get() = !partialName && declaredLength > 0L && !tipBehindDeclared
     }
 
     /** True when [name] looks like an in-progress download artifact. */
@@ -116,5 +129,37 @@ object IncompleteLocalMedia {
             second.readableEnd > first.readableEnd
     }
 
+    /**
+     * True when local playback should use the growing DataSource / disable
+     * Matroska cue-seek / wrap with the incomplete-MKV extractor.
+     *
+     * Missing files and partial names are growing. Content-incomplete (hole /
+     * zero tail) is growing. A settled-complete file with stable mtime is not.
+     * A settled-complete file whose mtime is recent is growing only if declared
+     * or readable length still advances across [growthPollMs] (append-style).
+     */
+    fun shouldPlayAsGrowing(
+        path: String,
+        fileName: String? = null,
+        nowMs: Long = System.currentTimeMillis(),
+        growthPollMs: Long = DEFAULT_GROWTH_POLL_MS,
+    ): Boolean {
+        if (looksPartialFileName(fileName)) return true
+        val file = File(path)
+        if (looksPartialFileName(file.name) || looksPartialFileName(path)) return true
+        if (!file.exists()) return true
+        val snapshot = inspect(path, fileName)
+        if (snapshot.incomplete) return true
+        val age = nowMs - file.lastModified()
+        if (age < 0L) return true
+        if (age < RECENT_MTIME_FOR_POLL_MS) {
+            return isGrowingAcrossPoll(path, growthPollMs)
+        }
+        return false
+    }
+
     const val DEFAULT_GROWTH_POLL_MS = 250L
+
+    /** Only run the optional append-style growth poll when mtime is this fresh. */
+    const val RECENT_MTIME_FOR_POLL_MS = 30_000L
 }

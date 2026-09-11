@@ -14,7 +14,6 @@ import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.IncompleteLocalMedia
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.ReadableTipTracker
-import java.io.File
 
 /**
  * [ExtractorsFactory] that disables Matroska end-of-file cue seeking for local URIs that look
@@ -31,12 +30,14 @@ import java.io.File
  *
  * Incomplete is **content-based only** ([IncompleteLocalMedia]):
  * - partial filename suffix
- * - SEEK_HOLE tip behind declared length
+ * - SEEK_HOLE tip behind declared length (a far hole is ignored when the tail
+ *   already has real cues / media — finished file)
  * - last ~256KiB all zeros and last-non-zero tip behind declared
  * - optional: declared / readable length growing across a short poll (only if mtime is recent)
  *
- * Finished local MKVs (real cues / non-zero tail, not a partial name) keep cue-seek enabled and
- * are **not** wrapped, so seeking is unchanged. Directory names are never used.
+ * Finished local MKVs (real cues / non-zero tail, not a partial name, mtime not growing)
+ * keep cue-seek enabled and are **not** wrapped, so seeking is unchanged. Directory names
+ * are never used.
  *
  * The no-arg [createExtractors] disables cue-seek (unknown URI — safe default) but does not wrap
  * (no tip key). Non-local / network URIs keep cue-seek enabled.
@@ -91,10 +92,6 @@ class GrowingAwareExtractorsFactory(
     }
 
     companion object {
-        private const val LENGTH_POLL_MS = 250L
-        /** Only run the optional growth poll when the file was touched this recently. */
-        private const val RECENT_MTIME_FOR_POLL_MS = 30_000L
-
         /**
          * True when a local URI looks incomplete. Network URIs always return false.
          */
@@ -107,21 +104,7 @@ class GrowingAwareExtractorsFactory(
 
             val path = resolveLocalPath(context, uri)
             if (path != null) {
-                val file = File(path)
-                if (IncompleteLocalMedia.looksPartialFileName(file.name) ||
-                    IncompleteLocalMedia.looksPartialFileName(path)
-                ) {
-                    return true
-                }
-                if (!file.exists()) return true
-                val snapshot = IncompleteLocalMedia.inspect(path)
-                if (snapshot.incomplete) return true
-                val age = System.currentTimeMillis() - file.lastModified()
-                if (age < 0L) return true
-                if (age < RECENT_MTIME_FOR_POLL_MS) {
-                    return IncompleteLocalMedia.isGrowingAcrossPoll(path, LENGTH_POLL_MS)
-                }
-                return false
+                return IncompleteLocalMedia.shouldPlayAsGrowing(path)
             }
 
             // content:// without a resolvable path — cannot inspect bytes.

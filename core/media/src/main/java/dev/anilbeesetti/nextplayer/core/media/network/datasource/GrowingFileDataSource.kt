@@ -41,6 +41,9 @@ import java.io.RandomAccessFile
  * - Reported duration and seekable range may update only as more media is parsed.
  * - Unresolvable `content://` URIs use [GrowingContentDataSource] instead.
  * - On API 24–25, SEEK_HOLE is unavailable; sparse tails fall back to zero-tail scanning.
+ * - Finished local files (settled tip, stable mtime) are routed to Media3
+ *   [androidx.media3.datasource.DefaultDataSource] by [NextDataSourceFactory] so they
+ *   open with a finite length and normal extractors. This class is the incomplete path.
  *
  * See ExoPlayer issues #10472 / #7070.
  */
@@ -194,16 +197,27 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         path: String,
         declared: Long,
     ): Long {
-        // SEEK_HOLE first (sparse preallocation).
+        // SEEK_HOLE first (sparse preallocation). A far hole plus a real tail
+        // means the download already reached EOF — do not cap at a stale hole.
         val holeBased = try {
             SparseAwareFileLength.sparseHoleReadableEnd(path, declared, raf.fd)
         } catch (_: Exception) {
             declared
         }
-        if (holeBased < declared) {
-            cachedReadableTip = holeBased
-            noteLength(holeBased)
-            return holeBased
+        val tailData = try {
+            SparseAwareFileLength.tailHasRealData(raf, declared)
+        } catch (_: Exception) {
+            false
+        }
+        val chosen = SparseAwareFileLength.chooseReadableEnd(declared, holeBased, tailData)
+        if (tailData && chosen >= declared) {
+            cachedReadableTip = declared
+            return declared
+        }
+        if (chosen < declared) {
+            cachedReadableTip = chosen
+            noteLength(chosen)
+            return chosen
         }
         val now = System.currentTimeMillis()
         if (cachedReadableTip < 0L) {

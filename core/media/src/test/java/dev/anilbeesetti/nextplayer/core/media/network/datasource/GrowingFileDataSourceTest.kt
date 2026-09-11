@@ -332,4 +332,87 @@ class GrowingFileDataSourceTest {
         assertTrue(IncompleteLocalMedia.isIncomplete(path = null, fileName = "show.mkv.part"))
         assertTrue(IncompleteLocalMedia.isIncomplete("/tmp/show.mkv.crdownload"))
     }
+
+    @Test
+    fun chooseReadableEnd_ignoresFarHoleWhenTailHasRealData() {
+        val declared = 31_762_747L
+        val farHole = 2_097_152L
+        assertEquals(
+            declared,
+            SparseAwareFileLength.chooseReadableEnd(declared, farHole, tailHasRealData = true),
+        )
+        val nearHole = declared - 64L * 1024L
+        assertEquals(
+            nearHole,
+            SparseAwareFileLength.chooseReadableEnd(declared, nearHole, tailHasRealData = true),
+        )
+        assertEquals(
+            farHole,
+            SparseAwareFileLength.chooseReadableEnd(declared, farHole, tailHasRealData = false),
+        )
+    }
+
+    @Test
+    fun incompleteLocalMedia_preallocatedThenFilledBecomesSettledComplete() {
+        val file = File.createTempFile("prealloc-then-done", ".mkv")
+        try {
+            val declared = 4L * 1024L * 1024L
+            val prefix = 384L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.setLength(declared)
+                raf.seek(0)
+                raf.write(ByteArray(prefix.toInt()) { (it % 250 + 1).toByte() })
+                raf.seek(prefix)
+                raf.write(ByteArray((declared - prefix).toInt()) { 0 })
+            }
+            val growing = IncompleteLocalMedia.inspect(file.absolutePath)
+            assertTrue("preallocated zero tail must be incomplete", growing.incomplete)
+            assertFalse(growing.settledComplete)
+            assertTrue(IncompleteLocalMedia.shouldPlayAsGrowing(file.absolutePath))
+
+            // Download finishes: remaining bytes become real media / cues.
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.seek(prefix)
+                raf.write(ByteArray((declared - prefix).toInt()) { 0x5A })
+            }
+            file.setLastModified(System.currentTimeMillis() - 60_000L)
+
+            val done = IncompleteLocalMedia.inspect(file.absolutePath)
+            assertFalse("filled file must not stay incomplete", done.incomplete)
+            assertTrue(done.settledComplete)
+            assertEquals(declared, done.declaredLength)
+            assertEquals(declared, done.readableEnd)
+            assertFalse(
+                "stable finished file must leave the growing path",
+                IncompleteLocalMedia.shouldPlayAsGrowing(file.absolutePath),
+            )
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun shouldPlayAsGrowing_zeroTailAndPartialNameStayGrowing() {
+        val file = File.createTempFile("still-growing", ".mkv")
+        try {
+            val declared = 4L * 1024L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.setLength(declared)
+                raf.seek(0)
+                raf.write(ByteArray(384 * 1024) { 1 })
+                raf.seek(384L * 1024L)
+                raf.write(ByteArray((declared - 384L * 1024L).toInt()) { 0 })
+            }
+            file.setLastModified(System.currentTimeMillis() - 60_000L)
+            assertTrue(IncompleteLocalMedia.shouldPlayAsGrowing(file.absolutePath))
+            assertTrue(IncompleteLocalMedia.shouldPlayAsGrowing("/tmp/movie.mkv.part"))
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun shouldPlayAsGrowing_missingFileIsGrowing() {
+        assertTrue(IncompleteLocalMedia.shouldPlayAsGrowing("/tmp/does-not-exist-nextplayer-test.mkv"))
+    }
 }
