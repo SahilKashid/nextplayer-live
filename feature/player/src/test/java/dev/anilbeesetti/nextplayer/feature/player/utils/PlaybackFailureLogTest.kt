@@ -106,8 +106,8 @@ class PlaybackFailureLogTest {
             assertTrue(report, report.contains("IncompleteLocalMedia.partialName: true"))
             assertTrue(report, report.contains("GrowingAware.isLikelyGrowing: "))
             assertTrue(report, report.contains("ReadableTipTracker[path=${file.absolutePath}]: tip=96 declared=128"))
-            assertTrue(report, report.contains("ApproximateByteSeekMap.tipProvider(last): 96"))
-            assertTrue(report, report.contains("ApproximateByteSeekMap.safeTip: "))
+            assertTrue(report, report.contains("seek.tip: 96"))
+            assertTrue(report, report.contains("seek.safeTip: "))
         } finally {
             file.delete()
         }

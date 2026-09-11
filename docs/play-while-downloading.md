@@ -54,7 +54,7 @@ advancing. A small cap applies when the tip is stuck. Complete files fail fast.
 Far cue-style seeks past the current tip fail fast so load can proceed without waiting for
 end-of-file cues.
 
-## Incomplete MKV seeking (estimated)
+## Incomplete MKV seeking (cluster index)
 
 With cue-EOF seek disabled, Media3 normally emits an unseekable `SeekMap`, so scrubbing does
 nothing. Next Player Live wraps incomplete Matroska extractors with
@@ -62,20 +62,19 @@ nothing. Next Player Live wraps incomplete Matroska extractors with
 
 1. `GrowingFileDataSource` / `GrowingContentDataSource` publish the sparse/zero-tail aware tip
    via `ReadableTipTracker` (under path, URI, and `file://` key forms).
-2. When the delegate reports an unseekable map that still has a known duration, it is replaced
-   with `ApproximateByteSeekMap` (full Info duration on the timeline; **tip-relative** byte
-   mapping across the downloaded tip, with a ~1 MiB safety margin so scrubbing never lands in
-   the unfinished / zero-padded edge). Mid-timeline scrub stays mid-tip — it does **not** clamp
-   to tip−1 when declared length ≫ tip.
-3. On seek, the byte position is clamped to the safe tip and snapped back to the nearest
-   **validated** preceding Cluster (`1F 43 B6 75` + plausible EBML size varint) within a 4 MiB
-   scan. Candidates near the tip edge or with a zero size byte are rejected; if none match,
-   seek falls back to position `0`.
+2. When the delegate reports an unseekable map that still has a known duration, `MatroskaClusterIndexer`
+   walks the local file with real EBML ID+size varints from the Segment start up to `safeTip`
+   (tip minus ~1 MiB). A Cluster is recorded only when its size is a valid VINT
+   (`1 <= size <= min(remaining, 64MiB)`) and a Timecode (`0xE7`, size 1..8) is present in the
+   first ~64 bytes of payload. Two or more validated Clusters become a Media3 `IndexSeekMap`
+   (full Info duration on the timeline; seek points only at those Cluster starts). Fewer than
+   two → keep `Unseekable` (better no seek than a crash). Approximate byte mapping and raw
+   `1F43B675` scans are not used.
+3. On seek, the byte position is clamped to the safe tip and snapped to the nearest indexed
+   Cluster at or before the target. The index is rebuilt if the tip has grown by more than 8 MiB.
 
-This is **estimated** seeking across the downloaded tip (VLC-like). Avoid seeking into the
-unfinished edge — that region is often a truncated cluster or zero padding and will fail parse.
-It may be less accurate than VLC until real cues exist at EOF; finished files keep normal
-cue-based seeking and are not wrapped.
+Seeking is only possible across **already-downloaded, indexed Clusters**. The duration bar still
+shows the full Info length. Finished files keep normal cue-based seeking and are not wrapped.
 
 ## Limitations
 
@@ -84,8 +83,8 @@ cue-based seeking and are not wrapped.
 - **MP4/MOV without an early `moov`** may not start until that metadata is present; the load
   retry policy waits briefly while the download grows.
 - **Duration and seek range** may update only as more media is parsed.
-- **Incomplete MKV scrubbing** is estimated within the downloaded tip and may be less accurate
-  than VLC until cues exist.
+- **Incomplete MKV scrubbing** only hits indexed downloaded Clusters; the duration bar still
+  shows the full length. Accuracy is Cluster-level until real cues exist at EOF.
 - **API 24–25**: `SEEK_HOLE` requires API 26+; zero-tail last-non-zero scanning still covers
   non-sparse preallocation.
 
@@ -93,6 +92,5 @@ cue-based seeking and are not wrapped.
 
 1. Start a download of a video (preferably MKV/TS) with any download manager.
 2. While the file is still growing — stored anywhere — open it in Next Player Live.
-3. Playback should start and continue as more bytes are written into the tip; scrubbing within
-   the timeline seeks approximately across the downloaded tip (estimated, safety-margined), and
-   snaps to a validated Cluster.
+3. Playback should start and continue as more bytes are written into the tip; scrubbing seeks
+   to validated downloaded Clusters (safety-margined). The duration bar shows the full length.

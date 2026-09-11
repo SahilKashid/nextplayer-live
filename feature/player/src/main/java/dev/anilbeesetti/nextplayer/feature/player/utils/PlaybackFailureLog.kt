@@ -14,7 +14,7 @@ import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.IncompleteLocalMedia
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.ReadableTipTracker
-import dev.anilbeesetti.nextplayer.feature.player.service.ApproximateByteSeekMap
+import dev.anilbeesetti.nextplayer.feature.player.service.MatroskaClusterIndexer
 import dev.anilbeesetti.nextplayer.feature.player.service.GrowingAwareExtractorsFactory
 import java.io.File
 import java.io.PrintWriter
@@ -180,7 +180,7 @@ object PlaybackFailureLog {
         if (path == null) {
             appendLine("  path: <unresolved>")
             appendReadableTip("uri", uri.toString())
-            appendApproximateSeek(tip = ReadableTipTracker.tipFor(uri.toString()))
+            appendSeekTip(tip = ReadableTipTracker.tipFor(uri.toString()))
             return@buildString
         }
 
@@ -219,9 +219,9 @@ object PlaybackFailureLog {
         val declaredFallback = declaredFromTracker.takeIf { it > 0L }
             ?: snapshot?.declaredLength?.takeIf { it > 0L }
             ?: -1L
-        appendLine("  ApproximateByteSeekMap.tipProvider(last): $tipFallback")
-        appendLine("  ApproximateByteSeekMap.declaredProvider(last): $declaredFallback")
-        appendApproximateSeek(tip = tipFallback)
+        appendLine("  seek.tip: $tipFallback")
+        appendLine("  seek.declared: $declaredFallback")
+        appendSeekTip(tip = tipFallback)
     }
 
     private fun StringBuilder.appendReadableTip(label: String, key: String) {
@@ -236,14 +236,14 @@ object PlaybackFailureLog {
         }
     }
 
-    private fun StringBuilder.appendApproximateSeek(tip: Long) {
+    private fun StringBuilder.appendSeekTip(tip: Long) {
         if (tip > 0L) {
-            val margin = ApproximateByteSeekMap.safetyMarginFor(tip)
-            val safe = ApproximateByteSeekMap.safeTip(tip)
-            appendLine("  ApproximateByteSeekMap.safetyMargin: $margin")
-            appendLine("  ApproximateByteSeekMap.safeTip: $safe")
+            val margin = MatroskaClusterIndexer.safetyMarginFor(tip)
+            val safe = MatroskaClusterIndexer.safeTip(tip)
+            appendLine("  seek.safetyMargin: $margin")
+            appendLine("  seek.safeTip: $safe")
         } else {
-            appendLine("  ApproximateByteSeekMap.safeTip: <n/a tip=$tip>")
+            appendLine("  seek.safeTip: <n/a tip=$tip>")
         }
     }
 

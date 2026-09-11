@@ -19,14 +19,15 @@ import java.io.File
 /**
  * [ExtractorsFactory] that disables Matroska end-of-file cue seeking for local URIs that look
  * **incomplete**, and wraps Matroska extractors with [IncompleteMatroskaSeekExtractor] so the
- * player still gets an approximate seekable map within the downloaded tip.
+ * player still gets an EBML-validated Cluster [androidx.media3.extractor.IndexSeekMap]
+ * within the downloaded tip (or stays unseekable if too few Clusters validate).
  *
  * VLC (libmatroska) plays Clusters without requiring Cues at EOF. Media3 [MatroskaExtractor]
  * seeks to the Cues element near EOF when SeekHead points there (ExoPlayer#8935); on incomplete
  * MKVs that seek hits zeros / EOF. With [MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES], playback
  * starts as soon as the header and early clusters are present. The wrapper then replaces the
- * resulting [androidx.media3.extractor.SeekMap.Unseekable] with [ApproximateByteSeekMap] and
- * snaps seek byte positions to the nearest preceding Cluster.
+ * resulting [androidx.media3.extractor.SeekMap.Unseekable] with an indexed Cluster seek map
+ * and snaps seek byte positions to those Cluster starts.
  *
  * Incomplete is **content-based only** ([IncompleteLocalMedia]):
  * - partial filename suffix
