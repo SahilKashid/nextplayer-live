@@ -1,6 +1,5 @@
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -32,14 +31,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -276,23 +273,10 @@ private fun LiveSubtitleCueRow(
         MaterialTheme.colorScheme.onSurface
     }
 
-    // Fast scenes: 0ms color swap (no scale/alpha). Slow scenes: short fade only.
-    // animateColorAsState is always called (Compose hook rules).
-    val colorSpec = if (rapidHighlight) {
-        tween<Color>(durationMillis = 0)
-    } else {
-        tween<Color>(durationMillis = 160, easing = FastOutSlowInEasing)
-    }
-    val background by animateColorAsState(
-        targetValue = targetBackground,
-        animationSpec = colorSpec,
-        label = "cueBackground",
-    )
-    val contentColor by animateColorAsState(
-        targetValue = targetContent,
-        animationSpec = colorSpec,
-        label = "cueContent",
-    )
+    // Always snap color/weight — animated fades still read as flicker after rewind
+    // when the lead target chatters across a threshold.
+    val background = targetBackground
+    val contentColor = targetContent
     val timeLabel = remember(cue.startMs) { Utils.formatDurationMillis(cue.startMs) }
     val weight = when {
         !isCurrent -> FontWeight.Normal

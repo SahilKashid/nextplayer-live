@@ -36,6 +36,8 @@ private val IdleHighlightTick = 500.milliseconds
 // Start centering the upcoming cue slightly before it becomes active so the
 // slide finishes as bold/highlight lands (matches scroll animation length).
 private val ScrollLeadMs = 380L
+private val ScrollLeadHysteresisMs = 120L
+private val DisableLeadAfterSeekMs = 500L
 private val PartialCoalesceWindow = 48.milliseconds
 
 @UnstableApi
@@ -95,6 +97,8 @@ class LiveSubtitlesState(
     private var loadJob: Job? = null
     private var resumeFollowJob: Job? = null
     private var lastTrackSignature: String? = null
+    /** Realtime millis until which scroll/highlight lead is disabled (after seek). */
+    private var leadDisabledUntilElapsedMs: Long = 0L
 
     fun togglePanel() {
         isPanelVisible = !isPanelVisible
@@ -129,8 +133,11 @@ class LiveSubtitlesState(
     }
 
     fun seekToCue(cue: TimedCue) {
+        leadDisabledUntilElapsedMs =
+            android.os.SystemClock.elapsedRealtime() + DisableLeadAfterSeekMs
         player.seekTo(cue.startMs.coerceAtLeast(0L))
         jumpToCurrent()
+        updateCurrentCueIndexFromPosition(cue.startMs.coerceAtLeast(0L))
     }
 
     suspend fun observe() {
@@ -151,8 +158,13 @@ class LiveSubtitlesState(
                     if (events.contains(Player.EVENT_CUES)) {
                         updateCurrentCueIndexFromCues()
                     }
-                    if (events.containsAny(
-                            Player.EVENT_POSITION_DISCONTINUITY,
+                    if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) {
+                        // Rewind/seek: drop lead briefly so highlight doesn't chatter
+                        // between current and next around the lead threshold.
+                        leadDisabledUntilElapsedMs =
+                            android.os.SystemClock.elapsedRealtime() + DisableLeadAfterSeekMs
+                        updateCurrentCueIndexFromPosition(player.currentPosition)
+                    } else if (events.containsAny(
                             Player.EVENT_PLAYBACK_STATE_CHANGED,
                             Player.EVENT_IS_PLAYING_CHANGED,
                         )
@@ -177,6 +189,10 @@ class LiveSubtitlesState(
      * a delay-adjusted position match when no cue is active.
      */
     fun updateCurrentCueIndexFromPlayer() {
+        if (android.os.SystemClock.elapsedRealtime() < leadDisabledUntilElapsedMs) {
+            updateCurrentCueIndexFromPosition(player.currentPosition)
+            return
+        }
         val active = player.currentCues.cues
         if (active.isNotEmpty() && matchCuesToIndex(active)) {
             updateScrollTarget()
@@ -186,6 +202,12 @@ class LiveSubtitlesState(
     }
 
     fun updateCurrentCueIndexFromCues() {
+        // Right after rewind/seek, trust timeline position over cue-text matching
+        // so duplicate lines don't make bold/color chatter.
+        if (android.os.SystemClock.elapsedRealtime() < leadDisabledUntilElapsedMs) {
+            updateCurrentCueIndexFromPosition(player.currentPosition)
+            return
+        }
         val active = player.currentCues.cues
         if (active.isNotEmpty() && matchCuesToIndex(active)) {
             updateScrollTarget()
@@ -215,11 +237,9 @@ class LiveSubtitlesState(
 
 
     /**
-     * Lead the auto-scroll toward the next cue shortly before it becomes current,
-     * so the slide into center feels on-time with bold/highlight.
-     *
-     * Lead is adaptive: short/rapid cue gaps get little or no lead so we don't
-     * thrash between current and next during fast scenes.
+     * Lead the auto-scroll/highlight toward the next cue shortly before it becomes
+     * current. Adaptive lead + hysteresis avoid chatter after rewind (crossing the
+     * lead threshold repeatedly) and during fast scenes.
      */
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex
@@ -232,6 +252,13 @@ class LiveSubtitlesState(
             scrollTargetIndex = current
             return
         }
+
+        // After seek/rewind, stick to the true current cue until lead re-enables.
+        if (android.os.SystemClock.elapsedRealtime() < leadDisabledUntilElapsedMs) {
+            scrollTargetIndex = current
+            return
+        }
+
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
         val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
         val gapToNext = (cues[next].startMs - cues[current].startMs).coerceAtLeast(0L)
@@ -240,8 +267,21 @@ class LiveSubtitlesState(
             gapToNext <= 560L -> gapToNext / 3
             else -> ScrollLeadMs
         }
+        if (leadMs <= 0L) {
+            scrollTargetIndex = current
+            return
+        }
+
         val untilNext = cues[next].startMs - effective
-        scrollTargetIndex = if (leadMs > 0L && untilNext in 0..leadMs) next else current
+        val alreadyLeading = scrollTargetIndex == next
+        val enterLead = untilNext in 0..leadMs
+        // Leave lead only after we're clearly outside the window (+ hysteresis).
+        val leaveLead = untilNext > leadMs + ScrollLeadHysteresisMs || untilNext < 0L
+        scrollTargetIndex = when {
+            alreadyLeading && !leaveLead -> next
+            !alreadyLeading && enterLead -> next
+            else -> current
+        }
     }
 
     /** @deprecated Use [updateCurrentCueIndexFromPlayer]. Kept for older call sites. */
