@@ -167,6 +167,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         var stableSize = -1L
         var stableMtime = -1L
         var stableSince = 0L
+        var waitStarted = 0L
         while (true) {
             throwIfClosedOrInterrupted()
             val f = File(path)
@@ -181,26 +182,49 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             if (size >= position) {
                 return
             }
+            val now = System.currentTimeMillis()
+            if (waitStarted == 0L) {
+                waitStarted = now
+            }
+            val gap = position - size
+            // Cue-style seeks land far past the current EOF on incomplete MKVs. Do not wait the
+            // full STABLE_DURATION_MS hoping for end cues — fail fast so load can proceed without
+            // cue-seek (or retry). Still wait briefly for the next few KB of a cluster.
+            if (gap > CUE_SEEK_GAP_BYTES &&
+                (looksPartialFileName(f.name) || isActivelyGrowing(mtime)) &&
+                now - waitStarted >= CUE_SEEK_FAIL_FAST_MS
+            ) {
+                throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+            }
             if (looksPartialFileName(f.name)) {
                 stableSize = size
                 stableMtime = mtime
-                stableSince = System.currentTimeMillis()
+                stableSince = now
                 sleepInterruptibly(POLL_INTERVAL_MS)
                 continue
             }
             if (size == stableSize && mtime == stableMtime) {
                 if (stableSince == 0L) {
-                    stableSince = System.currentTimeMillis()
-                } else if (System.currentTimeMillis() - stableSince >= STABLE_DURATION_MS) {
+                    stableSince = now
+                } else if (now - stableSince >= STABLE_DURATION_MS) {
                     throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
                 }
             } else {
                 stableSize = size
                 stableMtime = mtime
-                stableSince = System.currentTimeMillis()
+                stableSince = now
             }
             sleepInterruptibly(POLL_INTERVAL_MS)
         }
+    }
+
+    /** True when length recently grew or mtime is very fresh (downloader buffering). */
+    private fun isActivelyGrowing(mtime: Long): Boolean {
+        val now = System.currentTimeMillis()
+        if (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) {
+            return true
+        }
+        return now - mtime in 0 until CUE_SEEK_FRESH_MTIME_MS
     }
 
     private fun waitUntilExists(path: String) {
@@ -325,6 +349,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         /** Idle stability before treating a growing file as finished (was 2s; too short for downloader buffer pauses). */
         private const val STABLE_DURATION_MS = 6_000L
         private const val RECENT_GROWTH_WINDOW_MS = 10_000L
+        /** Far seeks (e.g. Matroska Cues near EOF) beyond current length + this gap fail fast. */
+        private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
+        private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
+        private const val CUE_SEEK_FRESH_MTIME_MS = 20_000L
 
         private val PARTIAL_SUFFIXES = listOf(
             ".part",

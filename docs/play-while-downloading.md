@@ -18,11 +18,16 @@ Unresolvable `content://` URIs use `GrowingContentDataSource`, which opens via
 growing semantics. Media3’s fixed-length `ContentDataSource` is **not** used for video playback
 when growing support is desired.
 
-`GrowingFileLoadErrorHandlingPolicy` retries progressive load/source errors (including
-`UnrecognizedInputFormatException` / `ParserException`) for local `file://` and `content://`
-media for up to ~45 seconds. That gives incomplete containers time to append headers — especially
-**MP4/MOV until an early `moov` appears** — instead of failing immediately with “Source error” /
-“Can't play video”.
+For still-growing MKVs, `GrowingAwareExtractorsFactory` sets
+`MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES` so playback can start as soon as the header and
+early clusters are present, without a long end-cue demux wait.
+
+`GrowingFileLoadErrorHandlingPolicy` only briefly retries progressive load/source errors
+(including `UnrecognizedInputFormatException` / `ParserException`) for local `file://` /
+`content://` media while the file is still tiny, actively growing, or looks partial — a hard
+cap of a few seconds (~8 × ~600ms), not a long demux delay. That covers empty-at-open races and
+rare **MP4/MOV until an early `moov` appears**, instead of failing immediately with
+“Source error” / “Can't play video”. Large, stable, non-partial files surface errors quickly.
 
 Network schemes (`smb` / `ftp` / `sftp` / `webdav`) still use `NetworkDataSource`. http(s) still
 uses Media3 `DefaultDataSource`.

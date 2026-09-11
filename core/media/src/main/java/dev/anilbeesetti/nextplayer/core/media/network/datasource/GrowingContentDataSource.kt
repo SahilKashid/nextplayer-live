@@ -164,6 +164,7 @@ class GrowingContentDataSource(
         var absentSince = 0L
         var stableLength = -1L
         var stableSince = 0L
+        var waitStarted = 0L
         while (true) {
             throwIfClosedOrInterrupted()
             try {
@@ -178,18 +179,33 @@ class GrowingContentDataSource(
                     openDescriptorAt(uri, position)
                     return
                 }
+                val now = System.currentTimeMillis()
+                if (waitStarted == 0L) {
+                    waitStarted = now
+                }
+                val gap = position - length
+                val looksGrowing = looksPartialName(displayName) ||
+                    looksPartialName(uri.lastPathSegment) ||
+                    (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS)
+                // Cue-style far seeks on a growing content URI: fail fast after a short wait.
+                if (gap > CUE_SEEK_GAP_BYTES &&
+                    looksGrowing &&
+                    now - waitStarted >= CUE_SEEK_FAIL_FAST_MS
+                ) {
+                    throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+                }
                 if (length == stableLength) {
                     if (stableSince == 0L) {
-                        stableSince = System.currentTimeMillis()
+                        stableSince = now
                     } else if (
-                        System.currentTimeMillis() - stableSince >= STABLE_DURATION_MS &&
+                        now - stableSince >= STABLE_DURATION_MS &&
                         !looksPartialName(displayName)
                     ) {
                         throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
                     }
                 } else {
                     stableLength = length
-                    stableSince = System.currentTimeMillis()
+                    stableSince = now
                 }
             } catch (e: DataSourceException) {
                 throw e
@@ -357,6 +373,8 @@ class GrowingContentDataSource(
         private const val POLL_INTERVAL_MS = 50L
         private const val STABLE_DURATION_MS = 6_000L
         private const val RECENT_GROWTH_WINDOW_MS = 10_000L
+        private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
+        private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
 
         private val PARTIAL_SUFFIXES = listOf(
             ".part",
