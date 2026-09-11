@@ -2,6 +2,7 @@ package dev.anilbeesetti.nextplayer.feature.player.utils.subtitle
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
@@ -31,6 +32,9 @@ import java.io.EOFException
  * Demuxes a local/http media container and builds a full text cue timeline for one embedded
  * subtitle track using Media3 extractors + [DefaultSubtitleParserFactory].
  *
+ * Supports progressive partial emission and a near-playback-first two-phase demux when a
+ * [SeekMap] is available so the live panel can paint mid-movie without waiting for a full scan.
+ *
  * Bitmap image subtitles (PGS / VobSub / DVB) are not converted to text and yield an empty list.
  */
 @UnstableApi
@@ -39,26 +43,37 @@ object EmbeddedSubtitleCueExtractor {
     private val subtitleParserFactory = DefaultSubtitleParserFactory()
     private val cueDecoder = CueDecoder()
 
+    /** Prefer near-playback extract when the user is at least this far into the file. */
+    private const val NEAR_FIRST_THRESHOLD_MS = 15_000L
+    /** Seek a few seconds before playback so the active cue is usually included. */
+    private const val NEAR_SEEK_LEAD_MS = 5_000L
+    /** Emit a partial list at least this often while demuxing. */
+    private const val PARTIAL_EMIT_MIN_INTERVAL_MS = 200L
+    /** Or whenever at least this many new cues have been decoded since the last emit. */
+    private const val PARTIAL_EMIT_CUE_BATCH = 50
+    /** Phase A aims to publish at least this many cues near playback before continuing. */
+    private const val PHASE_A_TARGET_CUES = 50
+
     fun extract(
         context: Context,
         mediaUri: Uri,
         selectedFormat: Format,
         preferredTextTrackIndex: Int,
+        playbackPositionMs: Long = 0L,
+        onPartialCues: ((List<TimedCue>) -> Unit)? = null,
     ): List<TimedCue> {
         if (isBitmapSubtitle(selectedFormat)) return emptyList()
 
         val dataSource: DataSource = DefaultDataSource.Factory(context).createDataSource()
         return try {
-            val tracks = demuxTextTracks(
+            demuxAndConvert(
                 dataSource = dataSource,
                 mediaUri = mediaUri,
                 selectedFormat = selectedFormat,
                 preferredTextTrackIndex = preferredTextTrackIndex,
+                playbackPositionMs = playbackPositionMs,
+                onPartialCues = onPartialCues,
             )
-            val matched = selectBestTextTrack(tracks, selectedFormat, preferredTextTrackIndex)
-                ?: return emptyList()
-            if (isBitmapSubtitle(matched.format)) return emptyList()
-            samplesToTimedCues(matched)
         } catch (_: Exception) {
             emptyList()
         } finally {
@@ -140,15 +155,15 @@ object EmbeddedSubtitleCueExtractor {
         return listOf(TimedCue(startMs = startMs, endMs = endMs, text = text))
     }
 
-    private fun demuxTextTracks(
+    private fun demuxAndConvert(
         dataSource: DataSource,
         mediaUri: Uri,
         selectedFormat: Format,
         preferredTextTrackIndex: Int,
-    ): List<CollectedTextTrack> {
+        playbackPositionMs: Long,
+        onPartialCues: ((List<TimedCue>) -> Unit)?,
+    ): List<TimedCue> {
         val output = CollectingExtractorOutput(selectedFormat, preferredTextTrackIndex)
-        // Text-track transcoding defaults to enabled in Media3 1.11 and emits
-        // APPLICATION_MEDIA3_CUES samples decoded via DefaultSubtitleParserFactory.
         val extractorsFactory = DefaultExtractorsFactory()
             .setSubtitleParserFactory(subtitleParserFactory)
         val extractors = extractorsFactory.createExtractors(mediaUri, emptyMap())
@@ -156,28 +171,124 @@ object EmbeddedSubtitleCueExtractor {
 
         var input: ExtractorInput = openInput(dataSource, mediaUri, position = 0L)
         val extractor = sniffExtractor(extractors, input) ?: return emptyList()
-        // sniff() peeks; reset peek before init/read.
         input.resetPeekPosition()
         extractor.init(output)
 
         val positionHolder = PositionHolder()
+        val emitter = ProgressiveEmitter(onPartialCues)
+        val seen = HashSet<String>()
+        val merged = mutableListOf<TimedCue>()
+        // Incremental decode cursor per selected track sample list identity.
+        var decodedSampleCount = 0
+
+        fun reopenAt(position: Long, timeUs: Long) {
+            runCatching { dataSource.close() }
+            input = openInput(dataSource, mediaUri, position = position)
+            extractor.seek(position, timeUs)
+        }
+
+        fun readOnce(): Int {
+            return when (extractor.read(input, positionHolder)) {
+                Extractor.RESULT_CONTINUE -> Extractor.RESULT_CONTINUE
+                Extractor.RESULT_END_OF_INPUT -> Extractor.RESULT_END_OF_INPUT
+                Extractor.RESULT_SEEK -> {
+                    reopenAt(positionHolder.position, timeUs = 0L)
+                    Extractor.RESULT_CONTINUE
+                }
+                else -> Extractor.RESULT_END_OF_INPUT
+            }
+        }
+
+        fun selectedTrackOrNull(): CollectedTextTrack? {
+            val tracks = output.textTracksInOrder()
+            return selectBestTextTrack(tracks, selectedFormat, preferredTextTrackIndex)
+                ?.takeUnless { isBitmapSubtitle(it.format) }
+        }
+
+        fun refreshMergedFromSelected(): List<TimedCue> {
+            val track = selectedTrackOrNull() ?: return merged.sortedBy { it.startMs }
+            if (track.samples.size < decodedSampleCount) {
+                // Sample list was trimmed (phase B); reset decode cursor.
+                decodedSampleCount = 0
+            }
+            val decoded = appendNewSamples(track, decodedSampleCount, seen, merged)
+            decodedSampleCount = track.samples.size
+            val snapshot = merged.sortedBy { it.startMs }
+            emitter.maybeEmit(snapshot)
+            return snapshot
+        }
+
         try {
-            while (true) {
-                when (val result = extractor.read(input, positionHolder)) {
-                    Extractor.RESULT_CONTINUE -> Unit
-                    Extractor.RESULT_END_OF_INPUT -> break
-                    Extractor.RESULT_SEEK -> {
-                        runCatching { dataSource.close() }
-                        input = openInput(dataSource, mediaUri, position = positionHolder.position)
-                        extractor.seek(positionHolder.position, 0L)
+            // Bootstrap until SeekMap typically arrives.
+            var bootstrap = 0
+            while (bootstrap < 64 && output.seekMap == null) {
+                if (readOnce() == Extractor.RESULT_END_OF_INPUT) break
+                bootstrap++
+            }
+
+            val seekMap = output.seekMap
+            if (playbackPositionMs >= NEAR_FIRST_THRESHOLD_MS &&
+                seekMap != null &&
+                seekMap.isSeekable
+            ) {
+                val seekTimeMs = (playbackPositionMs - NEAR_SEEK_LEAD_MS).coerceAtLeast(0L)
+                val seekTimeUs = Util.msToUs(seekTimeMs)
+                val seekPoints = seekMap.getSeekPoints(seekTimeUs)
+                val seekPos = seekPoints.first.position
+                reopenAt(seekPos, seekTimeUs)
+                // Fresh sample buffer after seek — clear any bootstrap leftovers.
+                output.clearAllSamples()
+                decodedSampleCount = 0
+                merged.clear()
+                seen.clear()
+
+                // Phase A: read forward from near playback; emit ASAP once we have a batch.
+                var phaseAEmitted = false
+                while (true) {
+                    val result = readOnce()
+                    val current = refreshMergedFromSelected()
+                    if (!phaseAEmitted && current.size >= PHASE_A_TARGET_CUES) {
+                        emitter.maybeEmit(current, force = true)
+                        phaseAEmitted = true
                     }
-                    else -> break
+                    if (result == Extractor.RESULT_END_OF_INPUT) break
+                }
+                emitter.maybeEmit(merged.sortedBy { it.startMs }, force = true)
+
+                // Phase B: fill cues from the start up to the phase-A join point.
+                val joinTimeUs = seekTimeUs
+                reopenAt(0L, 0L)
+                output.clearAllSamples()
+                decodedSampleCount = 0
+                // Keep merged/seen so phase-A cues remain; only add earlier ones.
+
+                while (true) {
+                    val result = readOnce()
+                    val newestBeforeTrim = output.newestSampleTimeUs()
+                    output.dropSamplesAtOrAfter(joinTimeUs)
+                    refreshMergedFromSelected()
+                    // Stop once the demux has reached the phase-A join; later cues are
+                    // already in [merged] from phase A.
+                    if (newestBeforeTrim != C.TIME_UNSET && newestBeforeTrim >= joinTimeUs) {
+                        break
+                    }
+                    if (result == Extractor.RESULT_END_OF_INPUT) break
+                }
+            } else {
+                // Single full pass with progressive emission.
+                while (true) {
+                    val result = readOnce()
+                    refreshMergedFromSelected()
+                    if (result == Extractor.RESULT_END_OF_INPUT) break
                 }
             }
+
+            val finalCues = refreshMergedFromSelected()
+            emitter.maybeEmit(finalCues, force = true)
+            return finalCues
         } finally {
             extractor.release()
         }
-        return output.textTracksInOrder()
     }
 
     private fun sniffExtractor(extractors: Array<Extractor>, input: ExtractorInput): Extractor? {
@@ -204,29 +315,35 @@ object EmbeddedSubtitleCueExtractor {
         return DefaultExtractorInput(dataSource, position, length)
     }
 
-    private fun samplesToTimedCues(track: CollectedTextTrack): List<TimedCue> {
+    private fun appendNewSamples(
+        track: CollectedTextTrack,
+        alreadyDecoded: Int,
+        seen: HashSet<String>,
+        into: MutableList<TimedCue>,
+    ): List<TimedCue> {
         val format = track.format
-        val cues = mutableListOf<TimedCue>()
-        val seen = HashSet<String>()
+        val startIndex = alreadyDecoded.coerceIn(0, track.samples.size)
 
         if (format.sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) {
-            for (sample in track.samples) {
+            for (i in startIndex until track.samples.size) {
+                val sample = track.samples[i]
                 val decoded = runCatching {
                     cueDecoder.decode(sample.timeUs, sample.data, 0, sample.data.size)
                 }.getOrNull() ?: continue
                 for (timed in cuesWithTimingToTimedCues(decoded)) {
                     val key = "${timed.startMs}|${timed.endMs}|${timed.text}"
-                    if (seen.add(key)) cues += timed
+                    if (seen.add(key)) into += timed
                 }
             }
-            return cues.sortedBy { it.startMs }
+            return into
         }
 
         if (!subtitleParserFactory.supportsFormat(format)) {
-            return emptyList()
+            return into
         }
         val parser = subtitleParserFactory.create(format)
-        for (sample in track.samples) {
+        for (i in startIndex until track.samples.size) {
+            val sample = track.samples[i]
             val parsed = mutableListOf<CuesWithTiming>()
             runCatching {
                 parser.parse(
@@ -240,12 +357,12 @@ object EmbeddedSubtitleCueExtractor {
                 val adjusted = adjustTiming(cuesWithTiming, sample.timeUs)
                 for (timed in cuesWithTimingToTimedCues(adjusted)) {
                     val key = "${timed.startMs}|${timed.endMs}|${timed.text}"
-                    if (seen.add(key)) cues += timed
+                    if (seen.add(key)) into += timed
                 }
             }
         }
         parser.reset()
-        return cues.sortedBy { it.startMs }
+        return into
     }
 
     private fun adjustTiming(cues: CuesWithTiming, sampleTimeUs: Long): CuesWithTiming {
@@ -271,6 +388,29 @@ object EmbeddedSubtitleCueExtractor {
     private val ASS_OVERRIDE_TAG = Regex("""\{[^}]*\}""")
     private val SRT_POSITION_TAG = Regex("""\{\\an\d\}""")
 
+    private class ProgressiveEmitter(
+        private val onPartialCues: ((List<TimedCue>) -> Unit)?,
+    ) {
+        private var lastEmitElapsedMs = 0L
+        private var lastEmitSize = 0
+
+        fun maybeEmit(cues: List<TimedCue>, force: Boolean = false) {
+            val callback = onPartialCues ?: return
+            if (cues.isEmpty()) return
+            val now = SystemClock.elapsedRealtime()
+            val grew = cues.size - lastEmitSize
+            if (!force &&
+                grew < PARTIAL_EMIT_CUE_BATCH &&
+                now - lastEmitElapsedMs < PARTIAL_EMIT_MIN_INTERVAL_MS
+            ) {
+                return
+            }
+            lastEmitElapsedMs = now
+            lastEmitSize = cues.size
+            callback(cues)
+        }
+    }
+
     internal data class CollectedTextTrack(
         val format: Format,
         val samples: List<Sample>,
@@ -288,7 +428,8 @@ object EmbeddedSubtitleCueExtractor {
         private val textTrackOutputs = linkedMapOf<Int, CollectingTrackOutput>()
         private val discarding = DiscardingTrackOutput()
         private val textOrder = mutableListOf<Int>()
-        private var selectedId: Int? = null
+        var seekMap: SeekMap? = null
+            private set
 
         override fun track(id: Int, type: Int): TrackOutput {
             if (type != C.TRACK_TYPE_TEXT) return discarding
@@ -302,7 +443,9 @@ object EmbeddedSubtitleCueExtractor {
             pruneToSelectedTrack()
         }
 
-        override fun seekMap(seekMap: SeekMap) = Unit
+        override fun seekMap(seekMap: SeekMap) {
+            this.seekMap = seekMap
+        }
 
         fun textTracksInOrder(): List<CollectedTextTrack> {
             pruneToSelectedTrack()
@@ -310,8 +453,37 @@ object EmbeddedSubtitleCueExtractor {
                 val output = textTrackOutputs[id] ?: return@mapNotNull null
                 if (output.discardSamples) return@mapNotNull null
                 val format = output.format ?: return@mapNotNull null
-                CollectedTextTrack(format = format, samples = output.samples.toList())
+                CollectedTextTrack(format = format, samples = output.samples)
             }
+        }
+
+        fun clearAllSamples() {
+            textTrackOutputs.values.forEach { it.clearSamples() }
+        }
+
+        fun dropSamplesAtOrAfter(joinTimeUs: Long) {
+            pruneToSelectedTrack()
+            textTrackOutputs.values.forEach { output ->
+                if (output.discardSamples) return@forEach
+                output.samples.removeAll { sample ->
+                    sample.timeUs != C.TIME_UNSET && sample.timeUs >= joinTimeUs
+                }
+            }
+        }
+
+        fun newestSampleTimeUs(): Long {
+            var max = C.TIME_UNSET
+            textTrackOutputs.values.forEach { output ->
+                if (output.discardSamples) return@forEach
+                for (sample in output.samples) {
+                    if (sample.timeUs != C.TIME_UNSET &&
+                        (max == C.TIME_UNSET || sample.timeUs > max)
+                    ) {
+                        max = sample.timeUs
+                    }
+                }
+            }
+            return max
         }
 
         private fun pruneToSelectedTrack() {
@@ -323,7 +495,6 @@ object EmbeddedSubtitleCueExtractor {
             }
             if (scored.isEmpty()) return
             val bestId = scored.maxBy { it.second }.first
-            selectedId = bestId
             textTrackOutputs.forEach { (id, output) ->
                 if (id != bestId) {
                     output.discardSamples = true

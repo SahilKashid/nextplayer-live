@@ -20,7 +20,8 @@ import kotlinx.coroutines.withContext
  *
  * External SRT/VTT (and other Media3-parseable text files) are read from their URI.
  * Embedded in-container text tracks are demuxed on a background thread via
- * [EmbeddedSubtitleCueExtractor]. MediaController player APIs stay on Main.
+ * [EmbeddedSubtitleCueExtractor] with progressive partial updates and optional
+ * near-playback-first seeking. MediaController player APIs stay on Main.
  *
  * Results are cached in-memory (session LRU) and on disk under `subtitleCacheDir`.
  */
@@ -38,13 +39,20 @@ object SubtitleCueLoader {
     suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> =
         loadSelectedTrackCuesDetailed(context, player).cues
 
-    suspend fun loadSelectedTrackCuesDetailed(context: Context, player: Player): LoadResult {
+    suspend fun loadSelectedTrackCuesDetailed(
+        context: Context,
+        player: Player,
+        onPartialCues: ((List<TimedCue>) -> Unit)? = null,
+    ): LoadResult {
         val selection = withContext(Dispatchers.Main.immediate) {
             resolveSelectedSubtitle(player)
         } ?: return LoadResult(emptyList(), "none", fromCache = false)
 
         val mediaId = withContext(Dispatchers.Main.immediate) {
             player.currentMediaItem?.mediaId
+        }
+        val playbackPositionMs = withContext(Dispatchers.Main.immediate) {
+            player.currentPosition.coerceAtLeast(0L)
         }
         val cacheKey = LiveSubtitleCueCache.buildKey(
             mediaId = mediaId,
@@ -55,6 +63,7 @@ object SubtitleCueLoader {
             context = context,
         )
 
+        // Memory hit: paint immediately, no spinner.
         LiveSubtitleCueCache.getMemoryOnly(cacheKey)?.let {
             return LoadResult(it, cacheKey, fromCache = true)
         }
@@ -75,6 +84,8 @@ object SubtitleCueLoader {
                         mediaUri = selection.mediaUri,
                         selectedFormat = selection.format,
                         preferredTextTrackIndex = selection.textTrackIndex,
+                        playbackPositionMs = playbackPositionMs,
+                        onPartialCues = onPartialCues,
                     )
                 }
                 else -> emptyList()

@@ -1,9 +1,12 @@
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -48,11 +52,15 @@ import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import dev.anilbeesetti.nextplayer.feature.player.state.LiveSubtitlesState
+import kotlin.math.abs
+
+private val ScrollAnimation = tween<Float>(durationMillis = 320, easing = FastOutSlowInEasing)
+private val HighlightAnimation = tween<Float>(durationMillis = 280, easing = FastOutSlowInEasing)
 
 /**
  * Right-side live subtitles timeline for landscape playback.
  *
- * Auto-scrolls so the active cue sits near the vertical center while
+ * Auto-scrolls so the active cue is vertically centered while
  * [LiveSubtitlesState.isFollowing] is true. User scrolling pauses follow for ~3s
  * (or until "jump to current").
  */
@@ -87,8 +95,7 @@ fun LiveSubtitlesPanel(
             LaunchedEffect(currentIndex, state.isFollowing, halfViewportPx, state.cues.size) {
                 if (!state.isFollowing) return@LaunchedEffect
                 if (currentIndex !in state.cues.indices) return@LaunchedEffect
-                // Snappy centering while following live — avoid animate lag that feels late.
-                listState.scrollItemTopToCenter(currentIndex)
+                listState.animateItemCenterToViewportCenter(currentIndex)
             }
 
             when {
@@ -120,7 +127,7 @@ fun LiveSubtitlesPanel(
                 }
 
                 else -> {
-                    // Half-viewport padding lets first/last cues scroll to center.
+                    // Half-viewport padding lets first/last cues scroll to true center.
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -172,15 +179,17 @@ fun LiveSubtitlesPanel(
     }
 }
 
-/** Scroll so [index]'s top edge sits at the vertical center of the viewport. */
-private suspend fun LazyListState.scrollItemTopToCenter(index: Int) {
-    scrollToItem(index)
+/** Animate so [index]'s vertical midpoint sits at the viewport center. */
+private suspend fun LazyListState.animateItemCenterToViewportCenter(index: Int) {
+    animateScrollToItem(index)
+    // Layout may need a frame after animateScrollToItem before offsets are final.
     val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
     val viewportCenter =
-        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-    val delta = item.offset - viewportCenter
-    if (delta != 0) {
-        scrollBy(delta.toFloat())
+        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2f
+    val itemCenter = item.offset + item.size / 2f
+    val delta = itemCenter - viewportCenter
+    if (abs(delta) > 1f) {
+        animateScrollBy(delta, animationSpec = ScrollAnimation)
     }
 }
 
@@ -196,6 +205,7 @@ private fun LiveSubtitleCueRow(
         } else {
             MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         },
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
         label = "cueBackground",
     )
     val contentColor by animateColorAsState(
@@ -204,13 +214,29 @@ private fun LiveSubtitleCueRow(
         } else {
             MaterialTheme.colorScheme.onSurface
         },
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
         label = "cueContent",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isCurrent) 1.03f else 1f,
+        animationSpec = HighlightAnimation,
+        label = "cueScale",
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (isCurrent) 1f else 0.72f,
+        animationSpec = HighlightAnimation,
+        label = "cueAlpha",
     )
     val timeLabel = remember(cue.startMs) { Utils.formatDurationMillis(cue.startMs) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+            }
             .clip(MaterialTheme.shapes.medium)
             .background(background)
             .clickable(onClick = onClick)

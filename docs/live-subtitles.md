@@ -5,9 +5,9 @@ The landscape live-subtitles side panel builds a full `(startMs, endMs, text)` c
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and WebVTT are parsed by `SubtitleCueParser`; ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files.
-- **Embedded** text tracks inside containers (MKV/MP4/…): `EmbeddedSubtitleCueExtractor` demuxes the media with Media3 `DefaultExtractorsFactory` (text-track transcoding enabled) on a background IO dispatcher, matches the selected `Format` (id / language / label / original mime / order), and converts `CuesWithTiming` into `TimedCue`s. Non-selected text tracks and bitmap tracks discard samples early.
+- **Embedded** text tracks inside containers (MKV/MP4/…): `EmbeddedSubtitleCueExtractor` demuxes the media with Media3 `DefaultExtractorsFactory` (text-track transcoding enabled) on a background IO dispatcher, matches the selected `Format` (id / language / label / original mime / order), and converts `CuesWithTiming` into `TimedCue`s. Non-selected text tracks and bitmap tracks discard samples early. While demuxing, partial cue lists are published to the UI (~every 50 cues / 200ms). When playback is mid-file and a `SeekMap` is available, extraction seeks near the current position first (phase A) so the panel paints quickly, then fills earlier cues from the start (phase B) and merges/dedupes before caching.
 
-Player / `MediaController` APIs (`currentTracks`, `currentMediaItem`, `currentCues`) are only read on the main application thread; demux and file I/O stay on `Dispatchers.IO`.
+Player / `MediaController` APIs (`currentTracks`, `currentMediaItem`, `currentCues`, `currentPosition`) are only read on the main application thread; demux and file I/O stay on `Dispatchers.IO`.
 
 ## Highlight sync
 
@@ -15,7 +15,7 @@ The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCue
 
 ## Cache
 
-Cue timelines are cached in a session LRU and on disk under `context.subtitleCacheDir` as `live_cues_*.json`, keyed by media id/URI + track signature (+ file length/lastModified when available). Cache hits paint immediately without a full-panel spinner.
+Cue timelines are cached in a session LRU and on disk under `context.subtitleCacheDir` as compact `live_cues_*.bin` files (legacy JSON is migrated on read), keyed by media id/URI + track signature (+ file length/lastModified when available). Memory hits paint immediately; disk hits avoid a full demux spinner.
 
 ## Unsupported
 

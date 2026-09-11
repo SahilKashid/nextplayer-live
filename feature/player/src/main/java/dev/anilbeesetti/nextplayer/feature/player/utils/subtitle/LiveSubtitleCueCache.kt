@@ -6,25 +6,31 @@ import androidx.media3.common.Format
 import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.core.common.extensions.subtitleCacheDir
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.File
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * Session LRU + disk cache for live-subtitle [TimedCue] timelines.
  *
- * Disk files live under [Context.subtitleCacheDir] as `live_cues_*.json`, keyed by media URI /
- * media id, track signature, and optional file length/lastModified.
+ * Disk files live under [Context.subtitleCacheDir] as `live_cues_*.bin` (compact binary).
+ * Legacy `live_cues_*.json` files are still read once and rewritten as binary.
  */
 @UnstableApi
 object LiveSubtitleCueCache {
 
-    private const val VERSION = 1
+    private const val VERSION = 2
     private const val MEMORY_CAPACITY = 12
     private const val FILE_PREFIX = "live_cues_"
+    private const val MAGIC = 0x4C534342 // 'LSCB'
 
     private val lock = ReentrantLock()
     private val memory = object : LinkedHashMap<String, List<TimedCue>>(16, 0.75f, true) {
@@ -78,57 +84,102 @@ object LiveSubtitleCueCache {
     fun getMemoryOnly(key: String): List<TimedCue>? = lock.withLock { memory[key] }
 
     private fun readDisk(context: Context, key: String): List<TimedCue>? {
-        val file = cacheFile(context, key)
-        if (!file.exists() || !file.isFile) return null
-        return runCatching {
-            val root = JSONObject(file.readText())
-            if (root.optInt("v") != VERSION) return null
-            val arr = root.getJSONArray("cues")
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    add(
-                        TimedCue(
-                            startMs = o.getLong("s"),
-                            endMs = o.getLong("e"),
-                            text = o.getString("t"),
-                        ),
-                    )
-                }
-            }
-        }.getOrNull()
+        val bin = cacheFileBin(context, key)
+        if (bin.exists() && bin.isFile) {
+            readBinary(bin)?.let { return it }
+        }
+        val json = cacheFileJson(context, key)
+        if (json.exists() && json.isFile) {
+            val legacy = readJson(json) ?: return null
+            // Migrate to binary for faster subsequent loads.
+            writeBinary(bin, legacy)
+            runCatching { json.delete() }
+            return legacy
+        }
+        return null
     }
 
     private fun writeDisk(context: Context, key: String, cues: List<TimedCue>) {
         runCatching {
-            val arr = JSONArray()
-            for (cue in cues) {
-                arr.put(
-                    JSONObject()
-                        .put("s", cue.startMs)
-                        .put("e", cue.endMs)
-                        .put("t", cue.text),
-                )
-            }
-            val root = JSONObject().put("v", VERSION).put("cues", arr)
-            val file = cacheFile(context, key)
-            file.parentFile?.mkdirs()
-            val tmp = File(file.parentFile, "${file.name}.tmp")
-            tmp.writeText(root.toString())
-            if (!tmp.renameTo(file)) {
-                file.writeText(root.toString())
-                tmp.delete()
-            }
+            val bin = cacheFileBin(context, key)
+            bin.parentFile?.mkdirs()
+            writeBinary(bin, cues)
+            // Remove legacy JSON if present.
+            runCatching { cacheFileJson(context, key).delete() }
         }
     }
 
-    private fun cacheFile(context: Context, key: String): File {
-        val digest = MessageDigest.getInstance("SHA-256")
+    private fun writeBinary(file: File, cues: List<TimedCue>) {
+        val tmp = File(file.parentFile, "${file.name}.tmp")
+        DataOutputStream(BufferedOutputStream(FileOutputStream(tmp))).use { out ->
+            out.writeInt(MAGIC)
+            out.writeInt(VERSION)
+            out.writeInt(cues.size)
+            for (cue in cues) {
+                out.writeLong(cue.startMs)
+                out.writeLong(cue.endMs)
+                val bytes = cue.text.toByteArray(Charsets.UTF_8)
+                out.writeInt(bytes.size)
+                out.write(bytes)
+            }
+            out.flush()
+        }
+        if (!tmp.renameTo(file)) {
+            tmp.copyTo(file, overwrite = true)
+            tmp.delete()
+        }
+    }
+
+    private fun readBinary(file: File): List<TimedCue>? = runCatching {
+        DataInputStream(BufferedInputStream(FileInputStream(file))).use { input ->
+            if (input.readInt() != MAGIC) return null
+            if (input.readInt() != VERSION) return null
+            val count = input.readInt()
+            if (count < 0 || count > 500_000) return null
+            buildList(count) {
+                repeat(count) {
+                    val start = input.readLong()
+                    val end = input.readLong()
+                    val len = input.readInt()
+                    if (len < 0 || len > 1_000_000) return null
+                    val bytes = ByteArray(len)
+                    input.readFully(bytes)
+                    add(TimedCue(startMs = start, endMs = end, text = String(bytes, Charsets.UTF_8)))
+                }
+            }
+        }
+    }.getOrNull()
+
+    private fun readJson(file: File): List<TimedCue>? = runCatching {
+        val root = JSONObject(file.readText())
+        val version = root.optInt("v")
+        if (version != 1 && version != VERSION) return null
+        val arr = root.getJSONArray("cues")
+        buildList(arr.length()) {
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                add(
+                    TimedCue(
+                        startMs = o.getLong("s"),
+                        endMs = o.getLong("e"),
+                        text = o.getString("t"),
+                    ),
+                )
+            }
+        }
+    }.getOrNull()
+
+    private fun cacheFileBin(context: Context, key: String): File =
+        File(context.subtitleCacheDir, "$FILE_PREFIX${digest(key)}.bin")
+
+    private fun cacheFileJson(context: Context, key: String): File =
+        File(context.subtitleCacheDir, "$FILE_PREFIX${digest(key)}.json")
+
+    private fun digest(key: String): String =
+        MessageDigest.getInstance("SHA-256")
             .digest(key.toByteArray(Charsets.UTF_8))
             .joinToString("") { b -> "%02x".format(b) }
             .take(40)
-        return File(context.subtitleCacheDir, "$FILE_PREFIX$digest.json")
-    }
 
     private fun uriFileMeta(context: Context, uri: Uri?): Pair<Long, Long>? {
         if (uri == null) return null

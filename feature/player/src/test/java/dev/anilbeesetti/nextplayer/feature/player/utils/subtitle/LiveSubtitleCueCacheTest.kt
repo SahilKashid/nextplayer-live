@@ -40,6 +40,6 @@ class LiveSubtitleCueCacheTest {
         assertEquals(cues, LiveSubtitleCueCache.getMemoryOnly(key))
         assertEquals(cues, LiveSubtitleCueCache.get(context, key))
         val cacheFiles = context.cacheDir.resolve("subtitles").list()?.toList().orEmpty()
-        assertTrue(cacheFiles.any { it.startsWith("live_cues_") && it.endsWith(".json") })
+        assertTrue(cacheFiles.any { it.startsWith("live_cues_") && it.endsWith(".bin") })
     }
 }

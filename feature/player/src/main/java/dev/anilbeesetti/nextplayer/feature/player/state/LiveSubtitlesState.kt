@@ -267,11 +267,29 @@ class LiveSubtitlesState(
 
             // Only spin when we have nothing to show yet. Cache hits return immediately
             // from memory/disk inside the loader so reopen / track reselect stays snappy.
+            // Progressive demux partials also clear the spinner as soon as cues arrive.
             if (cues.isEmpty()) {
                 isLoading = true
             }
-            val result = SubtitleCueLoader.loadSelectedTrackCuesDetailed(context, player)
+            val loadGeneration = lastTrackSignature
+            val result = SubtitleCueLoader.loadSelectedTrackCuesDetailed(
+                context = context,
+                player = player,
+                onPartialCues = { partial ->
+                    // Called from the IO demux thread — hop to Main without blocking demux.
+                    scope.launch(Dispatchers.Main.immediate) {
+                        if (lastTrackSignature != loadGeneration) return@launch
+                        if (partial.isEmpty()) return@launch
+                        // Prefer larger / newer snapshots so phase merges don't regress.
+                        if (cues.isNotEmpty() && partial.size < cues.size) return@launch
+                        cues = partial
+                        isUnsupportedTrack = false
+                        updateCurrentCueIndexFromPlayer()
+                    }
+                },
+            )
             withContext(Dispatchers.Main.immediate) {
+                if (lastTrackSignature != loadGeneration) return@withContext
                 cues = result.cues
                 isUnsupportedTrack = result.cues.isEmpty()
                 isLoading = false
