@@ -253,8 +253,9 @@ class LiveSubtitlesState(
 
     /**
      * Lead **scroll only** toward the next cue shortly before it becomes current.
-     * Bold/color use [highlightedCueKey] from the true current cue and never lead.
-     * Adaptive lead + hysteresis avoid scroll chatter after rewind.
+     * Drives both scroll centering and bold/color via [scrollTargetKey].
+     * Adaptive lead + hysteresis avoid chatter after rewind; identity keys
+     * keep remux index remaps from flashing highlight.
      */
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex
