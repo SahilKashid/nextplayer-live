@@ -10,10 +10,9 @@ import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
-import dev.anilbeesetti.nextplayer.core.media.network.datasource.DownloadPathHeuristic
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingContentDataSource
-import dev.anilbeesetti.nextplayer.core.media.network.datasource.SparseAwareFileLength
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.IncompleteLocalMedia
 import java.io.EOFException
 import java.io.File
 import java.io.IOException
@@ -27,20 +26,12 @@ import java.io.IOException
  * playback can start as soon as the header and early clusters are present — this policy
  * does **not** introduce a long demux delay.
  *
- * This policy only covers short waits for tiny/incomplete headers, for example:
- * - empty or near-empty file at open
- * - rare MP4/MOV where `moov` has not landed yet
- * - transient parse / EOF / IO while bytes are still arriving on a still-tiny or
- *   actively growing / partial download
+ * Retries while the file looks incomplete ([IncompleteLocalMedia]): partial name,
+ * readable tip behind declared length, tiny / unsnifftable header, or tip still
+ * advancing. Small cap when the tip is stuck. Fail-fast when the file looks complete
+ * (no zero tail, hole tip == declared, not a partial name).
  *
- * [DefaultLoadErrorHandlingPolicy] treats [ParserException] /
- * [UnrecognizedInputFormatException] as non-retriable; without a short retry those
- * surface immediately as "Source error" / "Can't play video" when the file is opened
- * before any usable header bytes exist.
- *
- * Ordinary caps are short (~14 attempts). Download-manager paths, zero-padded tails, and
- * Matroska varint/EBML errors get a longer budget (~50 × ~600ms ≈ 30s) so play-while-download
- * survives stale mtime / full declared length. Large + stable + non-download still fail fast.
+ * Directory names are never used.
  */
 @UnstableApi
 class GrowingFileLoadErrorHandlingPolicy(
@@ -66,20 +57,9 @@ class GrowingFileLoadErrorHandlingPolicy(
 
     private fun shouldRetryGrowingLocal(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Boolean {
         val uri = loadErrorInfo.loadEventInfo.uri
-            ?: loadErrorInfo.loadEventInfo.dataSpec.uri
-            ?: (loadErrorInfo.exception as? UnrecognizedInputFormatException)?.uri
-            ?: return false
         if (!isLocalUri(uri)) return false
         if (!isRetriableWhileGrowing(loadErrorInfo.exception)) return false
-        val downloadLike = isDownloadManagerLike(uri)
-        val varintLike = isVarintOrEbmlParseError(loadErrorInfo.exception)
-        val maxRetries = if (downloadLike || varintLike) {
-            MAX_DOWNLOAD_PATH_RETRIES
-        } else {
-            MAX_GROWING_RETRIES
-        }
-        if (loadErrorInfo.errorCount >= maxRetries) return false
-        return appearsStillGrowingOrIncomplete(uri, downloadLike = downloadLike, varintLike = varintLike)
+        return appearsStillGrowingOrIncomplete(uri, loadErrorInfo.errorCount)
     }
 
     private fun isLocalUri(uri: Uri): Boolean {
@@ -89,147 +69,58 @@ class GrowingFileLoadErrorHandlingPolicy(
             ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)
     }
 
-    /**
-     * Retry while the file is still tiny, actively growing, download-manager-like, has a
-     * zero-padded / sparse tip behind declared length, or the error looks like Matroska
-     * reading into zeros (`No valid varint length mask`). Large + stable + non-download → no.
-     */
-    private fun appearsStillGrowingOrIncomplete(
-        uri: Uri,
-        downloadLike: Boolean,
-        varintLike: Boolean,
-    ): Boolean {
+    private fun appearsStillGrowingOrIncomplete(uri: Uri, errorCount: Int): Boolean {
         val path = runCatching { appContext.getPath(uri) }.getOrNull()
             ?: GrowingFileDataSource.resolvePath(uri)
         if (path != null) {
             val file = File(path)
-            if (downloadLike ||
-                GrowingFileDataSource.looksPartialFileName(file.name) ||
-                GrowingFileDataSource.looksPartialFileName(path) ||
-                DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
+            if (IncompleteLocalMedia.looksPartialFileName(file.name) ||
+                IncompleteLocalMedia.looksPartialFileName(path)
             ) {
-                return tipStillAdvancingOrAllowRetry(file, path, force = true)
+                return errorCount < retryCap(tipAdvancing = tipAdvancing(path))
             }
-            if (!file.exists()) return true
-            val preferZero = DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
-            val declared1 = file.length()
-            val tip1 = SparseAwareFileLength.readableEnd(
-                path,
-                declared1,
-                fd = null,
-                preferZeroTailScan = preferZero,
-            )
-            if (SparseAwareFileLength.isSparsePartial(declared1, tip1)) {
-                return tipStillAdvancingOrAllowRetry(file, path, force = true)
+            if (!file.exists()) return errorCount < MAX_GROWING_RETRIES
+            val snapshot = IncompleteLocalMedia.inspect(path)
+            if (snapshot.declaredLength in 0 until SNIFF_READY_BYTES) {
+                return errorCount < MAX_GROWING_RETRIES
             }
-            if (declared1 < SNIFF_READY_BYTES) {
-                return true
+            if (!snapshot.incomplete) {
+                // Looks complete — fail fast unless the tip is actually advancing.
+                return errorCount < MAX_GROWING_RETRIES && tipAdvancing(path)
             }
-            if (varintLike) {
-                // Varint/EBML errors on a large "stable" file often mean we read into a zero
-                // tail that SEEK_HOLE missed — keep retrying briefly while tip may advance.
-                return tipStillAdvancingOrAllowRetry(file, path, force = true)
-            }
-            try {
-                Thread.sleep(STABLE_POLL_MS)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
-                return true
-            }
-            val declared2 = file.length()
-            val tip2 = SparseAwareFileLength.readableEnd(
-                path,
-                declared2,
-                fd = null,
-                preferZeroTailScan = preferZero,
-            )
-            if (SparseAwareFileLength.isSparsePartial(declared2, tip2)) return true
-            return tip2 > tip1 || declared2 > declared1
+            return errorCount < retryCap(tipAdvancing = tipAdvancing(path))
         }
 
         if (ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)) {
             val displayName = queryDisplayName(uri)
-            if (downloadLike ||
-                varintLike ||
-                GrowingContentDataSource.looksPartialName(displayName) ||
-                GrowingContentDataSource.looksPartialName(uri.lastPathSegment) ||
-                DownloadPathHeuristic.looksIncompleteDownload(uri.toString(), displayName)
+            if (GrowingContentDataSource.looksPartialName(displayName) ||
+                GrowingContentDataSource.looksPartialName(uri.lastPathSegment)
             ) {
-                return true
+                return errorCount < MAX_GROWING_RETRIES
             }
             val size = queryContentSize(uri)
             if (size != null && size < SNIFF_READY_BYTES) {
-                return true
+                return errorCount < MAX_GROWING_RETRIES
             }
             return false
         }
         return false
     }
 
-    /**
-     * For download-manager / zero-tail / varint cases: keep retrying while the tip advances;
-     * if the tip is stuck we still return true so the attempt budget ([MAX_DOWNLOAD_PATH_RETRIES])
-     * provides the time bound (~30s).
-     */
-    private fun tipStillAdvancingOrAllowRetry(file: File, path: String, force: Boolean): Boolean {
-        if (!file.exists()) return true
-        val preferZero = force || DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
-        val tip1 = SparseAwareFileLength.readableEnd(
-            path,
-            file.length(),
-            fd = null,
-            preferZeroTailScan = preferZero,
-        )
+    private fun retryCap(tipAdvancing: Boolean): Int =
+        if (tipAdvancing) MAX_GROWING_RETRIES else MAX_STUCK_RETRIES
+
+    private fun tipAdvancing(path: String): Boolean {
+        val first = IncompleteLocalMedia.inspect(path)
         try {
             Thread.sleep(STABLE_POLL_MS)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             return true
         }
-        val tip2 = SparseAwareFileLength.readableEnd(
-            path,
-            file.length(),
-            fd = null,
-            preferZeroTailScan = preferZero,
-        )
-        // Advancing tip → definitely keep going; stuck tip → still allow until max retries.
-        return true
-    }
-
-    private fun isDownloadManagerLike(uri: Uri): Boolean {
-        val path = runCatching { appContext.getPath(uri) }.getOrNull()
-            ?: GrowingFileDataSource.resolvePath(uri)
-        if (DownloadPathHeuristic.looksLikeDownloadManagerPath(path)) return true
-        if (DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString())) return true
-        if (path != null) {
-            val name = File(path).name
-            if (DownloadPathHeuristic.looksIncompleteDownload(path, name)) return true
-        }
-        if (ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)) {
-            val displayName = queryDisplayName(uri)
-            if (DownloadPathHeuristic.looksIncompleteDownload(uri.toString(), displayName)) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun isVarintOrEbmlParseError(error: IOException): Boolean {
-        var cause: Throwable? = error
-        while (cause != null) {
-            val msg = cause.message.orEmpty()
-            val name = cause.javaClass.name
-            if (msg.contains("No valid varint length mask", ignoreCase = true) ||
-                msg.contains("VarintReader", ignoreCase = true) ||
-                name.contains("VarintReader") ||
-                name.contains("DefaultEbmlReader") ||
-                name.contains("MatroskaExtractor")
-            ) {
-                return true
-            }
-            cause = cause.cause
-        }
-        return false
+        val second = IncompleteLocalMedia.inspect(path)
+        return second.readableEnd > first.readableEnd ||
+            second.declaredLength > first.declaredLength
     }
 
     private fun queryDisplayName(uri: Uri): String? {
@@ -283,6 +174,17 @@ class GrowingFileLoadErrorHandlingPolicy(
                 is EOFException,
                 -> return true
             }
+            // Matroska varint / EBML races while reading a zero tail.
+            val msg = cause.message.orEmpty()
+            val name = cause.javaClass.name
+            if (msg.contains("No valid varint length mask", ignoreCase = true) ||
+                msg.contains("VarintReader", ignoreCase = true) ||
+                name.contains("VarintReader") ||
+                name.contains("DefaultEbmlReader") ||
+                name.contains("MatroskaExtractor")
+            ) {
+                return true
+            }
             cause = cause.cause
         }
         // Generic IO / source errors while bytes are still arriving.
@@ -290,21 +192,16 @@ class GrowingFileLoadErrorHandlingPolicy(
     }
 
     companion object {
-        /** ~500–700ms between attempts; 14 × 600ms ≈ enough for header after a short pause. */
+        /** ~500–700ms between attempts. */
         private const val RETRY_DELAY_MS = 600L
         private const val STABLE_POLL_MS = 200L
         /** Below this size, headers may not be snifftable yet — allow brief retries. */
         private const val SNIFF_READY_BYTES = 64L * 1024L
-        /**
-         * Floor for ExoPlayer's minimum loadable retry count — covers download-path budget.
-         */
-        private const val MIN_GROWING_LOADABLE_RETRIES = 50
-        /** Hard cap on ordinary growing-local retries (not a long demux wait). */
-        const val MAX_GROWING_RETRIES = 14
-        /**
-         * Longer budget for 1DM/Download-path / zero-tail / varint errors (~50 × 600ms ≈ 30s)
-         * so a stuck tip still fails, but a slowly advancing download keeps retrying.
-         */
-        const val MAX_DOWNLOAD_PATH_RETRIES = 50
+        /** Floor for ExoPlayer's minimum loadable retry count. */
+        private const val MIN_GROWING_LOADABLE_RETRIES = 12
+        /** Cap while the tip is advancing or the file is tiny / partial. */
+        const val MAX_GROWING_RETRIES = 12
+        /** Smaller cap when the tip is stuck (incomplete but not writing). */
+        const val MAX_STUCK_RETRIES = 6
     }
 }

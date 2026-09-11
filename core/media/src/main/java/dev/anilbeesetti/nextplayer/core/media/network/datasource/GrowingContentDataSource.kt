@@ -3,8 +3,6 @@ package dev.anilbeesetti.nextplayer.core.media.network.datasource
 import android.content.ContentResolver
 import android.content.Context
 import android.content.res.AssetFileDescriptor
-import android.provider.DocumentsContract
-import android.provider.MediaStore
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -27,14 +25,13 @@ import java.io.InterruptedIOException
  *
  * Opens via [ContentResolver.openAssetFileDescriptor] / PFD and always returns
  * [C.LENGTH_UNSET]. On EOF, reopens the descriptor and seeks back to [readPosition] if more
- * bytes became available; polls ~50ms and only signals end-of-input after a longer stable idle
- * (~30s), matching [GrowingFileDataSource] VLC-style wait through downloader buffer pauses.
- * Recent last-modified (when queryable) or recent length growth also blocks EOF.
+ * bytes became available; polls ~50ms. End-of-input is signalled only when the file looks
+ * complete (no partial name, tip equals declared length, tip not still advancing) or, for
+ * append-style growth, after a short stable idle.
  *
  * When the AFD reports a large declared length but [SparseAwareFileLength] finds a smaller
- * SEEK_HOLE or zero-tail tip (ADM sparse / 1DM zero preallocation), reads are capped at the tip
- * and we poll until it advances — same semantics as [GrowingFileDataSource]. Download-manager
- * path / display-name heuristics force zero-tail scanning when SEEK_HOLE is useless.
+ * SEEK_HOLE or zero-tail tip (content-triggered, any path), reads are capped at the tip
+ * and we poll until it advances — same semantics as [GrowingFileDataSource].
  *
  * Never uses Media3's fixed-length [androidx.media3.datasource.ContentDataSource] for this path.
  */
@@ -61,7 +58,6 @@ class GrowingContentDataSource(
     private var lastDeclaredLength: Long = -1L
     private var lastGrowthElapsedMs: Long = 0L
     private var displayName: String? = null
-    private var preferZeroTailScan: Boolean = false
     private var cachedZeroTailTip: Long = -1L
     private var lastTipProbeElapsedMs: Long = 0L
 
@@ -76,10 +72,6 @@ class GrowingContentDataSource(
 
         uri = openUri
         displayName = queryDisplayName(openUri)
-        preferZeroTailScan = DownloadPathHeuristic.looksIncompleteDownload(
-            openUri.toString(),
-            displayName,
-        ) || DownloadPathHeuristic.looksLikeDownloadManagerPath(openUri.lastPathSegment)
         cachedZeroTailTip = -1L
         transferInitializing(dataSpec)
 
@@ -250,8 +242,6 @@ class GrowingContentDataSource(
                 val gap = position - length
                 val looksGrowing = looksPartialName(displayName) ||
                     looksPartialName(uri.lastPathSegment) ||
-                    preferZeroTailScan ||
-                    DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString()) ||
                     (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) ||
                     SparseAwareFileLength.isSparsePartial(declared, length)
                 // Cue-style far seeks on a growing content URI: fail fast after a short wait.
@@ -302,32 +292,17 @@ class GrowingContentDataSource(
     }
 
     private fun isDownloadFinished(uri: Uri): Boolean {
-        if (looksPartialName(displayName) ||
-            looksPartialName(uri.lastPathSegment) ||
-            preferZeroTailScan ||
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString())
-        ) {
+        if (looksPartialName(displayName) || looksPartialName(uri.lastPathSegment)) {
             return false
         }
         refreshReadableTip()
         if (SparseAwareFileLength.isSparsePartial(lastDeclaredLength, lastObservedLength)) {
             return false
         }
-        val now = System.currentTimeMillis()
-        val lastModified = queryLastModified(uri)
-        if (lastModified != null) {
-            val mtimeAge = now - lastModified
-            if (mtimeAge in 0 until RECENT_MTIME_MS) {
-                return false
-            }
-        }
-        if (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) {
-            return false
-        }
-
+        val stableWait = if (lastGrowthElapsedMs > 0L) STABLE_DURATION_MS else FIRST_EOF_STABLE_MS
         var lastLength = lastObservedLength
         val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < STABLE_DURATION_MS) {
+        while (System.currentTimeMillis() - start < stableWait) {
             throwIfClosedOrInterrupted()
             sleepInterruptibly(POLL_INTERVAL_MS)
             try {
@@ -361,14 +336,7 @@ class GrowingContentDataSource(
                     return false
                 }
             }
-            val loopNow = System.currentTimeMillis()
-            val loopMtime = queryLastModified(uri)
-            if (loopMtime != null && loopNow - loopMtime in 0 until RECENT_MTIME_MS) {
-                return false
-            }
-            if (lastGrowthElapsedMs > 0L &&
-                loopNow - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
-            ) {
+            if (looksPartialName(displayName) || looksPartialName(uri.lastPathSegment)) {
                 return false
             }
             lastLength = length
@@ -434,14 +402,9 @@ class GrowingContentDataSource(
             cachedZeroTailTip = hole
             return hole
         }
-        val prefer = preferZeroTailScan
         val now = System.currentTimeMillis()
         if (cachedZeroTailTip < 0L) {
-            val tip = SparseAwareFileLength.readableEnd(
-                declared,
-                fd,
-                preferZeroTailScan = prefer,
-            )
+            val tip = SparseAwareFileLength.readableEnd(declared, fd)
             cachedZeroTailTip = tip
             lastTipProbeElapsedMs = now
             return if (tip < declared) tip else declared
@@ -466,11 +429,11 @@ class GrowingContentDataSource(
 
     private fun noteObservedLength(length: Long) {
         if (length < 0L) return
-        if (length > lastObservedLength) {
+        if (lastObservedLength < 0L) {
+            lastObservedLength = length
+        } else if (length > lastObservedLength) {
             lastObservedLength = length
             lastGrowthElapsedMs = System.currentTimeMillis()
-        } else if (lastObservedLength < 0L) {
-            lastObservedLength = length
         }
     }
 
@@ -487,37 +450,6 @@ class GrowingContentDataSource(
         } finally {
             assetFileDescriptor = null
         }
-    }
-
-    /**
-     * Best-effort last-modified for content URIs (Documents / MediaStore). Returns null when
-     * unavailable so callers fall back to length-stability heuristics only.
-     */
-    private fun queryLastModified(uri: Uri): Long? {
-        val columns = arrayOf(
-            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
-            MediaStore.MediaColumns.DATE_MODIFIED,
-        )
-        for (column in columns) {
-            try {
-                resolver.query(uri, arrayOf(column), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(column)
-                        if (idx >= 0 && !cursor.isNull(idx)) {
-                            var value = cursor.getLong(idx)
-                            // MediaStore DATE_MODIFIED is seconds; Documents is millis.
-                            if (column == MediaStore.MediaColumns.DATE_MODIFIED && value < 10_000_000_000L) {
-                                value *= 1000L
-                            }
-                            if (value > 0L) return value
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-                // try next column
-            }
-        }
-        return null
     }
 
     private fun queryDisplayName(uri: Uri): String? {
@@ -561,14 +493,14 @@ class GrowingContentDataSource(
         /** Match [GrowingFileDataSource]: wait through downloader buffer pauses. */
         private const val STABLE_DURATION_MS = 30_000L
         private const val RECENT_GROWTH_WINDOW_MS = 15_000L
-        private const val RECENT_MTIME_MS = 180_000L
+        private const val FIRST_EOF_STABLE_MS = 2_000L
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
         private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
 
         private const val TIP_REPROBE_MS = 400L
 
         fun looksPartialName(name: String?): Boolean =
-            DownloadPathHeuristic.looksPartialFileName(name)
+            IncompleteLocalMedia.looksPartialFileName(name)
     }
 
     /** Creates [GrowingContentDataSource] instances. */

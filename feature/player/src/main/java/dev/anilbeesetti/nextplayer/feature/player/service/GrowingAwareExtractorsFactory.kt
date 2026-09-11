@@ -11,31 +11,30 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
-import dev.anilbeesetti.nextplayer.core.media.network.datasource.DownloadPathHeuristic
-import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingContentDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
-import dev.anilbeesetti.nextplayer.core.media.network.datasource.SparseAwareFileLength
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.IncompleteLocalMedia
 import java.io.File
 
 /**
- * [ExtractorsFactory] that disables Matroska end-of-file cue seeking for local URIs unless the
- * file is clearly a finished download.
+ * [ExtractorsFactory] that disables Matroska end-of-file cue seeking for local URIs that look
+ * **incomplete**.
  *
  * VLC (libmatroska) plays Clusters without requiring Cues at EOF. Media3 [MatroskaExtractor]
  * seeks to the Cues element near EOF when SeekHead points there (ExoPlayer#8935); on incomplete
- * MKVs that seek hits EOF / fails while the file is still growing. With
- * [MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES], playback can start as soon as the header and
- * early clusters are present — matching VLC-style play-while-download (unseekable until the file
- * finishes / cues become available).
+ * MKVs that seek hits zeros / EOF. With [MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES], playback
+ * starts as soon as the header and early clusters are present.
  *
- * For local `file://` / `content://` / path URIs we **default to disabling cue-seek** whenever
- * the file might still be downloading. Cue-seek stays enabled only when the file is clearly
- * finished (exists, non-partial / non-download-manager path, mtime age ≥ 5 minutes, no sparse
- * or zero-padded tail, and a short length poll shows no growth). Missing files, partial
- * suffixes, `1DM`/`Download`/ADM paths, sparse / zero-preallocation, and unresolved
- * `content://` URIs always disable cues.
+ * Incomplete is **content-based only** ([IncompleteLocalMedia]):
+ * - partial filename suffix
+ * - SEEK_HOLE tip behind declared length
+ * - last ~256KiB all zeros and last-non-zero tip behind declared
+ * - optional: declared / readable length growing across a short poll (only if mtime is recent)
  *
- * The no-arg [createExtractors] also disables cue-seek by default (safe) when callers omit URI.
+ * Finished local MKVs (real cues / non-zero tail, not a partial name) keep cue-seek enabled so
+ * seeking is preserved. Directory names are never used.
+ *
+ * The no-arg [createExtractors] disables cue-seek (unknown URI — safe default). Non-local /
+ * network URIs keep cue-seek enabled.
  */
 @UnstableApi
 class GrowingAwareExtractorsFactory(
@@ -67,13 +66,12 @@ class GrowingAwareExtractorsFactory(
     }
 
     companion object {
-        /** Only treat as finished after this mtime age (plus a no-growth poll). */
-        private const val CLEARLY_FINISHED_MTIME_MS = 300_000L
         private const val LENGTH_POLL_MS = 250L
+        /** Only run the optional growth poll when the file was touched this recently. */
+        private const val RECENT_MTIME_FOR_POLL_MS = 30_000L
 
         /**
-         * VLC-like default: assume a local file may still be downloading and disable cue-seek,
-         * unless it is clearly finished (old mtime + stable length + non-partial name + not sparse).
+         * True when a local URI looks incomplete. Network URIs always return false.
          */
         fun isLikelyGrowing(context: Context, uri: Uri): Boolean {
             val scheme = uri.scheme
@@ -84,77 +82,33 @@ class GrowingAwareExtractorsFactory(
 
             val path = runCatching { context.getPath(uri) }.getOrNull()
                 ?: GrowingFileDataSource.resolvePath(uri)
-            // Download-manager path (1DM / Download / ADM / …) → always disable cue-seek,
-            // even when mtime is stale and declared length looks finished.
-            if (DownloadPathHeuristic.looksIncompleteDownload(path, uri.toString()) ||
-                DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString())
-            ) {
-                return true
-            }
             if (path != null) {
                 val file = File(path)
-                if (GrowingFileDataSource.looksPartialFileName(file.name) ||
-                    GrowingFileDataSource.looksPartialFileName(path) ||
-                    DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
+                if (IncompleteLocalMedia.looksPartialFileName(file.name) ||
+                    IncompleteLocalMedia.looksPartialFileName(path)
                 ) {
                     return true
                 }
-                // Missing file → still may appear; keep cues disabled.
                 if (!file.exists()) return true
-                val preferZero = DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
-                val declared = file.length()
-                val readable = SparseAwareFileLength.readableEnd(
-                    path,
-                    declared,
-                    fd = null,
-                    preferZeroTailScan = preferZero,
-                )
-                if (SparseAwareFileLength.isSparsePartial(declared, readable)) {
-                    return true
-                }
-                val now = System.currentTimeMillis()
-                val age = now - file.lastModified()
-                // Clock skew / future mtime — treat as growing.
+                val snapshot = IncompleteLocalMedia.inspect(path)
+                if (snapshot.incomplete) return true
+                val age = System.currentTimeMillis() - file.lastModified()
                 if (age < 0L) return true
-                // Not clearly finished until mtime is old enough.
-                if (age < CLEARLY_FINISHED_MTIME_MS) {
-                    return true
+                if (age < RECENT_MTIME_FOR_POLL_MS) {
+                    return IncompleteLocalMedia.isGrowingAcrossPoll(path, LENGTH_POLL_MS)
                 }
-                // Age ≥ 5 minutes: confirm readable tip is not still growing.
-                val length1 = SparseAwareFileLength.readableEnd(
-                    path,
-                    file.length(),
-                    fd = null,
-                    preferZeroTailScan = preferZero,
-                )
-                try {
-                    Thread.sleep(LENGTH_POLL_MS)
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    return true
-                }
-                val length2Declared = file.length()
-                val length2 = SparseAwareFileLength.readableEnd(
-                    path,
-                    length2Declared,
-                    fd = null,
-                    preferZeroTailScan = preferZero,
-                )
-                if (SparseAwareFileLength.isSparsePartial(length2Declared, length2)) {
-                    return true
-                }
-                return length2 > length1
+                return false
             }
 
-            // content:// without resolvable path — always disable cue-seek (may be downloading).
+            // content:// without a resolvable path — cannot inspect bytes.
             if (ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)) {
                 val displayName = queryDisplayName(context, uri)
-                if (GrowingContentDataSource.looksPartialName(displayName) ||
-                    GrowingContentDataSource.looksPartialName(uri.lastPathSegment) ||
-                    DownloadPathHeuristic.looksIncompleteDownload(uri.toString(), displayName)
+                if (IncompleteLocalMedia.looksPartialFileName(displayName) ||
+                    IncompleteLocalMedia.looksPartialFileName(uri.lastPathSegment)
                 ) {
                     return true
                 }
+                // Safe default: disable cue-seek when we cannot see the file.
                 return true
             }
 

@@ -150,39 +150,6 @@ class GrowingFileDataSourceTest {
     }
 
 
-    @Test
-    fun downloadPathHeuristic_matches1dmAndDownloadFolders() {
-        assertTrue(
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(
-                "/storage/emulated/0/Download/1DM/Videos/show.mkv",
-            ),
-        )
-        assertTrue(
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(
-                "/storage/emulated/0/Downloads/movie.mkv",
-            ),
-        )
-        assertTrue(DownloadPathHeuristic.looksLikeDownloadManagerPath("/sdcard/ADM/file.mkv"))
-        assertTrue(DownloadPathHeuristic.looksLikeDownloadManagerPath("/sdcard/IDM/file.mkv"))
-        assertTrue(DownloadPathHeuristic.looksPartialFileName("movie.mkv.crdownload"))
-        assertTrue(
-            DownloadPathHeuristic.looksIncompleteDownload(
-                "/storage/emulated/0/Download/1DM/Videos/The Gentlemen 2024 S02E02.mkv",
-                "The Gentlemen 2024 S02E02.mkv",
-            ),
-        )
-        assertFalse(
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(
-                "/storage/emulated/0/Movies/finished-show.mkv",
-            ),
-        )
-        // "adm" must not match inside "admin"
-        assertFalse(
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(
-                "/storage/emulated/0/Movies/admin-cut.mkv",
-            ),
-        )
-    }
 
     @Test
     fun zeroPaddedReadableEnd_findsTipBeforeZeroTail() {
@@ -268,5 +235,101 @@ class GrowingFileDataSourceTest {
         } finally {
             file.delete()
         }
+    }
+
+    @Test
+    fun incompleteLocalMedia_partialSuffixesAreUniversal() {
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.mp4.part"))
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.mp4.crdownload"))
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.mp4.!ut"))
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.tmp"))
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.download"))
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.aria2"))
+        assertTrue(IncompleteLocalMedia.looksPartialFileName("movie.bc!"))
+        assertFalse(IncompleteLocalMedia.looksPartialFileName("movie.mp4"))
+        assertFalse(IncompleteLocalMedia.looksPartialFileName("show.mkv"))
+    }
+
+    @Test
+    fun incompleteLocalMedia_zeroTailIsIncompleteOnAnyPath() {
+        val file = File.createTempFile("movies-folder-style", ".mkv")
+        try {
+            val declared = 4L * 1024L * 1024L
+            val prefix = 384L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.setLength(declared)
+                raf.seek(0)
+                raf.write(ByteArray(prefix.toInt()) { (it % 250 + 1).toByte() })
+                raf.seek(prefix)
+                raf.write(ByteArray((declared - prefix).toInt()) { 0 })
+            }
+            val snapshot = IncompleteLocalMedia.inspect(file.absolutePath)
+            assertTrue("zero-preallocated file must be incomplete anywhere", snapshot.incomplete)
+            assertTrue(snapshot.tipBehindDeclared)
+            assertFalse(snapshot.partialName)
+            assertTrue(snapshot.readableEnd < snapshot.declaredLength)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun incompleteLocalMedia_finishedNonZeroTailIsCompleteAnywhere() {
+        val file = File.createTempFile("finished-library", ".mkv")
+        try {
+            val size = 2L * 1024L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                // Non-zero throughout, including the last 256KiB (cues / real media).
+                raf.write(ByteArray(size.toInt()) { 0x5A })
+            }
+            val snapshot = IncompleteLocalMedia.inspect(file.absolutePath)
+            assertFalse("finished file with real tail must not be incomplete", snapshot.incomplete)
+            assertFalse(snapshot.tipBehindDeclared)
+            assertEquals(size, snapshot.declaredLength)
+            assertEquals(size, snapshot.readableEnd)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun incompleteLocalMedia_doesNotKeyOffDirectoryNames() {
+        // A complete file whose path *looks* like a download-manager folder is still complete.
+        val complete = File.createTempFile("finished-in-download-named-dir", ".mkv")
+        try {
+            val size = 2L * 1024L * 1024L
+            RandomAccessFile(complete, "rw").use { raf ->
+                raf.write(ByteArray(size.toInt()) { 0x7E })
+            }
+            assertFalse(IncompleteLocalMedia.isIncomplete(complete))
+            // Folder tokens in a path string must not flip the result by themselves.
+            assertFalse(
+                IncompleteLocalMedia.isIncomplete(
+                    "/storage/emulated/0/Download/1DM/Videos/show.mkv",
+                    "show.mkv",
+                ),
+            )
+            assertFalse(
+                IncompleteLocalMedia.isIncomplete(
+                    "/storage/emulated/0/Movies/admin-cut.mkv",
+                    "admin-cut.mkv",
+                ),
+            )
+            assertFalse(IncompleteLocalMedia.looksPartialFileName("The Gentlemen 2024 S02E02.mkv"))
+            assertFalse(
+                IncompleteLocalMedia.isIncomplete(
+                    path = null,
+                    fileName = "The Gentlemen 2024 S02E02.mkv",
+                ),
+            )
+        } finally {
+            complete.delete()
+        }
+    }
+
+    @Test
+    fun incompleteLocalMedia_partialNameAloneIsIncomplete() {
+        assertTrue(IncompleteLocalMedia.isIncomplete(path = null, fileName = "show.mkv.part"))
+        assertTrue(IncompleteLocalMedia.isIncomplete("/tmp/show.mkv.crdownload"))
     }
 }

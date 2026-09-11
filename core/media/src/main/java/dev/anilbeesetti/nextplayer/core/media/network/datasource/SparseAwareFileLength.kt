@@ -11,13 +11,14 @@ import kotlin.math.min
 
 /**
  * Resolves the **readable** end of a local file that may be sparse / preallocated, or
- * zero-padded by a download manager (1DM-style non-sparse preallocation).
+ * zero-padded (non-sparse preallocation).
  *
- * Advanced download managers often create the destination at the **final** size immediately
+ * Downloaders often create the destination at the **final** size immediately
  * (fallocate / truncate) and fill it sequentially. [java.io.File.length] then returns the full
  * declared size while bytes past the download tip are either:
- * - sparse holes (ADM) — detectable via SEEK_HOLE on API 26+, or
- * - real zero bytes (1DM) — SEEK_HOLE returns EOF; we binary-search the last non-zero byte.
+ * - sparse holes — detectable via SEEK_HOLE on API 26+, or
+ * - real zero bytes — SEEK_HOLE returns EOF; we binary-search the last non-zero byte
+ *   when the last ~256KiB is all zeros (content trigger, any path).
  *
  * Media3 must not treat those holes / zero tails as valid media.
  *
@@ -67,7 +68,7 @@ object SparseAwareFileLength {
      * @param path filesystem path (used to open a temporary FD / RAF when [fd] is null)
      * @param declaredLength [java.io.File.length] / AFD reported length
      * @param fd open file descriptor whose position will be preserved; may be null
-     * @param preferZeroTailScan force last-non-zero scan (download-manager path heuristic)
+     * @param preferZeroTailScan force last-non-zero scan (tests / callers that already know the tail is zeros)
      */
     fun readableEnd(
         path: String,
@@ -98,7 +99,7 @@ object SparseAwareFileLength {
 
     /**
      * Binary-search / block-probe for the last non-zero byte (exclusive end = download tip)
-     * under the sequential-prefix assumption used by 1DM-style zero preallocation.
+     * under the sequential-prefix assumption used by zero-preallocated downloads.
      *
      * Restores [raf] file pointer.
      */

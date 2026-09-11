@@ -19,22 +19,19 @@ import java.io.RandomAccessFile
  *
  * Unlike Media3 [androidx.media3.datasource.FileDataSource], [open] always returns
  * [C.LENGTH_UNSET] so ExoPlayer does not treat the then-current EOF as the end of the stream.
- * [read] blocks (polling ~50ms) until more bytes appear — VLC-style wait through downloader
- * buffer pauses. It only returns [C.RESULT_END_OF_INPUT] once size and mtime have been stable
- * for ~30s, the name does not look like a partial download, mtime is older than ~3 minutes,
- * and nothing has grown within the recent-growth window.
+ * [read] blocks (polling ~50ms) until more bytes appear. End-of-input is signalled only when
+ * the file looks **complete** (no partial name, hole/zero tip equals declared length, tip not
+ * still advancing) or, for append-style growth, after a short stable idle.
  *
  * Tiny / empty files still open successfully (with [C.LENGTH_UNSET]) so the extractors / load
  * retry policy can wait for headers (e.g. MP4 `moov`) rather than failing at the DataSource.
  *
  * ## Sparse / zero-preallocated downloads
- * Many ADMs create the destination at **final size** immediately and fill it sequentially.
+ * Downloaders may create the destination at **final size** immediately and fill it sequentially.
  * [File.length] then returns the full declared size while bytes past the download tip are
- * sparse holes **or** real zero bytes (1DM-style non-sparse preallocation). We use
- * [SparseAwareFileLength] (`SEEK_HOLE` + last-non-zero binary search) as the readable end and
- * poll/block when the tip has not advanced — never returning hole / padding zeros as media.
- * Download-manager path heuristics (`1DM`, `/Download/`, …) force zero-tail scanning even when
- * mtime is stale and SEEK_HOLE is useless.
+ * sparse holes **or** real zero bytes. We use [SparseAwareFileLength] (`SEEK_HOLE` + last-non-zero
+ * scan when the last ~256KiB is zeros) as the readable end — any path, content-triggered —
+ * and poll/block when the tip has not caught up. Never returns hole / padding zeros as media.
  *
  * ## Limitations
  * - Works best with streamable / growing-friendly containers (MKV, TS, many incomplete
@@ -64,10 +61,9 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     private var lastGrowthElapsedMs: Long = 0L
     private var lastSeenLength: Long = -1L
 
-    /** Cached zero-tail / sparse tip when SEEK_HOLE is useless (1DM zeros). */
+    /** Cached zero-tail / sparse tip when SEEK_HOLE is useless (zero-preallocated). */
     private var cachedReadableTip: Long = -1L
     private var lastTipProbeElapsedMs: Long = 0L
-    private var preferZeroTailScan: Boolean = false
 
     private val lock = Any()
 
@@ -78,7 +74,6 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
         uri = dataSpec.uri
         path = resolvedPath
-        preferZeroTailScan = DownloadPathHeuristic.looksLikeDownloadManagerPath(resolvedPath)
         cachedReadableTip = -1L
         transferInitializing(dataSpec)
 
@@ -191,9 +186,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         if (raf != null) {
             return effectiveLengthWithRaf(raf, path, declared)
         }
-        val prefer = preferZeroTailScan ||
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
-        return SparseAwareFileLength.readableEnd(path, declared, fd = null, preferZeroTailScan = prefer)
+        return SparseAwareFileLength.readableEnd(path, declared, fd = null)
     }
 
     private fun effectiveLengthWithRaf(
@@ -201,9 +194,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         path: String,
         declared: Long,
     ): Long {
-        val prefer = preferZeroTailScan ||
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
-        // SEEK_HOLE first (sparse ADM).
+        // SEEK_HOLE first (sparse preallocation).
         val holeBased = try {
             SparseAwareFileLength.sparseHoleReadableEnd(path, declared, raf.fd)
         } catch (_: Exception) {
@@ -216,7 +207,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         }
         val now = System.currentTimeMillis()
         if (cachedReadableTip < 0L) {
-            if (!prefer && !SparseAwareFileLength.quickTailIsAllZeros(raf, declared)) {
+            if (!SparseAwareFileLength.quickTailIsAllZeros(raf, declared)) {
                 return declared
             }
             cachedReadableTip = SparseAwareFileLength.zeroPaddedReadableEnd(raf, declared)
@@ -271,7 +262,6 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             // Sparse: declared may already be huge while tip is small — still fail-fast on gap.
             if (gap > CUE_SEEK_GAP_BYTES &&
                 (looksPartialFileName(f.name) ||
-                    DownloadPathHeuristic.looksLikeDownloadManagerPath(path) ||
                     isActivelyGrowing(mtime) ||
                     SparseAwareFileLength.isSparsePartial(declared, size)) &&
                 now - waitStarted >= CUE_SEEK_FAIL_FAST_MS
@@ -279,7 +269,6 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
             }
             if (looksPartialFileName(f.name) ||
-                DownloadPathHeuristic.looksLikeDownloadManagerPath(path) ||
                 SparseAwareFileLength.isSparsePartial(declared, size)
             ) {
                 stableSize = size
@@ -332,73 +321,51 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     }
 
     /**
-     * Treat the file as finished when its readable tip and mtime have not changed for
-     * [STABLE_DURATION_MS], mtime is older than [RECENT_MTIME_MS], nothing grew within
-     * [RECENT_GROWTH_WINDOW_MS], the name does not look like a partial download artifact, and
-     * there is no sparse tail ([SparseAwareFileLength.isSparsePartial]).
-     *
-     * Download managers often pause longer than a few seconds between flushes; we wait through
-     * those pauses (VLC-style) rather than declaring EOF mid-cluster.
+     * Finished only when the file looks complete (no partial name, tip == declared) and the
+     * readable tip is not still advancing. Incomplete files (partial name / sparse / zero tail)
+     * never EOF here — [read] keeps polling. Append-style growth (tip == declared but bytes
+     * still arriving) waits through a short stable idle after recent growth.
      */
     private fun isDownloadFinished(file: File): Boolean {
-        if (looksPartialFileName(file.name) ||
-            DownloadPathHeuristic.looksLikeDownloadManagerPath(file.absolutePath)
-        ) {
-            return false
-        }
         val path = file.absolutePath
         val declared = file.length()
         val readable = effectiveLength(path, declared)
-        // Sparse preallocated tail: still downloading even if declared length is stable.
-        if (SparseAwareFileLength.isSparsePartial(declared, readable)) {
+        // Partial name or tip behind declared → still downloading; keep polling.
+        if (looksPartialFileName(file.name) ||
+            SparseAwareFileLength.isSparsePartial(declared, readable)
+        ) {
             noteLength(readable)
             return false
         }
-        val now = System.currentTimeMillis()
-        val mtimeAge = now - file.lastModified()
-        // Still being written / touched recently — keep waiting (never EOF on a fresh mtime).
-        if (mtimeAge in 0 until RECENT_MTIME_MS) {
-            return false
-        }
-        if (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) {
-            return false
-        }
-
+        // Complete-looking: still wait briefly so append-style growth is not missed
+        // (first EOF this session), or longer if we already saw the tip advance.
+        val stableWait = if (lastGrowthElapsedMs > 0L) STABLE_DURATION_MS else FIRST_EOF_STABLE_MS
         var lastSize = readable
-        var lastMtime = file.lastModified()
         val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < STABLE_DURATION_MS) {
+        while (System.currentTimeMillis() - start < stableWait) {
             throwIfClosedOrInterrupted()
             sleepInterruptibly(POLL_INTERVAL_MS)
             val loopDeclared = file.length()
             val size = effectiveLength(path, loopDeclared)
-            val mtime = file.lastModified()
             noteLength(size)
-            if (SparseAwareFileLength.isSparsePartial(loopDeclared, size)) {
+            if (looksPartialFileName(file.name) ||
+                SparseAwareFileLength.isSparsePartial(loopDeclared, size)
+            ) {
                 return false
             }
-            if (size != lastSize || mtime != lastMtime) {
+            if (size != lastSize) {
                 return false
             }
             if (size > readPosition) {
                 return false
             }
-            val loopNow = System.currentTimeMillis()
-            if (loopNow - mtime in 0 until RECENT_MTIME_MS) {
-                return false
-            }
-            // Growth within window (e.g. size bumped then stalled) still blocks EOF.
-            if (lastGrowthElapsedMs > 0L &&
-                loopNow - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS
-            ) {
-                return false
-            }
             lastSize = size
-            lastMtime = mtime
         }
         val finalDeclared = file.length()
         val finalReadable = effectiveLength(path, finalDeclared)
-        if (SparseAwareFileLength.isSparsePartial(finalDeclared, finalReadable)) {
+        if (looksPartialFileName(file.name) ||
+            SparseAwareFileLength.isSparsePartial(finalDeclared, finalReadable)
+        ) {
             return false
         }
         return finalReadable <= readPosition
@@ -406,11 +373,11 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     private fun noteLength(length: Long) {
         if (length < 0L) return
-        if (length > lastSeenLength) {
+        if (lastSeenLength < 0L) {
+            lastSeenLength = length
+        } else if (length > lastSeenLength) {
             lastSeenLength = length
             lastGrowthElapsedMs = System.currentTimeMillis()
-        } else if (lastSeenLength < 0L) {
-            lastSeenLength = length
         }
     }
 
@@ -471,8 +438,8 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         private const val STABLE_DURATION_MS = 30_000L
         /** Keep waiting if length grew this recently. */
         private const val RECENT_GROWTH_WINDOW_MS = 15_000L
-        /** Keep waiting if lastModified is within this window (downloader still active). */
-        private const val RECENT_MTIME_MS = 180_000L
+        /** First complete-looking EOF: wait this long for an append before finishing. */
+        private const val FIRST_EOF_STABLE_MS = 2_000L
         /** Far seeks (e.g. Matroska Cues near EOF) beyond current length + this gap fail fast. */
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
         private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
@@ -483,7 +450,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
         /** True when [name] looks like an in-progress download artifact. */
         fun looksPartialFileName(name: String?): Boolean =
-            DownloadPathHeuristic.looksPartialFileName(name)
+            IncompleteLocalMedia.looksPartialFileName(name)
 
         /** Resolves `file://` URIs and raw filesystem paths. */
         fun resolvePath(uri: Uri): String? {
