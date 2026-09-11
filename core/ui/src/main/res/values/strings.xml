@@ -526,5 +526,5 @@
     <string name="hide_live_subtitles">Hide live subtitles</string>
     <string name="jump_to_current_cue">Jump to current cue</string>
     <string name="live_subtitles_empty">No subtitle track selected, or this track has no cues to list.</string>
-    <string name="live_subtitles_unsupported">Live subtitles work with external SRT and VTT files. Embedded or ASS/TTML tracks are not listed yet.</string>
+    <string name="live_subtitles_unsupported">Live subtitles are not available for this track. Image-based subtitles (PGS, VobSub, DVB) cannot be listed as text.</string>
 </resources>
