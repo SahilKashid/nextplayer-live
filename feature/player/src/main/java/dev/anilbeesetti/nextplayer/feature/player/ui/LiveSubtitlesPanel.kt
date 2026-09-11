@@ -2,7 +2,6 @@ package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,17 +32,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -62,7 +58,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val ScrollAnimation = tween<Float>(durationMillis = 320, easing = FastOutSlowInEasing)
-private val HighlightAnimation = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
 
 /**
  * Right-side live subtitles timeline for landscape playback.
@@ -101,11 +96,9 @@ fun LiveSubtitlesPanel(
             val halfViewportPx = constraints.maxHeight / 2
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
-            // Scroll + highlight share scrollTargetIndex. collectLatest cancels an
-            // in-flight slide when the target jumps again (fast scenes); short cue
-            // gaps snap instead of stacking incomplete animations.
-            var rapidFollow by remember { mutableStateOf(false) }
-
+            // Scroll uses collectLatest so a new target cancels an in-flight slide.
+            // Highlight "rapid" mode is derived from cue timing (not scroll state),
+            // so color/bold snap for the whole fast scene instead of re-animating.
             LaunchedEffect(state.isFollowing, halfViewportPx) {
                 if (!state.isFollowing) return@LaunchedEffect
                 snapshotFlow {
@@ -118,16 +111,13 @@ fun LiveSubtitlesPanel(
                         if (!state.isFollowing) return@collectLatest
                         if (identity == null || index !in state.cues.indices) return@collectLatest
                         if (state.cues[index].identityKey() != identity) return@collectLatest
-                        if (listState.isItemNearViewportCenter(index)) {
-                            rapidFollow = false
-                            return@collectLatest
-                        }
+                        if (listState.isItemNearViewportCenter(index)) return@collectLatest
                         val snap = state.cues.isRapidGapTo(index)
-                        rapidFollow = snap
                         listState.centerItemInViewport(index, animated = !snap)
-                        rapidFollow = false
                     }
             }
+
+            val rapidHighlight = state.cues.isRapidHighlightContext(highlightIndex)
 
             when {
                 state.isLoading && state.cues.isEmpty() -> {
@@ -177,7 +167,7 @@ fun LiveSubtitlesPanel(
                             LiveSubtitleCueRow(
                                 cue = cue,
                                 isCurrent = index == highlightIndex,
-                                animateHighlight = !rapidFollow,
+                                rapidHighlight = rapidHighlight,
                                 onClick = { state.seekToCue(cue) },
                             )
                         }
@@ -212,14 +202,24 @@ fun LiveSubtitlesPanel(
 }
 
 private const val NearCenterTolerancePx = 8f
-/** Cue start gaps below this use snap-follow instead of a slide. */
-private const val RapidCueGapMs = 450L
+/** Cue start gaps / durations below this use snap scroll and snap highlight. */
+private const val RapidCueGapMs = 500L
 
 private fun TimedCue.identityKey(): String = "$startMs|$endMs|$text"
 
 private fun List<TimedCue>.isRapidGapTo(index: Int): Boolean {
     if (index <= 0 || index !in indices) return false
     return (this[index].startMs - this[index - 1].startMs) < RapidCueGapMs
+}
+
+/** True when the active or neighboring cue is in a fast-scene cluster. */
+private fun List<TimedCue>.isRapidHighlightContext(index: Int): Boolean {
+    if (index !in indices) return false
+    val cue = this[index]
+    if ((cue.endMs - cue.startMs) < RapidCueGapMs) return true
+    if (isRapidGapTo(index)) return true
+    if (index + 1 in indices && isRapidGapTo(index + 1)) return true
+    return false
 }
 
 private fun LazyListState.isItemNearViewportCenter(index: Int): Boolean {
@@ -262,53 +262,47 @@ private suspend fun LazyListState.centerItemInViewport(index: Int, animated: Boo
 private fun LiveSubtitleCueRow(
     cue: TimedCue,
     isCurrent: Boolean,
-    animateHighlight: Boolean,
+    rapidHighlight: Boolean,
     onClick: () -> Unit,
 ) {
-    val colorSpec = if (animateHighlight) {
-        tween<Color>(durationMillis = 200, easing = FastOutSlowInEasing)
+    val targetBackground = if (isCurrent) {
+        MaterialTheme.colorScheme.primaryContainer
     } else {
-        tween<Color>(durationMillis = 0)
+        MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
     }
-    val floatSpec = if (animateHighlight) HighlightAnimation else tween<Float>(durationMillis = 0)
+    val targetContent = if (isCurrent) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    // Fast scenes: 0ms color swap (no scale/alpha). Slow scenes: short fade only.
+    // animateColorAsState is always called (Compose hook rules).
+    val colorSpec = if (rapidHighlight) {
+        tween<Color>(durationMillis = 0)
+    } else {
+        tween<Color>(durationMillis = 160, easing = FastOutSlowInEasing)
+    }
     val background by animateColorAsState(
-        targetValue = if (isCurrent) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-        },
+        targetValue = targetBackground,
         animationSpec = colorSpec,
         label = "cueBackground",
     )
     val contentColor by animateColorAsState(
-        targetValue = if (isCurrent) {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
+        targetValue = targetContent,
         animationSpec = colorSpec,
         label = "cueContent",
     )
-    val scale by animateFloatAsState(
-        targetValue = if (isCurrent) 1.03f else 1f,
-        animationSpec = floatSpec,
-        label = "cueScale",
-    )
-    val alpha by animateFloatAsState(
-        targetValue = if (isCurrent) 1f else 0.72f,
-        animationSpec = floatSpec,
-        label = "cueAlpha",
-    )
     val timeLabel = remember(cue.startMs) { Utils.formatDurationMillis(cue.startMs) }
+    val weight = when {
+        !isCurrent -> FontWeight.Normal
+        rapidHighlight -> FontWeight.Medium
+        else -> FontWeight.SemiBold
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                this.alpha = alpha
-            }
             .clip(MaterialTheme.shapes.medium)
             .background(background)
             .clickable(onClick = onClick)
@@ -322,9 +316,7 @@ private fun LiveSubtitleCueRow(
         Spacer(modifier = Modifier.size(2.dp))
         Text(
             text = cue.text,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-            ),
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = weight),
             color = contentColor,
         )
     }
