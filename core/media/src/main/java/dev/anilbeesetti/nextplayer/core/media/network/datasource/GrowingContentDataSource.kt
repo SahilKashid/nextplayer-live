@@ -440,8 +440,16 @@ class GrowingContentDataSource(
 
     /** Share sparse/zero-tail aware tip with [ReadableTipTracker] for approximate seeking. */
     private fun publishReadableTip(readableEnd: Long) {
-        val key = uri?.toString() ?: return
+        val u = uri ?: return
+        val key = u.toString()
         ReadableTipTracker.update(key, readableEnd, lastDeclaredLength)
+        val path = GrowingFileDataSource.resolvePath(u)
+        if (path != null) {
+            ReadableTipTracker.update(path, readableEnd, lastDeclaredLength)
+            if (path.startsWith("/")) {
+                ReadableTipTracker.update("file://$path", readableEnd, lastDeclaredLength)
+            }
+        }
     }
 
     private fun closeDescriptorQuietly() {

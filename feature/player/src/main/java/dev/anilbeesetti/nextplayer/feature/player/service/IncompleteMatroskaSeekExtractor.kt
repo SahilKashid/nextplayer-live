@@ -9,6 +9,8 @@ import androidx.media3.extractor.ForwardingExtractorOutput
 import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.SniffFailure
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.IncompleteLocalMedia
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.ReadableTipTracker
 import java.io.File
 import java.io.IOException
 
@@ -16,8 +18,8 @@ import java.io.IOException
  * Wraps a Matroska/WebM [Extractor] for incomplete local files:
  * - Replaces an unseekable seek map that still has a known duration with
  *   [ApproximateByteSeekMap] (keeps cue-EOF disabled for open, but allows scrubbing).
- * - On [seek], clamps to the readable tip and snaps the byte position back to the nearest
- *   preceding Cluster for demux sync.
+ * - On [seek], clamps to the safe readable tip (tip minus safety margin) and snaps the byte
+ *   position back to the nearest validated preceding Cluster for demux sync.
  *
  * Real cue seek maps (finished files / cues already present) are passed through unchanged.
  */
@@ -60,10 +62,15 @@ class IncompleteMatroskaSeekExtractor(
         delegate.read(input, seekPosition)
 
     override fun seek(position: Long, timeUs: Long) {
-        val tip = tipProvider()
+        val tip = resolveTip()
+        val safe = ApproximateByteSeekMap.safeTip(tip)
+        val clampLimit = when {
+            safe > 1L -> safe - 1L
+            tip > 1L -> tip - 1L
+            else -> 0L
+        }
         val clamped = when {
-            tip > 1L -> position.coerceIn(0L, tip - 1L)
-            tip == 1L -> 0L
+            tip > 0L -> position.coerceIn(0L, clampLimit)
             else -> position.coerceAtLeast(0L)
         }
         val snapped = snapToCluster(clamped, tip)
@@ -77,8 +84,30 @@ class IncompleteMatroskaSeekExtractor(
     override fun getUnderlyingImplementation(): Extractor =
         delegate.underlyingImplementation
 
+    /**
+     * Tip from the tracker; if unknown (-1), fall back to [IncompleteLocalMedia.inspect]
+     * before seeking so we still clamp/snap against a real readable end.
+     */
+    private fun resolveTip(): Long {
+        val tracked = tipProvider()
+        if (tracked > 0L) return tracked
+        val path = filePathProvider() ?: return tracked
+        return try {
+            val snap = IncompleteLocalMedia.inspect(path)
+            if (snap.readableEnd > 0L) {
+                ReadableTipTracker.update(path, snap.readableEnd, snap.declaredLength)
+                ReadableTipTracker.update("file://$path", snap.readableEnd, snap.declaredLength)
+                snap.readableEnd
+            } else {
+                tracked
+            }
+        } catch (_: Exception) {
+            tracked
+        }
+    }
+
     private fun snapToCluster(position: Long, tip: Long): Long {
-        if (tip < 4L) return position
+        if (tip < 5L) return position
         val path = filePathProvider() ?: return position
         return try {
             val file = File(path)

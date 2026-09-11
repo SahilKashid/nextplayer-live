@@ -61,16 +61,21 @@ nothing. Next Player Live wraps incomplete Matroska extractors with
 `IncompleteMatroskaSeekExtractor`:
 
 1. `GrowingFileDataSource` / `GrowingContentDataSource` publish the sparse/zero-tail aware tip
-   via `ReadableTipTracker`.
+   via `ReadableTipTracker` (under path, URI, and `file://` key forms).
 2. When the delegate reports an unseekable map that still has a known duration, it is replaced
-   with `ApproximateByteSeekMap` (full Info duration on the timeline; byte positions use
-   declared-length mapping clamped to the current tip — seeking toward the end of a partially
-   downloaded file lands near the latest available data).
-3. On seek, the byte position is snapped back to the nearest preceding Cluster (`1F 43 B6 75`)
-   within a 2 MiB scan so demux stays in sync.
+   with `ApproximateByteSeekMap` (full Info duration on the timeline; **tip-relative** byte
+   mapping across the downloaded tip, with a ~1 MiB safety margin so scrubbing never lands in
+   the unfinished / zero-padded edge). Mid-timeline scrub stays mid-tip — it does **not** clamp
+   to tip−1 when declared length ≫ tip.
+3. On seek, the byte position is clamped to the safe tip and snapped back to the nearest
+   **validated** preceding Cluster (`1F 43 B6 75` + plausible EBML size varint) within a 4 MiB
+   scan. Candidates near the tip edge or with a zero size byte are rejected; if none match,
+   seek falls back to position `0`.
 
-This is **estimated** seeking within the downloaded tip (VLC-like). It may be less accurate than
-VLC until real cues exist at EOF; finished files keep normal cue-based seeking and are not wrapped.
+This is **estimated** seeking across the downloaded tip (VLC-like). Avoid seeking into the
+unfinished edge — that region is often a truncated cluster or zero padding and will fail parse.
+It may be less accurate than VLC until real cues exist at EOF; finished files keep normal
+cue-based seeking and are not wrapped.
 
 ## Limitations
 
@@ -89,4 +94,5 @@ VLC until real cues exist at EOF; finished files keep normal cue-based seeking a
 1. Start a download of a video (preferably MKV/TS) with any download manager.
 2. While the file is still growing — stored anywhere — open it in Next Player Live.
 3. Playback should start and continue as more bytes are written into the tip; scrubbing within
-   the timeline seeks approximately within the downloaded tip (clamped), and snaps to a Cluster.
+   the timeline seeks approximately across the downloaded tip (estimated, safety-margined), and
+   snaps to a validated Cluster.

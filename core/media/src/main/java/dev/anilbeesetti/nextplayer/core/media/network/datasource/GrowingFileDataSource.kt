@@ -255,17 +255,19 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             if (waitStarted == 0L) {
                 waitStarted = now
             }
+            val incomplete = looksPartialFileName(f.name) ||
+                isActivelyGrowing(mtime) ||
+                SparseAwareFileLength.isSparsePartial(declared, size)
+            // Seeks should already be clamped to the safe tip. If a seek still opens past the
+            // readable end on an incomplete file, fail fast (~200–500ms) instead of spinning
+            // on a long stable wait / forever-poll (loading spinner then parse failure).
+            if (incomplete && now - waitStarted >= SEEK_PAST_TIP_FAIL_FAST_MS) {
+                throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+            }
             val gap = position - size
-            // Cue-style seeks land far past the current tip on incomplete MKVs. Do not wait the
-            // full STABLE_DURATION_MS hoping for end cues — fail fast so load can proceed without
-            // cue-seek (or retry). Still wait briefly for the next few KB of a cluster.
-            // Sparse: declared may already be huge while tip is small — still fail-fast on gap.
-            if (gap > CUE_SEEK_GAP_BYTES &&
-                (looksPartialFileName(f.name) ||
-                    isActivelyGrowing(mtime) ||
-                    SparseAwareFileLength.isSparsePartial(declared, size)) &&
-                now - waitStarted >= CUE_SEEK_FAIL_FAST_MS
-            ) {
+            // Legacy cue-style far seeks on ambiguous files: fail after a short wait once the
+            // gap is clearly beyond the next cluster fill.
+            if (gap > CUE_SEEK_GAP_BYTES && now - waitStarted >= CUE_SEEK_FAIL_FAST_MS) {
                 throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
             }
             if (looksPartialFileName(f.name) ||
@@ -390,8 +392,23 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         } catch (_: Exception) {
             -1L
         }
+        // Publish under path, DataSpec URI, and file:// forms so tipProvider never misses
+        // after SchemeDispatch rewrites the URI.
         ReadableTipTracker.update(path, readableEnd, declared)
-        uri?.let { ReadableTipTracker.update(it.toString(), readableEnd, declared) }
+        if (path.startsWith("/")) {
+            ReadableTipTracker.update("file://$path", readableEnd, declared)
+        }
+        uri?.let { u ->
+            val uriStr = u.toString()
+            ReadableTipTracker.update(uriStr, readableEnd, declared)
+            val uriPath = resolvePath(u)
+            if (uriPath != null && uriPath != path) {
+                ReadableTipTracker.update(uriPath, readableEnd, declared)
+                if (uriPath.startsWith("/")) {
+                    ReadableTipTracker.update("file://$uriPath", readableEnd, declared)
+                }
+            }
+        }
     }
 
     private fun openFileAt(path: String, position: Long) {
@@ -455,7 +472,12 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         private const val FIRST_EOF_STABLE_MS = 2_000L
         /** Far seeks (e.g. Matroska Cues near EOF) beyond current length + this gap fail fast. */
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
-        private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
+        private const val CUE_SEEK_FAIL_FAST_MS = 500L
+        /**
+         * Incomplete-file seeks past the readable tip: short wait only. Approximate seeking
+         * should already clamp; do not spin the loading UI for seconds on a bad open.
+         */
+        private const val SEEK_PAST_TIP_FAIL_FAST_MS = 400L
         private const val CUE_SEEK_FRESH_MTIME_MS = 20_000L
 
         /** Re-probe zero-tail tip at most this often while waiting past the tip. */

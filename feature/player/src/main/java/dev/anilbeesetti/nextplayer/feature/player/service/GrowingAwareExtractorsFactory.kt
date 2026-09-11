@@ -159,17 +159,33 @@ class GrowingAwareExtractorsFactory(
             return false
         }
 
+        private fun tipLookupKeys(tipKey: String, path: String?): List<String> {
+            val keys = LinkedHashSet<String>()
+            keys.add(tipKey)
+            if (path != null) {
+                keys.add(path)
+                if (path.startsWith("/")) keys.add("file://$path")
+            }
+            if (tipKey.startsWith("/")) {
+                keys.add("file://$tipKey")
+            } else if (tipKey.startsWith("file://")) {
+                val stripped = tipKey.removePrefix("file://")
+                if (stripped.isNotEmpty()) keys.add(stripped)
+            }
+            return keys.toList()
+        }
+
         private fun tipForKey(tipKey: String, path: String?): Long {
-            val tracked = ReadableTipTracker.tipFor(tipKey)
-            if (tracked > 0L) return tracked
-            if (path != null && path != tipKey) {
-                val alt = ReadableTipTracker.tipFor(path)
-                if (alt > 0L) return alt
+            for (key in tipLookupKeys(tipKey, path)) {
+                val tracked = ReadableTipTracker.tipFor(key)
+                if (tracked > 0L) return tracked
             }
             if (path != null) {
                 val snap = IncompleteLocalMedia.inspect(path)
                 if (snap.readableEnd > 0L) {
-                    ReadableTipTracker.update(tipKey, snap.readableEnd, snap.declaredLength)
+                    for (key in tipLookupKeys(tipKey, path)) {
+                        ReadableTipTracker.update(key, snap.readableEnd, snap.declaredLength)
+                    }
                     return snap.readableEnd
                 }
             }
@@ -177,11 +193,9 @@ class GrowingAwareExtractorsFactory(
         }
 
         private fun declaredForKey(tipKey: String, path: String?): Long {
-            val tracked = ReadableTipTracker.declaredFor(tipKey)
-            if (tracked > 0L) return tracked
-            if (path != null && path != tipKey) {
-                val alt = ReadableTipTracker.declaredFor(path)
-                if (alt > 0L) return alt
+            for (key in tipLookupKeys(tipKey, path)) {
+                val tracked = ReadableTipTracker.declaredFor(key)
+                if (tracked > 0L) return tracked
             }
             if (path != null) {
                 val file = File(path)

@@ -28,8 +28,9 @@ class ApproximateByteSeekMapTest {
     }
 
     @Test
-    fun getSeekPoints_clampsToTip_whenMappedPastTip() {
-        // Full movie duration; only 10% downloaded (tip << declared).
+    fun getSeekPoints_midScrubStaysMidSafeTip_whenDeclaredMuchLarger() {
+        // Full movie duration; only ~10% downloaded (tip << declared).
+        // Tip-relative mapping (not declared-then-clamp) keeps mid scrub at mid safeTip.
         val durationUs = 100_000_000L
         val tip = 1_000_000L
         val declared = 10_000_000L
@@ -38,18 +39,32 @@ class ApproximateByteSeekMapTest {
             tipProvider = { tip },
             declaredProvider = { declared },
         )
-        // Mid-timeline: declared mapping would be 5_000_000, clamped to tip-1.
+        val safe = ApproximateByteSeekMap.safeTip(tip)
         val mid = map.getSeekPoints(durationUs / 2)
-        assertEquals(tip - 1L, mid.first.position)
+        assertEquals(safe / 2, mid.first.position)
         assertEquals(durationUs / 2, mid.first.timeUs)
-
-        // Near end of timeline: still clamps to tip.
-        val end = map.getSeekPoints(durationUs - 1)
-        assertEquals(tip - 1L, end.first.position)
+        // Must NOT clamp to tip-1 (that lands in the unfinished edge).
+        assertTrue(mid.first.position < tip - 1L)
+        assertTrue(mid.first.position < safe)
     }
 
     @Test
-    fun getSeekPoints_usesDeclaredMapping_whenWithinTip() {
+    fun getSeekPoints_nearEndMapsNearSafeTip_notDeclaredEdge() {
+        val durationUs = 100_000_000L
+        val tip = 1_000_000L
+        val declared = 10_000_000L
+        val map = ApproximateByteSeekMap(
+            durationUs = durationUs,
+            tipProvider = { tip },
+            declaredProvider = { declared },
+        )
+        val safe = ApproximateByteSeekMap.safeTip(tip)
+        val end = map.getSeekPoints(durationUs - 1)
+        assertEquals(safe - 1L, end.first.position)
+    }
+
+    @Test
+    fun getSeekPoints_usesTipRelativeMapping_evenWhenDeclaredKnown() {
         val durationUs = 100_000_000L
         val tip = 8_000_000L
         val declared = 10_000_000L
@@ -58,9 +73,10 @@ class ApproximateByteSeekMapTest {
             tipProvider = { tip },
             declaredProvider = { declared },
         )
-        // 20% of timeline → 20% of declared = 2_000_000, within tip.
+        val safe = ApproximateByteSeekMap.safeTip(tip)
+        // 20% of timeline → 20% of safeTip (not 20% of declared).
         val points = map.getSeekPoints(20_000_000L)
-        assertEquals(2_000_000L, points.first.position)
+        assertEquals((20_000_000L * safe) / durationUs, points.first.position)
         assertEquals(20_000_000L, points.first.timeUs)
     }
 
@@ -73,8 +89,9 @@ class ApproximateByteSeekMapTest {
             tipProvider = { tip },
             declaredProvider = { -1L },
         )
+        val safe = ApproximateByteSeekMap.safeTip(tip)
         val points = map.getSeekPoints(50_000_000L)
-        assertEquals(tip / 2, points.first.position)
+        assertEquals(safe / 2, points.first.position)
     }
 
     @Test
@@ -87,5 +104,14 @@ class ApproximateByteSeekMapTest {
         val points = map.getSeekPoints(0L)
         assertEquals(0L, points.first.position)
         assertEquals(0L, points.first.timeUs)
+    }
+
+    @Test
+    fun safeTip_appliesOneMiBOrTipOverEight() {
+        assertEquals(0L, ApproximateByteSeekMap.safeTip(0L))
+        // tip/8 < 1MiB → margin = tip/8
+        assertEquals(7_000_000L, ApproximateByteSeekMap.safeTip(8_000_000L))
+        // large tip → margin capped at 1MiB
+        assertEquals(9L * 1024L * 1024L, ApproximateByteSeekMap.safeTip(10L * 1024L * 1024L))
     }
 }
