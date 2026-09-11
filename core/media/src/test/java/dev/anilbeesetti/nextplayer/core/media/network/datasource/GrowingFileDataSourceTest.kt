@@ -6,6 +6,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
 import java.io.File
 import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -99,6 +100,51 @@ class GrowingFileDataSourceTest {
             assertEquals(C.LENGTH_UNSET.toLong(), source.open(DataSpec(file.toUri())))
         } finally {
             source.close()
+            file.delete()
+        }
+    }
+
+    @Test
+    fun chooseReadableEnd_usesHoleWhenInsideDeclared() {
+        assertEquals(2_097_152L, SparseAwareFileLength.chooseReadableEnd(31_762_747L, 2_097_152L))
+        assertEquals(31_762_747L, SparseAwareFileLength.chooseReadableEnd(31_762_747L, 31_762_747L))
+        assertEquals(31_762_747L, SparseAwareFileLength.chooseReadableEnd(31_762_747L, 0L))
+        assertEquals(31_762_747L, SparseAwareFileLength.chooseReadableEnd(31_762_747L, -1L))
+        assertEquals(0L, SparseAwareFileLength.chooseReadableEnd(0L, 0L))
+    }
+
+    @Test
+    fun isSparsePartial_whenReadableBehindDeclared() {
+        assertTrue(SparseAwareFileLength.isSparsePartial(31_762_747L, 2_097_152L))
+        assertFalse(SparseAwareFileLength.isSparsePartial(31_762_747L, 31_762_747L))
+        assertFalse(SparseAwareFileLength.isSparsePartial(0L, 0L))
+    }
+
+    @Test
+    fun createSparseFile_documentsAdmPreallocationShape() {
+        // Reproduce ADM preallocation: truncate to final size, write only a prefix.
+        val file = File.createTempFile("growing-sparse", ".bin")
+        try {
+            val declared = 8L * 1024L * 1024L
+            val prefix = 256L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.setLength(declared)
+                raf.seek(0)
+                raf.write(ByteArray(prefix.toInt()) { 0xAB.toByte() })
+            }
+            assertEquals(declared, file.length())
+            // Pure heuristic: hole tip would be prefix if SEEK_HOLE works.
+            assertEquals(prefix, SparseAwareFileLength.chooseReadableEnd(declared, prefix))
+            assertTrue(SparseAwareFileLength.isSparsePartial(declared, prefix))
+            // readableEnd without Android Os support still returns declared (safe fallback);
+            // on Robolectric API 26+ it may or may not implement SEEK_HOLE — either is OK as
+            // long as chooseReadableEnd / isSparsePartial stay correct.
+            val tip = SparseAwareFileLength.readableEnd(file.absolutePath, declared, fd = null)
+            assertTrue(
+                "readableEnd should be tip or declared, got $tip",
+                tip == prefix || tip == declared,
+            )
+        } finally {
             file.delete()
         }
     }

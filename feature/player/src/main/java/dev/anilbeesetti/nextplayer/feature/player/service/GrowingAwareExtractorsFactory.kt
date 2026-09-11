@@ -13,6 +13,7 @@ import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingContentDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.SparseAwareFileLength
 import java.io.File
 
 /**
@@ -28,8 +29,11 @@ import java.io.File
  *
  * For local `file://` / `content://` / path URIs we **default to disabling cue-seek** whenever
  * the file might still be downloading. Cue-seek stays enabled only when the file is clearly
- * finished (exists, non-partial name, mtime age ≥ 5 minutes, and a short length poll shows no
- * growth). Missing files, partial suffixes, and unresolved `content://` URIs always disable cues.
+ * finished (exists, non-partial name, mtime age ≥ 5 minutes, no sparse tail, and a short length
+ * poll shows no growth). Missing files, partial suffixes, sparse preallocation, and unresolved
+ * `content://` URIs always disable cues.
+ *
+ * The no-arg [createExtractors] also disables cue-seek by default (safe) when callers omit URI.
  */
 @UnstableApi
 class GrowingAwareExtractorsFactory(
@@ -40,7 +44,7 @@ class GrowingAwareExtractorsFactory(
     private val subtitleParserFactory = DefaultSubtitleParserFactory()
 
     override fun createExtractors(): Array<Extractor> =
-        buildFactory(disableSeekForCues = false).createExtractors()
+        buildFactory(disableSeekForCues = true).createExtractors()
 
     override fun createExtractors(
         uri: Uri,
@@ -67,7 +71,7 @@ class GrowingAwareExtractorsFactory(
 
         /**
          * VLC-like default: assume a local file may still be downloading and disable cue-seek,
-         * unless it is clearly finished (old mtime + stable length + non-partial name).
+         * unless it is clearly finished (old mtime + stable length + non-partial name + not sparse).
          */
         fun isLikelyGrowing(context: Context, uri: Uri): Boolean {
             val scheme = uri.scheme
@@ -87,6 +91,11 @@ class GrowingAwareExtractorsFactory(
                 }
                 // Missing file → still may appear; keep cues disabled.
                 if (!file.exists()) return true
+                val declared = file.length()
+                val readable = SparseAwareFileLength.readableEnd(path, declared, fd = null)
+                if (SparseAwareFileLength.isSparsePartial(declared, readable)) {
+                    return true
+                }
                 val now = System.currentTimeMillis()
                 val age = now - file.lastModified()
                 // Clock skew / future mtime — treat as growing.
@@ -95,15 +104,20 @@ class GrowingAwareExtractorsFactory(
                 if (age < CLEARLY_FINISHED_MTIME_MS) {
                     return true
                 }
-                // Age ≥ 5 minutes: confirm length is not still growing.
-                val length1 = file.length()
+                // Age ≥ 5 minutes: confirm readable tip is not still growing.
+                val length1 = SparseAwareFileLength.readableEnd(path, file.length(), fd = null)
                 try {
                     Thread.sleep(LENGTH_POLL_MS)
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
                     return true
                 }
-                return file.length() > length1
+                val length2Declared = file.length()
+                val length2 = SparseAwareFileLength.readableEnd(path, length2Declared, fd = null)
+                if (SparseAwareFileLength.isSparsePartial(length2Declared, length2)) {
+                    return true
+                }
+                return length2 > length1
             }
 
             // content:// without resolvable path — always disable cue-seek (may be downloading).

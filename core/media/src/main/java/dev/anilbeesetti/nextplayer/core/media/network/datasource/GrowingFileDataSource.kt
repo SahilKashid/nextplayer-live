@@ -27,6 +27,12 @@ import java.io.RandomAccessFile
  * Tiny / empty files still open successfully (with [C.LENGTH_UNSET]) so the extractors / load
  * retry policy can wait for headers (e.g. MP4 `moov`) rather than failing at the DataSource.
  *
+ * ## Sparse / preallocated downloads
+ * Many ADMs create the destination at **final size** immediately and fill it sequentially.
+ * [File.length] then returns the full declared size while bytes past the download tip are
+ * sparse holes. We use [SparseAwareFileLength] (API 26+ `SEEK_HOLE`) as the readable end and
+ * poll/block when the tip has not advanced — never returning hole zeros as media.
+ *
  * ## Limitations
  * - Works best with streamable / growing-friendly containers (MKV, TS, many incomplete
  *   progressive downloads).
@@ -34,6 +40,7 @@ import java.io.RandomAccessFile
  *   (see player `GrowingFileLoadErrorHandlingPolicy`).
  * - Reported duration and seekable range may update only as more media is parsed.
  * - Unresolvable `content://` URIs use [GrowingContentDataSource] instead.
+ * - On API 24–25, SEEK_HOLE is unavailable; preallocated sparse tails may still be misread.
  *
  * See ExoPlayer issues #10472 / #7070.
  */
@@ -50,7 +57,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     @Volatile
     private var closed = false
 
-    /** Wall-clock millis when on-disk length last increased. */
+    /** Wall-clock millis when readable end (download tip) last increased. */
     private var lastGrowthElapsedMs: Long = 0L
     private var lastSeenLength: Long = -1L
 
@@ -76,7 +83,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             }
             val existing = File(resolvedPath)
             if (existing.exists()) {
-                noteLength(existing.length())
+                noteLength(effectiveLength(resolvedPath))
             }
         } catch (e: InterruptedIOException) {
             throw e
@@ -107,12 +114,13 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             throwIfClosedOrInterrupted()
 
             val localFile = File(path)
-            val lengthOnDisk = localFile.length()
+            val declared = localFile.length()
+            val lengthOnDisk = effectiveLength(path, declared)
             noteLength(lengthOnDisk)
             val available = lengthOnDisk - readPosition
 
             if (available > 0) {
-                ensureFileReflectsLength(path, lengthOnDisk)
+                ensureFileReflectsLength(path, declared)
                 val raf = file ?: return C.RESULT_END_OF_INPUT
                 val bytesRead = try {
                     raf.read(buffer, offset, minOf(toRead.toLong(), available).toInt())
@@ -134,6 +142,8 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 continue
             }
 
+            // Tip reached but declared size still larger (sparse hole) or file still growing —
+            // never return zeros from the hole; poll like a growing append.
             if (isDownloadFinished(localFile)) {
                 return C.RESULT_END_OF_INPUT
             }
@@ -160,6 +170,19 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         }
     }
 
+    /**
+     * Readable download tip: [SparseAwareFileLength.readableEnd] when an FD is available,
+     * otherwise probes via path. Polled on every length check so the tip advances as holes fill.
+     */
+    private fun effectiveLength(path: String, declared: Long = File(path).length()): Long {
+        val fd = try {
+            file?.fd
+        } catch (_: IOException) {
+            null
+        }
+        return SparseAwareFileLength.readableEnd(path, declared, fd)
+    }
+
     private fun waitUntilPositionAvailable(path: String, position: Long) {
         if (position <= 0L) {
             waitUntilExists(path)
@@ -176,10 +199,11 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 sleepInterruptibly(POLL_INTERVAL_MS)
                 continue
             }
-            val size = f.length()
+            val declared = f.length()
+            val size = effectiveLength(path, declared)
             val mtime = f.lastModified()
             noteLength(size)
-            // Seek is OK at or before current EOF; past a finished file is an error.
+            // Seek is OK at or before current readable tip; past a finished file is an error.
             if (size >= position) {
                 return
             }
@@ -188,16 +212,21 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 waitStarted = now
             }
             val gap = position - size
-            // Cue-style seeks land far past the current EOF on incomplete MKVs. Do not wait the
+            // Cue-style seeks land far past the current tip on incomplete MKVs. Do not wait the
             // full STABLE_DURATION_MS hoping for end cues — fail fast so load can proceed without
             // cue-seek (or retry). Still wait briefly for the next few KB of a cluster.
+            // Sparse: declared may already be huge while tip is small — still fail-fast on gap.
             if (gap > CUE_SEEK_GAP_BYTES &&
-                (looksPartialFileName(f.name) || isActivelyGrowing(mtime)) &&
+                (looksPartialFileName(f.name) ||
+                    isActivelyGrowing(mtime) ||
+                    SparseAwareFileLength.isSparsePartial(declared, size)) &&
                 now - waitStarted >= CUE_SEEK_FAIL_FAST_MS
             ) {
                 throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
             }
-            if (looksPartialFileName(f.name)) {
+            if (looksPartialFileName(f.name) ||
+                SparseAwareFileLength.isSparsePartial(declared, size)
+            ) {
                 stableSize = size
                 stableMtime = mtime
                 stableSince = now
@@ -235,7 +264,7 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             val f = File(path)
             if (f.exists()) {
                 // Tiny / empty files are fine — LENGTH_UNSET lets sniff/retry wait for headers.
-                noteLength(f.length())
+                noteLength(effectiveLength(path))
                 return
             }
             if (absentSince == 0L) {
@@ -248,15 +277,24 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     }
 
     /**
-     * Treat the file as finished when its length and mtime have not changed for
+     * Treat the file as finished when its readable tip and mtime have not changed for
      * [STABLE_DURATION_MS], mtime is older than [RECENT_MTIME_MS], nothing grew within
-     * [RECENT_GROWTH_WINDOW_MS], and the name does not look like a partial download artifact.
+     * [RECENT_GROWTH_WINDOW_MS], the name does not look like a partial download artifact, and
+     * there is no sparse tail ([SparseAwareFileLength.isSparsePartial]).
      *
      * Download managers often pause longer than a few seconds between flushes; we wait through
      * those pauses (VLC-style) rather than declaring EOF mid-cluster.
      */
     private fun isDownloadFinished(file: File): Boolean {
         if (looksPartialFileName(file.name)) {
+            return false
+        }
+        val path = file.absolutePath
+        val declared = file.length()
+        val readable = effectiveLength(path, declared)
+        // Sparse preallocated tail: still downloading even if declared length is stable.
+        if (SparseAwareFileLength.isSparsePartial(declared, readable)) {
+            noteLength(readable)
             return false
         }
         val now = System.currentTimeMillis()
@@ -269,15 +307,19 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             return false
         }
 
-        var lastSize = file.length()
+        var lastSize = readable
         var lastMtime = file.lastModified()
         val start = System.currentTimeMillis()
         while (System.currentTimeMillis() - start < STABLE_DURATION_MS) {
             throwIfClosedOrInterrupted()
             sleepInterruptibly(POLL_INTERVAL_MS)
-            val size = file.length()
+            val loopDeclared = file.length()
+            val size = effectiveLength(path, loopDeclared)
             val mtime = file.lastModified()
             noteLength(size)
+            if (SparseAwareFileLength.isSparsePartial(loopDeclared, size)) {
+                return false
+            }
             if (size != lastSize || mtime != lastMtime) {
                 return false
             }
@@ -297,7 +339,12 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             lastSize = size
             lastMtime = mtime
         }
-        return file.length() <= readPosition
+        val finalDeclared = file.length()
+        val finalReadable = effectiveLength(path, finalDeclared)
+        if (SparseAwareFileLength.isSparsePartial(finalDeclared, finalReadable)) {
+            return false
+        }
+        return finalReadable <= readPosition
     }
 
     private fun noteLength(length: Long) {
@@ -324,13 +371,13 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     }
 
     /**
-     * Some platforms cache EOF on [RandomAccessFile]; if the on-disk length grew past what we
-     * have read, reopen so newly appended bytes are visible.
+     * Some platforms cache EOF on [RandomAccessFile]; if the on-disk declared length grew past
+     * what we have read, reopen so newly appended / filled bytes are visible.
      */
-    private fun ensureFileReflectsLength(path: String, lengthOnDisk: Long) {
+    private fun ensureFileReflectsLength(path: String, declaredLength: Long) {
         val raf = file ?: return
         try {
-            if (raf.length() < lengthOnDisk) {
+            if (raf.length() < declaredLength) {
                 reopenAt(path, readPosition)
             }
         } catch (_: IOException) {

@@ -9,18 +9,32 @@ manager (incomplete / growing file), similar to VLC.
 URIs that resolve to a readable filesystem path). On `open()` it returns `C.LENGTH_UNSET` so
 ExoPlayer does not treat the then-current EOF as the end of the stream. On `read()` it polls the
 file (~50ms) until more bytes appear, and only signals end-of-input once size and mtime have been
-stable for about six seconds, the name does not look like a partial download (`.part`,
+stable for about thirty seconds, the name does not look like a partial download (`.part`,
 `.crdownload`, `.!ut`, `.tmp`, `.download`, `.aria2`, `.bc!`), and nothing has grown within the
-last ~10 seconds.
+recent-growth window.
+
+### ADM preallocation / sparse files
+
+Many advanced download managers **preallocate** the destination (truncate / fallocate) to the
+final size and fill it sequentially. `File.length()` then returns the full declared size while
+bytes past the download tip are sparse holes (zeros). Reading those holes as media breaks
+Matroska parsing (“Can't play video”).
+
+On API 26+, `SparseAwareFileLength` uses `android.system.Os.lseek(fd, 0, SEEK_HOLE)` to find the
+end of the first data extent (= real downloaded tip for sequential sparse writes) and treats that
+as the readable end. While `readableEnd < declaredLength`, the datasource **blocks/polls** instead
+of returning hole zeros or EOF. As the downloader fills holes, the tip advances on each poll.
+Below API 26 (minSdk 24), SEEK_HOLE is unavailable and behavior falls back to declared length.
 
 Unresolvable `content://` URIs use `GrowingContentDataSource`, which opens via
 `ContentResolver.openAssetFileDescriptor` / PFD with the same `LENGTH_UNSET` + reopen-on-EOF
-growing semantics. Media3’s fixed-length `ContentDataSource` is **not** used for video playback
-when growing support is desired.
+growing semantics, and best-effort SEEK_HOLE on the AFD when available. Media3’s fixed-length
+`ContentDataSource` is **not** used for video playback when growing support is desired.
 
-For still-growing MKVs, `GrowingAwareExtractorsFactory` sets
+For still-growing (or sparse-preallocated) MKVs, `GrowingAwareExtractorsFactory` sets
 `MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES` so playback can start as soon as the header and
-early clusters are present, without a long end-cue demux wait.
+early clusters are present, without a long end-cue demux wait. The no-arg `createExtractors()`
+also disables cue-seek by default.
 
 `GrowingFileLoadErrorHandlingPolicy` only briefly retries progressive load/source errors
 (including `UnrecognizedInputFormatException` / `ParserException`) for local `file://` /
@@ -41,11 +55,14 @@ uses Media3 `DefaultDataSource`.
 - **Duration and seek range** may update only as more media is parsed.
 - `content://` is supported via the growing content source when a filesystem path cannot be
   resolved.
+- **API 24–25**: sparse preallocation detection requires SEEK_HOLE (API 26+); older devices may
+  still misread ADM preallocated tails.
 
 ## How to try
 
-1. Start a download of a video (preferably MKV/TS) with any download manager.
+1. Start a download of a video (preferably MKV/TS) with any download manager (including ones that
+   preallocate the full file size).
 2. While the file is still growing, open the partial file in Next Player Live from the file
    picker or a file manager share intent.
-3. Playback should start and continue as more bytes are appended; seeking far ahead of the
-   downloaded range waits until that offset exists (or errors if the download finishes short).
+3. Playback should start and continue as more bytes are written into the tip; seeking far ahead of
+   the downloaded range waits until that offset exists (or errors if the download finishes short).
