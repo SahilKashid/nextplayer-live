@@ -36,7 +36,6 @@ private val IdleHighlightTick = 500.milliseconds
 // Start centering the upcoming cue slightly before it becomes active so the
 // slide finishes as bold/highlight lands (matches scroll animation length).
 private val ScrollLeadMs = 380L
-private val ScrollLeadHysteresisMs = 120L
 private val DisableLeadAfterSeekMs = 500L
 private val PartialCoalesceWindow = 48.milliseconds
 
@@ -275,6 +274,15 @@ class LiveSubtitlesState(
             return
         }
 
+        // Already leading toward next: stay there until the true current cue catches
+        // up. Do not drop back to `current` when untilNext jitters — that caused the
+        // occasional highlight jump to the line above, then back.
+        val nextKey = cues[next].identityKey()
+        if (scrollTargetKey == nextKey && current < next) {
+            commitScrollTargetIndex(next)
+            return
+        }
+
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
         val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
         val gapToNext = (cues[next].startMs - cues[current].startMs).coerceAtLeast(0L)
@@ -289,15 +297,7 @@ class LiveSubtitlesState(
         }
 
         val untilNext = cues[next].startMs - effective
-        val alreadyLeading = scrollTargetKey == cues.getOrNull(next)?.identityKey()
-        val enterLead = untilNext in 0..leadMs
-        // Leave lead only after we're clearly outside the window (+ hysteresis).
-        val leaveLead = untilNext > leadMs + ScrollLeadHysteresisMs || untilNext < 0L
-        val target = when {
-            alreadyLeading && !leaveLead -> next
-            !alreadyLeading && enterLead -> next
-            else -> current
-        }
+        val target = if (untilNext in 0..leadMs) next else current
         commitScrollTargetIndex(target)
     }
 
