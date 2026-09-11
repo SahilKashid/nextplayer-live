@@ -99,6 +99,8 @@ class PlaybackFailureLogTest {
             assertTrue(report, report.contains("declaredLength: 128"))
             assertTrue(report, report.contains("readableEnd: "))
             assertTrue(report, report.contains("partialNameHeuristic: true"))
+            assertTrue(report, report.contains("downloadPathHeuristic: "))
+            assertTrue(report, report.contains("zeroTailReadableEnd: "))
             assertTrue(report, report.contains("isLikelyGrowing: "))
         } finally {
             file.delete()

@@ -148,4 +148,125 @@ class GrowingFileDataSourceTest {
             file.delete()
         }
     }
+
+
+    @Test
+    fun downloadPathHeuristic_matches1dmAndDownloadFolders() {
+        assertTrue(
+            DownloadPathHeuristic.looksLikeDownloadManagerPath(
+                "/storage/emulated/0/Download/1DM/Videos/show.mkv",
+            ),
+        )
+        assertTrue(
+            DownloadPathHeuristic.looksLikeDownloadManagerPath(
+                "/storage/emulated/0/Downloads/movie.mkv",
+            ),
+        )
+        assertTrue(DownloadPathHeuristic.looksLikeDownloadManagerPath("/sdcard/ADM/file.mkv"))
+        assertTrue(DownloadPathHeuristic.looksLikeDownloadManagerPath("/sdcard/IDM/file.mkv"))
+        assertTrue(DownloadPathHeuristic.looksPartialFileName("movie.mkv.crdownload"))
+        assertTrue(
+            DownloadPathHeuristic.looksIncompleteDownload(
+                "/storage/emulated/0/Download/1DM/Videos/The Gentlemen 2024 S02E02.mkv",
+                "The Gentlemen 2024 S02E02.mkv",
+            ),
+        )
+        assertFalse(
+            DownloadPathHeuristic.looksLikeDownloadManagerPath(
+                "/storage/emulated/0/Movies/finished-show.mkv",
+            ),
+        )
+        // "adm" must not match inside "admin"
+        assertFalse(
+            DownloadPathHeuristic.looksLikeDownloadManagerPath(
+                "/storage/emulated/0/Movies/admin-cut.mkv",
+            ),
+        )
+    }
+
+    @Test
+    fun zeroPaddedReadableEnd_findsTipBeforeZeroTail() {
+        val file = File.createTempFile("growing-zeropad", ".bin")
+        try {
+            val declared = 4L * 1024L * 1024L // 4 MiB zero-preallocated
+            val prefix = 384L * 1024L // 384 KiB real data
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.setLength(declared)
+                raf.seek(0)
+                raf.write(ByteArray(prefix.toInt()) { (it % 250 + 1).toByte() })
+                // Ensure a stretch of explicit zeros after the prefix (setLength already zero-fills
+                // on most platforms; write zeros to be explicit for the test).
+                raf.seek(prefix)
+                raf.write(ByteArray((declared - prefix).toInt()) { 0 })
+            }
+            assertEquals(declared, file.length())
+            RandomAccessFile(file, "r").use { raf ->
+                assertTrue(SparseAwareFileLength.quickTailIsAllZeros(raf, declared))
+                val tip = SparseAwareFileLength.zeroPaddedReadableEnd(raf, declared)
+                assertTrue(
+                    "tip=$tip should be near prefix=$prefix",
+                    tip in (prefix - 64) .. prefix,
+                )
+                assertTrue(SparseAwareFileLength.isSparsePartial(declared, tip))
+            }
+            val viaReadable = SparseAwareFileLength.readableEnd(
+                file.absolutePath,
+                declared,
+                fd = null,
+                preferZeroTailScan = true,
+            )
+            assertTrue(
+                "readableEnd=$viaReadable should be near prefix=$prefix",
+                viaReadable in (prefix - 64) .. prefix,
+            )
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun zeroPaddedReadableEnd_allDataReturnsDeclared() {
+        val file = File.createTempFile("growing-full", ".bin")
+        try {
+            val size = 128L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.write(ByteArray(size.toInt()) { 0x5A })
+            }
+            RandomAccessFile(file, "r").use { raf ->
+                val tip = SparseAwareFileLength.zeroPaddedReadableEnd(raf, size)
+                assertEquals(size, tip)
+            }
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun extendZeroPaddedTip_advancesWhenDataWrittenPastTip() {
+        val file = File.createTempFile("growing-extend", ".bin")
+        try {
+            val declared = 2L * 1024L * 1024L
+            val prefix1 = 100L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.setLength(declared)
+                raf.seek(0)
+                raf.write(ByteArray(prefix1.toInt()) { 1 })
+            }
+            RandomAccessFile(file, "r").use { raf ->
+                val tip1 = SparseAwareFileLength.zeroPaddedReadableEnd(raf, declared)
+                assertTrue(tip1 in (prefix1 - 64)..prefix1)
+            }
+            val prefix2 = 300L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.seek(prefix1)
+                raf.write(ByteArray((prefix2 - prefix1).toInt()) { 2 })
+            }
+            RandomAccessFile(file, "r").use { raf ->
+                val tip2 = SparseAwareFileLength.extendZeroPaddedTip(raf, prefix1, declared)
+                assertTrue("extended tip=$tip2", tip2 in (prefix2 - 64)..prefix2)
+            }
+        } finally {
+            file.delete()
+        }
+    }
 }

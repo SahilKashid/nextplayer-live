@@ -11,6 +11,7 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.DownloadPathHeuristic
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingContentDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.SparseAwareFileLength
@@ -29,8 +30,9 @@ import java.io.File
  *
  * For local `file://` / `content://` / path URIs we **default to disabling cue-seek** whenever
  * the file might still be downloading. Cue-seek stays enabled only when the file is clearly
- * finished (exists, non-partial name, mtime age ≥ 5 minutes, no sparse tail, and a short length
- * poll shows no growth). Missing files, partial suffixes, sparse preallocation, and unresolved
+ * finished (exists, non-partial / non-download-manager path, mtime age ≥ 5 minutes, no sparse
+ * or zero-padded tail, and a short length poll shows no growth). Missing files, partial
+ * suffixes, `1DM`/`Download`/ADM paths, sparse / zero-preallocation, and unresolved
  * `content://` URIs always disable cues.
  *
  * The no-arg [createExtractors] also disables cue-seek by default (safe) when callers omit URI.
@@ -82,17 +84,31 @@ class GrowingAwareExtractorsFactory(
 
             val path = runCatching { context.getPath(uri) }.getOrNull()
                 ?: GrowingFileDataSource.resolvePath(uri)
+            // Download-manager path (1DM / Download / ADM / …) → always disable cue-seek,
+            // even when mtime is stale and declared length looks finished.
+            if (DownloadPathHeuristic.looksIncompleteDownload(path, uri.toString()) ||
+                DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString())
+            ) {
+                return true
+            }
             if (path != null) {
                 val file = File(path)
                 if (GrowingFileDataSource.looksPartialFileName(file.name) ||
-                    GrowingFileDataSource.looksPartialFileName(path)
+                    GrowingFileDataSource.looksPartialFileName(path) ||
+                    DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
                 ) {
                     return true
                 }
                 // Missing file → still may appear; keep cues disabled.
                 if (!file.exists()) return true
+                val preferZero = DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
                 val declared = file.length()
-                val readable = SparseAwareFileLength.readableEnd(path, declared, fd = null)
+                val readable = SparseAwareFileLength.readableEnd(
+                    path,
+                    declared,
+                    fd = null,
+                    preferZeroTailScan = preferZero,
+                )
                 if (SparseAwareFileLength.isSparsePartial(declared, readable)) {
                     return true
                 }
@@ -105,7 +121,12 @@ class GrowingAwareExtractorsFactory(
                     return true
                 }
                 // Age ≥ 5 minutes: confirm readable tip is not still growing.
-                val length1 = SparseAwareFileLength.readableEnd(path, file.length(), fd = null)
+                val length1 = SparseAwareFileLength.readableEnd(
+                    path,
+                    file.length(),
+                    fd = null,
+                    preferZeroTailScan = preferZero,
+                )
                 try {
                     Thread.sleep(LENGTH_POLL_MS)
                 } catch (_: InterruptedException) {
@@ -113,7 +134,12 @@ class GrowingAwareExtractorsFactory(
                     return true
                 }
                 val length2Declared = file.length()
-                val length2 = SparseAwareFileLength.readableEnd(path, length2Declared, fd = null)
+                val length2 = SparseAwareFileLength.readableEnd(
+                    path,
+                    length2Declared,
+                    fd = null,
+                    preferZeroTailScan = preferZero,
+                )
                 if (SparseAwareFileLength.isSparsePartial(length2Declared, length2)) {
                     return true
                 }
@@ -124,7 +150,8 @@ class GrowingAwareExtractorsFactory(
             if (ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)) {
                 val displayName = queryDisplayName(context, uri)
                 if (GrowingContentDataSource.looksPartialName(displayName) ||
-                    GrowingContentDataSource.looksPartialName(uri.lastPathSegment)
+                    GrowingContentDataSource.looksPartialName(uri.lastPathSegment) ||
+                    DownloadPathHeuristic.looksIncompleteDownload(uri.toString(), displayName)
                 ) {
                     return true
                 }

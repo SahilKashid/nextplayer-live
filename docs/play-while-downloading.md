@@ -13,18 +13,30 @@ stable for about thirty seconds, the name does not look like a partial download 
 `.crdownload`, `.!ut`, `.tmp`, `.download`, `.aria2`, `.bc!`), and nothing has grown within the
 recent-growth window.
 
-### ADM preallocation / sparse files
+### ADM / 1DM preallocation (sparse holes **or** real zero padding)
 
 Many advanced download managers **preallocate** the destination (truncate / fallocate) to the
 final size and fill it sequentially. `File.length()` then returns the full declared size while
-bytes past the download tip are sparse holes (zeros). Reading those holes as media breaks
-Matroska parsing (“Can't play video”).
+bytes past the download tip are either:
 
-On API 26+, `SparseAwareFileLength` uses `android.system.Os.lseek(fd, 0, SEEK_HOLE)` to find the
-end of the first data extent (= real downloaded tip for sequential sparse writes) and treats that
-as the readable end. While `readableEnd < declaredLength`, the datasource **blocks/polls** instead
-of returning hole zeros or EOF. As the downloader fills holes, the tip advances on each poll.
-Below API 26 (minSdk 24), SEEK_HOLE is unavailable and behavior falls back to declared length.
+- **sparse holes** (many ADM builds) — detectable via `SEEK_HOLE` on API 26+, or
+- **real zero bytes** (1DM-style non-sparse preallocation) — `SEEK_HOLE` returns EOF because the
+  zeros are written extents; mtime is often stale while the download writes.
+
+Reading those holes / zero tails as media breaks Matroska parsing
+(`IllegalStateException: No valid varint length mask found` → “Can't play video”).
+
+`SparseAwareFileLength` resolves the readable tip as:
+
+1. `Os.lseek(SEEK_HOLE)` when it finds a hole before EOF, else
+2. a last-non-zero binary search (`zeroPaddedReadableEnd`, ~64KiB probes) when the path looks like
+   a download-manager destination (`1DM`, `/Download/`, `/Downloads/`, `ADM`, `IDM`, `.part`,
+   `.crdownload`, …) **or** the last 256KiB of the file is all zeros.
+
+While `readableEnd < declaredLength`, the datasource **blocks/polls** at the tip instead of
+returning padding zeros or EOF. As the downloader writes past the tip, the tip advances on each
+poll. Download-manager path heuristics also force `FLAG_DISABLE_SEEK_FOR_CUES` and keep load
+retries alive even when declared length is large and mtime is old.
 
 Unresolvable `content://` URIs use `GrowingContentDataSource`, which opens via
 `ContentResolver.openAssetFileDescriptor` / PFD with the same `LENGTH_UNSET` + reopen-on-EOF
@@ -55,8 +67,8 @@ uses Media3 `DefaultDataSource`.
 - **Duration and seek range** may update only as more media is parsed.
 - `content://` is supported via the growing content source when a filesystem path cannot be
   resolved.
-- **API 24–25**: sparse preallocation detection requires SEEK_HOLE (API 26+); older devices may
-  still misread ADM preallocated tails.
+- **API 24–25**: sparse `SEEK_HOLE` requires API 26+; zero-tail last-non-zero scanning still
+  covers 1DM-style non-sparse preallocation on older devices.
 
 ## How to try
 

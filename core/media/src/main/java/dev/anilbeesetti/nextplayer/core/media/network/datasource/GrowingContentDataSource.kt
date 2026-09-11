@@ -32,8 +32,9 @@ import java.io.InterruptedIOException
  * Recent last-modified (when queryable) or recent length growth also blocks EOF.
  *
  * When the AFD reports a large declared length but [SparseAwareFileLength] finds a smaller
- * SEEK_HOLE tip (ADM preallocation), reads are capped at the tip and we poll until it advances
- * — same sparse semantics as [GrowingFileDataSource].
+ * SEEK_HOLE or zero-tail tip (ADM sparse / 1DM zero preallocation), reads are capped at the tip
+ * and we poll until it advances — same semantics as [GrowingFileDataSource]. Download-manager
+ * path / display-name heuristics force zero-tail scanning when SEEK_HOLE is useless.
  *
  * Never uses Media3's fixed-length [androidx.media3.datasource.ContentDataSource] for this path.
  */
@@ -54,12 +55,15 @@ class GrowingContentDataSource(
     @Volatile
     private var closed = false
 
-    /** Last observed *readable* tip (SEEK_HOLE-aware when possible). */
+    /** Last observed *readable* tip (SEEK_HOLE / zero-tail aware when possible). */
     private var lastObservedLength: Long = -1L
-    /** Last AFD / channel declared length (may include sparse holes). */
+    /** Last AFD / channel declared length (may include sparse holes / zero padding). */
     private var lastDeclaredLength: Long = -1L
     private var lastGrowthElapsedMs: Long = 0L
     private var displayName: String? = null
+    private var preferZeroTailScan: Boolean = false
+    private var cachedZeroTailTip: Long = -1L
+    private var lastTipProbeElapsedMs: Long = 0L
 
     private val lock = Any()
 
@@ -72,6 +76,11 @@ class GrowingContentDataSource(
 
         uri = openUri
         displayName = queryDisplayName(openUri)
+        preferZeroTailScan = DownloadPathHeuristic.looksIncompleteDownload(
+            openUri.toString(),
+            displayName,
+        ) || DownloadPathHeuristic.looksLikeDownloadManagerPath(openUri.lastPathSegment)
+        cachedZeroTailTip = -1L
         transferInitializing(dataSpec)
 
         try {
@@ -241,6 +250,8 @@ class GrowingContentDataSource(
                 val gap = position - length
                 val looksGrowing = looksPartialName(displayName) ||
                     looksPartialName(uri.lastPathSegment) ||
+                    preferZeroTailScan ||
+                    DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString()) ||
                     (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) ||
                     SparseAwareFileLength.isSparsePartial(declared, length)
                 // Cue-style far seeks on a growing content URI: fail fast after a short wait.
@@ -291,7 +302,11 @@ class GrowingContentDataSource(
     }
 
     private fun isDownloadFinished(uri: Uri): Boolean {
-        if (looksPartialName(displayName) || looksPartialName(uri.lastPathSegment)) {
+        if (looksPartialName(displayName) ||
+            looksPartialName(uri.lastPathSegment) ||
+            preferZeroTailScan ||
+            DownloadPathHeuristic.looksLikeDownloadManagerPath(uri.toString())
+        ) {
             return false
         }
         refreshReadableTip()
@@ -387,7 +402,7 @@ class GrowingContentDataSource(
             if (declared != AssetFileDescriptor.UNKNOWN_LENGTH && declared >= 0L) {
                 lastDeclaredLength = declared
                 val fd = currentFd()
-                val readable = SparseAwareFileLength.readableEnd(declared, fd)
+                val readable = resolveReadableTip(declared, fd)
                 noteObservedLength(readable)
             }
         }
@@ -403,13 +418,46 @@ class GrowingContentDataSource(
         }
     }
 
-    /** Re-probe SEEK_HOLE tip without reopening when an FD is already open. */
+    /** Re-probe SEEK_HOLE / zero-tail tip without reopening when an FD is already open. */
     private fun refreshReadableTip() {
         val declared = lastDeclaredLength
         if (declared < 0L || declared == AssetFileDescriptor.UNKNOWN_LENGTH) return
         val fd = currentFd() ?: return
-        val readable = SparseAwareFileLength.readableEnd(declared, fd)
+        val readable = resolveReadableTip(declared, fd)
         noteObservedLength(readable)
+    }
+
+    private fun resolveReadableTip(declared: Long, fd: FileDescriptor?): Long {
+        if (fd == null) return declared
+        val hole = SparseAwareFileLength.sparseHoleReadableEnd(declared, fd)
+        if (hole < declared) {
+            cachedZeroTailTip = hole
+            return hole
+        }
+        val prefer = preferZeroTailScan
+        val now = System.currentTimeMillis()
+        if (cachedZeroTailTip < 0L) {
+            val tip = SparseAwareFileLength.readableEnd(
+                declared,
+                fd,
+                preferZeroTailScan = prefer,
+            )
+            cachedZeroTailTip = tip
+            lastTipProbeElapsedMs = now
+            return if (tip < declared) tip else declared
+        }
+        if (now - lastTipProbeElapsedMs >= TIP_REPROBE_MS ||
+            readPosition >= cachedZeroTailTip - SparseAwareFileLength.ZERO_TAIL_PROBE_BYTES
+        ) {
+            cachedZeroTailTip = SparseAwareFileLength.extendZeroPaddedTip(
+                fd,
+                cachedZeroTailTip,
+                declared,
+            )
+            lastTipProbeElapsedMs = now
+        }
+        val tip = cachedZeroTailTip
+        return if (tip in 0 until declared) tip else declared
     }
 
     private fun reopenAt(uri: Uri, position: Long) {
@@ -517,21 +565,10 @@ class GrowingContentDataSource(
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
         private const val CUE_SEEK_FAIL_FAST_MS = 1_500L
 
-        private val PARTIAL_SUFFIXES = listOf(
-            ".part",
-            ".crdownload",
-            ".!ut",
-            ".tmp",
-            ".download",
-            ".aria2",
-            ".bc!",
-        )
+        private const val TIP_REPROBE_MS = 400L
 
-        fun looksPartialName(name: String?): Boolean {
-            if (name.isNullOrEmpty()) return false
-            val lower = name.lowercase()
-            return PARTIAL_SUFFIXES.any { lower.endsWith(it) }
-        }
+        fun looksPartialName(name: String?): Boolean =
+            DownloadPathHeuristic.looksPartialFileName(name)
     }
 
     /** Creates [GrowingContentDataSource] instances. */

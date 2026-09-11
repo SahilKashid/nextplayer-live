@@ -11,6 +11,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
 import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
+import dev.anilbeesetti.nextplayer.core.media.network.datasource.DownloadPathHeuristic
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.GrowingFileDataSource
 import dev.anilbeesetti.nextplayer.core.media.network.datasource.SparseAwareFileLength
 import dev.anilbeesetti.nextplayer.feature.player.service.GrowingAwareExtractorsFactory
@@ -165,8 +166,27 @@ object PlaybackFailureLog {
         val exists = runCatching { file.exists() }.getOrDefault(false)
         val declared = runCatching { file.length() }.getOrDefault(-1L)
         val lastModified = runCatching { file.lastModified() }.getOrDefault(0L)
+        val downloadPathHeuristic = DownloadPathHeuristic.looksIncompleteDownload(path, file.name) ||
+            DownloadPathHeuristic.looksLikeDownloadManagerPath(path)
         val readableEnd = runCatching {
-            SparseAwareFileLength.readableEnd(path, declared.coerceAtLeast(0L), fd = null)
+            SparseAwareFileLength.readableEnd(
+                path,
+                declared.coerceAtLeast(0L),
+                fd = null,
+                preferZeroTailScan = downloadPathHeuristic,
+            )
+        }.getOrElse { -1L }
+        val holeOnly = runCatching {
+            SparseAwareFileLength.sparseHoleReadableEnd(path, declared.coerceAtLeast(0L), fd = null)
+        }.getOrElse { -1L }
+        val zeroTailReadableEnd = runCatching {
+            if (declared > 0L) {
+                java.io.RandomAccessFile(path, "r").use { raf ->
+                    SparseAwareFileLength.zeroPaddedReadableEnd(raf, declared.coerceAtLeast(0L))
+                }
+            } else {
+                -1L
+            }
         }.getOrElse { -1L }
         val partial = GrowingFileDataSource.looksPartialFileName(file.name) ||
             GrowingFileDataSource.looksPartialFileName(path)
@@ -177,11 +197,14 @@ object PlaybackFailureLog {
         appendLine("  exists: $exists")
         appendLine("  declaredLength: $declared")
         appendLine("  readableEnd: $readableEnd")
+        appendLine("  holeReadableEnd: $holeOnly")
+        appendLine("  zeroTailReadableEnd: $zeroTailReadableEnd")
         appendLine(
             "  lastModified: $lastModified" +
                 if (lastModified > 0L) " (${nowIso(lastModified)})" else "",
         )
         appendLine("  partialNameHeuristic: $partial")
+        appendLine("  downloadPathHeuristic: $downloadPathHeuristic")
         appendLine("  isLikelyGrowing: $growing")
     }
 
