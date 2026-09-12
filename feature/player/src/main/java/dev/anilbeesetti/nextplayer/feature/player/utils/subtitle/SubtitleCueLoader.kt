@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -96,7 +97,8 @@ object SubtitleCueLoader {
 
         val loaded = withContext(Dispatchers.IO) {
             when {
-                selection.externalUri != null -> loadExternalCues(context, selection.externalUri)
+                selection.externalUri != null ->
+                    loadExternalCues(context, selection.externalUri, selection.format)
                 selection.mediaUri != null && selection.format != null -> {
                     EmbeddedSubtitleCueExtractor.extract(
                         context = context,
@@ -141,7 +143,8 @@ object SubtitleCueLoader {
         val format = selectedGroup.getTrackFormat(0)
         val textTrackIndex = textGroups.indexOf(selectedGroup).coerceAtLeast(0)
         val mediaUri = player.currentMediaItem?.localConfiguration?.uri
-        val externalUri = resolveExternalSubtitleUri(player, format)
+        val configs = player.currentMediaItem?.localConfiguration?.subtitleConfigurations.orEmpty()
+        val externalUri = resolveExternalSubtitleUri(format, configs)
         return SelectedSubtitle(
             externalUri = externalUri,
             mediaUri = mediaUri,
@@ -154,22 +157,50 @@ object SubtitleCueLoader {
     fun resolveSelectedSubtitleUri(player: Player): Uri? =
         resolveSelectedSubtitle(player)?.externalUri
 
-    private fun resolveExternalSubtitleUri(player: Player, format: Format): Uri? {
+    /**
+     * Maps the selected player [Format] to a sideloaded [MediaItem.SubtitleConfiguration] URI.
+     *
+     * Media3 often exposes sideloaded tracks as [MimeTypes.APPLICATION_MEDIA3_CUES] with the
+     * original mime in [Format.codecs]. Matching must use that original mime — otherwise a lone
+     * external WebVTT (.vtt) track is missed, the loader demuxes the video container instead, and
+     * the live panel stays empty while the on-video overlay still works.
+     */
+    internal fun resolveExternalSubtitleUri(
+        format: Format,
+        configs: List<MediaItem.SubtitleConfiguration>,
+    ): Uri? {
+        if (configs.isEmpty()) return null
+
         val formatId = format.id
-        val configs = player.currentMediaItem?.localConfiguration?.subtitleConfigurations.orEmpty()
+        val label = format.label
+        val originalMime = EmbeddedSubtitleCueExtractor.originalSubtitleMime(format)
 
         // External subs set SubtitleConfiguration.id to the source URI string.
         if (!formatId.isNullOrBlank()) {
             configs.firstOrNull { it.id == formatId }?.uri?.let { return it }
+            configs.firstOrNull { it.uri.toString() == formatId }?.uri?.let { return it }
             runCatching { Uri.parse(formatId) }
                 .getOrNull()
                 ?.takeIf { it.scheme != null }
-                ?.let { return it }
+                ?.let { parsed ->
+                    // Only accept if it matches a known configuration (avoid treating
+                    // embedded numeric ids as file URIs).
+                    if (configs.any { it.id == formatId || it.uri == parsed || it.uri.toString() == formatId }) {
+                        return configs.firstOrNull { it.id == formatId }?.uri
+                            ?: configs.firstOrNull { it.uri == parsed || it.uri.toString() == formatId }?.uri
+                            ?: parsed
+                    }
+                }
         }
 
-        val label = format.label
         if (!label.isNullOrBlank()) {
             configs.firstOrNull { it.label == label }?.uri?.let { return it }
+        }
+
+        // Unique mime match (e.g. codecs=text/vtt vs configuration mimeType=text/vtt).
+        if (!originalMime.isNullOrBlank()) {
+            val mimeMatches = configs.filter { configurationMimeMatches(it.mimeType, originalMime) }
+            if (mimeMatches.size == 1) return mimeMatches.first().uri
         }
 
         // Single external configuration: only treat it as selected when the
@@ -179,32 +210,85 @@ object SubtitleCueLoader {
             val looksExternal =
                 (!formatId.isNullOrBlank() && (formatId == only.id || formatId == only.uri.toString())) ||
                     (!label.isNullOrBlank() && label == only.label) ||
-                    (
-                        format.sampleMimeType != MimeTypes.APPLICATION_MEDIA3_CUES &&
-                            only.mimeType != null &&
-                            format.sampleMimeType == only.mimeType
-                        )
+                    configurationMimeMatches(only.mimeType, format.sampleMimeType) ||
+                    configurationMimeMatches(only.mimeType, originalMime) ||
+                    configurationMimeMatches(only.mimeType, format.codecs)
             if (looksExternal) return only.uri
         }
         return null
     }
 
-    private fun loadExternalCues(context: Context, uri: Uri): List<TimedCue> {
-        val mimeType = uri.getSubtitleMime()
-        val bytes = readBytes(context, uri) ?: return emptyList()
+    private fun configurationMimeMatches(configMime: String?, formatMime: String?): Boolean {
+        if (configMime.isNullOrBlank() || formatMime.isNullOrBlank()) return false
+        if (formatMime == MimeTypes.APPLICATION_MEDIA3_CUES) return false
+        return configMime.equals(formatMime, ignoreCase = true)
+    }
 
-        if (isLegacyParsedMime(mimeType)) {
-            val content = bytes.toString(Charset.forName("UTF-8"))
+    internal fun loadExternalCues(
+        context: Context,
+        uri: Uri,
+        format: Format? = null,
+    ): List<TimedCue> {
+        val bytes = readBytes(context, uri) ?: return emptyList()
+        val mimeType = resolveExternalMime(uri, format)
+
+        if (isLegacyParsedMime(mimeType) || mimeType.equals("text/vtt", ignoreCase = true)) {
+            val content = decodeSubtitleBytes(bytes)
             val parsed = SubtitleCueParser.parse(content, mimeType)
             if (parsed.isNotEmpty()) return parsed
         }
 
+        // Content sniff: URI/path may have lost the .vtt extension (content://).
+        val sniffed = SubtitleCueParser.parse(decodeSubtitleBytes(bytes), mimeType = null)
+        if (sniffed.isNotEmpty()) return sniffed
+
         // ASS/TTML/others (and SRT/VTT fallback) via Media3 subtitle parsers.
-        return parseWithMedia3(bytes, mimeType)
+        val media3 = parseWithMedia3(bytes, mimeType)
+        if (media3.isNotEmpty()) return media3
+
+        // Last resort: try Media3 as WebVTT when format/codecs say VTT but URI mime was wrong.
+        if (mimeType != MimeTypes.TEXT_VTT) {
+            val asVtt = parseWithMedia3(bytes, MimeTypes.TEXT_VTT)
+            if (asVtt.isNotEmpty()) return asVtt
+        }
+        return emptyList()
+    }
+
+    private fun resolveExternalMime(uri: Uri, format: Format?): String {
+        val uriMime = uri.getSubtitleMime()
+        val original = format?.let { EmbeddedSubtitleCueExtractor.originalSubtitleMime(it) }
+        return when {
+            uriMime == MimeTypes.TEXT_VTT -> MimeTypes.TEXT_VTT
+            original == MimeTypes.TEXT_VTT ||
+                original.equals("text/vtt", ignoreCase = true) -> MimeTypes.TEXT_VTT
+            format?.sampleMimeType == MimeTypes.TEXT_VTT -> MimeTypes.TEXT_VTT
+            // Prefer non-default URI mime; otherwise fall back to format original mime.
+            uriMime != MimeTypes.APPLICATION_SUBRIP -> uriMime
+            !original.isNullOrBlank() && original != MimeTypes.APPLICATION_MEDIA3_CUES -> original
+            else -> uriMime
+        }
     }
 
     private fun isLegacyParsedMime(mimeType: String): Boolean =
-        mimeType == MimeTypes.APPLICATION_SUBRIP || mimeType == MimeTypes.TEXT_VTT
+        mimeType == MimeTypes.APPLICATION_SUBRIP ||
+            mimeType == MimeTypes.TEXT_VTT ||
+            mimeType.equals("text/vtt", ignoreCase = true)
+
+    private fun decodeSubtitleBytes(bytes: ByteArray): String {
+        // Strip UTF-8 BOM; also tolerate UTF-16 LE/BE BOM for sideloaded files.
+        return when {
+            bytes.size >= 3 &&
+                bytes[0] == 0xEF.toByte() &&
+                bytes[1] == 0xBB.toByte() &&
+                bytes[2] == 0xBF.toByte() ->
+                bytes.toString(Charset.forName("UTF-8")).removePrefix("\uFEFF")
+            bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte() ->
+                bytes.toString(Charset.forName("UTF-16LE")).removePrefix("\uFEFF")
+            bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte() ->
+                bytes.toString(Charset.forName("UTF-16BE")).removePrefix("\uFEFF")
+            else -> bytes.toString(Charset.forName("UTF-8")).removePrefix("\uFEFF")
+        }
+    }
 
     private fun parseWithMedia3(bytes: ByteArray, mimeType: String): List<TimedCue> {
         val format = Format.Builder().setSampleMimeType(mimeType).build()

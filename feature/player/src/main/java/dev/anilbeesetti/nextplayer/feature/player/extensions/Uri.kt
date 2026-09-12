@@ -14,22 +14,30 @@ import dev.anilbeesetti.nextplayer.core.common.extensions.getFilenameFromUri
 import java.nio.charset.Charset
 
 fun Uri.getSubtitleMime(): String {
+    val name = sequenceOf(lastPathSegment, path)
+        .filterNotNull()
+        .flatMap { segment ->
+            // Handle both "movie.vtt" and encoded "primary:Download/movie.vtt"
+            sequenceOf(segment, segment.substringAfterLast('/'), segment.substringAfterLast(':'))
+        }
+        .map { it.lowercase() }
+        .firstOrNull { candidate ->
+            candidate.endsWith(".ssa") ||
+                candidate.endsWith(".ass") ||
+                candidate.endsWith(".vtt") ||
+                candidate.endsWith(".ttml") ||
+                candidate.endsWith(".xml") ||
+                candidate.endsWith(".dfxp") ||
+                candidate.endsWith(".srt")
+        }
+        .orEmpty()
+
     return when {
-        path?.endsWith(".ssa") == true || path?.endsWith(".ass") == true -> {
-            MimeTypes.TEXT_SSA
-        }
-
-        path?.endsWith(".vtt") == true -> {
-            MimeTypes.TEXT_VTT
-        }
-
-        path?.endsWith(".ttml") == true || path?.endsWith(".xml") == true || path?.endsWith(".dfxp") == true -> {
+        name.endsWith(".ssa") || name.endsWith(".ass") -> MimeTypes.TEXT_SSA
+        name.endsWith(".vtt") -> MimeTypes.TEXT_VTT
+        name.endsWith(".ttml") || name.endsWith(".xml") || name.endsWith(".dfxp") ->
             MimeTypes.APPLICATION_TTML
-        }
-
-        else -> {
-            MimeTypes.APPLICATION_SUBRIP
-        }
+        else -> MimeTypes.APPLICATION_SUBRIP
     }
 }
 
