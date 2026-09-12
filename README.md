@@ -4,7 +4,8 @@
 
 > **Next Player Live** — this repository is the [Next Player Live](https://github.com/SahilKashid/nextplayer-live) fork
 > (`dev.sahilkashid.nextplayer`), installable beside stock Next Player. See [Releases](https://github.com/SahilKashid/nextplayer-live/releases)
-> for APKs. To port Live features onto a newer upstream Next Player version, see
+> for APKs (play-while-download + finished-open / settled-complete fix from **v1.0.1**). To port Live
+> features onto a newer upstream Next Player version, see
 > [`docs/porting-from-upstream.md`](docs/porting-from-upstream.md) and
 > [`scripts/port-from-upstream.sh`](scripts/port-from-upstream.sh).
 

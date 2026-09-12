@@ -22,6 +22,40 @@ reopen-on-EOF semantics). Media3’s fixed-length `ContentDataSource` is not use
 Network schemes (`smb` / `ftp` / `sftp` / `webdav`) still use `NetworkDataSource`. http(s) still
 uses Media3 `DefaultDataSource`.
 
+## Settled-complete handoff (finished downloads)
+
+Growing* datasources (`GrowingFileDataSource` / `GrowingContentDataSource`) are **only** for
+files that `shouldPlayAsGrowing` — still incomplete / still writing. They advertise
+`C.LENGTH_UNSET` and poll on EOF.
+
+**Settled-complete** files must use Media3 `DefaultDataSource` instead:
+
+- Finite declared length (ExoPlayer knows the real EOF)
+- Normal Matroska cue-seek (no `FLAG_DISABLE_SEEK_FOR_CUES`)
+- **No** `IncompleteMatroskaSeekExtractor` wrapper
+
+### How settled-complete is detected (content-based only)
+
+A local file is settled-complete when **all** of the following hold:
+
+1. It is **not** a partial-name download (no `.part` / `.crdownload` / `.!ut` / `.tmp` / …).
+2. The readable tip has caught the declared length **or** the last ~256KiB already has real
+   bytes and any leftover `SEEK_HOLE` is far from EOF (treat as a false / stale hole).
+3. `shouldPlayAsGrowing` is then false once mtime is stable, or a short growth poll sees no
+   further growth.
+
+`NextDataSourceFactory` is the router: Growing* only while `shouldPlayAsGrowing`; otherwise
+`DefaultDataSource`. Path / folder-name heuristics must never decide this.
+
+### Pitfall — blank loading screen after download finishes
+
+Always routing local URIs through Growing* (`LENGTH_UNSET`) while a leftover `SEEK_HOLE` (or
+incomplete-MKV wrapper) remains → ExoPlayer never settles → **blank loading screen forever**
+after the download has finished. Fixed in Live at `11c919b2` (shipped in **v1.0.1**).
+
+**Do not** reintroduce always-Growing for finished files, path heuristics, or
+`ApproximateByteSeekMap`.
+
 ## Universal incomplete detection
 
 A local file is treated as incomplete when **any** of these content signals is true — never

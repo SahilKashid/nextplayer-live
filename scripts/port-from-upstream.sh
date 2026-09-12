@@ -15,8 +15,8 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.0.0 if tagged,
-                   else origin/main)
+  live-source-ref  Live tree to copy features from (default: v1.0.1 if tagged,
+                   else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
 fetches tags, prints branding + copy paths + touchpoints + next commands.
@@ -110,11 +110,17 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  if git rev-parse --verify -q "v1.0.0" >/dev/null 2>&1 || \
-     git rev-parse --verify -q "refs/tags/v1.0.0" >/dev/null 2>&1; then
-    LIVE_ARG="v1.0.0"
+  # Prefer v1.0.1 (finished-download handoff), else newest v* tag, else origin/main.
+  if git rev-parse --verify -q "v1.0.1" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.0.1" >/dev/null 2>&1; then
+    LIVE_ARG="v1.0.1"
   else
-    LIVE_ARG="origin/main"
+    latest="$(git tag -l 'v*' --sort=-v:refname 2>/dev/null | head -n1 || true)"
+    if [[ -n "${latest:-}" ]]; then
+      LIVE_ARG="$latest"
+    else
+      LIVE_ARG="origin/main"
+    fi
   fi
 fi
 
@@ -251,7 +257,10 @@ done
 cat <<'TOUCH'
   MediaPlayerScreen: rememberLiveSubtitlesState, ~0.65/0.35 landscape, hide overlay when panel open
   ControlsTopView: onLiveSubtitlesClick / isLiveSubtitlesVisible / showLiveSubtitlesToggle
-  NextDataSourceFactory: route file/content -> Growing*
+  NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
+  Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
+                             GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
+                             (never always-Growing; blank loader pitfall fixed in v1.0.1 / 11c919b2)
   PlayerService: DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory) + setDataSourceFactory
                  + GrowingFileLoadErrorHandlingPolicy  (Media3 1.11: extractors via constructor)
   strings.xml: live_subtitles* + jump_to_current_cue (+ app_name)
@@ -265,6 +274,7 @@ cat <<'NOPORT'
   - PlaybackFailure Copy-log diagnostics
   - DownloadPathHeuristic / folder-name special cases
   - ApproximateByteSeekMap / MatroskaClusterFinder
+  - Always-Growing routing for settled-complete / finished files
 NOPORT
 
 echo ""
