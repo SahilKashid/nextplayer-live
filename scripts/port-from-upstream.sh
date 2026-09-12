@@ -15,7 +15,7 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.0.3 if tagged,
+  live-source-ref  Live tree to copy features from (default: v1.0.4 if tagged,
                    else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
@@ -110,13 +110,13 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.0.3 (live-subtitles panel fixes), else v1.0.2, else newest v* tag, else origin/main.
-  if git rev-parse --verify -q "v1.0.3" >/dev/null 2>&1 || \
+  # Prefer v1.0.4 (panel persist + pause auto-follow), else v1.0.3, else newest v* tag, else origin/main.
+  if git rev-parse --verify -q "v1.0.4" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.0.4" >/dev/null 2>&1; then
+    LIVE_ARG="v1.0.4"
+  elif git rev-parse --verify -q "v1.0.3" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.0.3" >/dev/null 2>&1; then
     LIVE_ARG="v1.0.3"
-  elif git rev-parse --verify -q "v1.0.2" >/dev/null 2>&1 || \
-     git rev-parse --verify -q "refs/tags/v1.0.2" >/dev/null 2>&1; then
-    LIVE_ARG="v1.0.2"
   else
     latest="$(git tag -l 'v*' --sort=-v:refname 2>/dev/null | head -n1 || true)"
     if [[ -n "${latest:-}" ]]; then
@@ -264,7 +264,8 @@ cat <<'TOUCH'
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
                              (never always-Growing; finished + Open-with content:// handoff: v1.0.1 / 11c919b2, v1.0.2 / 0e968022;
-                             live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position: v1.0.3)
+                             live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position: v1.0.3;
+                             panel persist + no auto-follow while paused: v1.0.4)
   PlayerService: DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory) + setDataSourceFactory
                  + GrowingFileLoadErrorHandlingPolicy  (Media3 1.11: extractors via constructor)
   strings.xml: live_subtitles* + jump_to_current_cue (+ app_name)

@@ -27,8 +27,9 @@ overwrite the original Next Player package.
 Baseline: Live **v1.0.0** was based around the upstream **~v0.17.5** lineage. Origin tag
 `v1.0.0` is the first Live release; **v1.0.1** adds finished-download settled-complete handoff;
 **v1.0.2** adds the same for **Open with / share-sheet `content://` URIs**;
-**v1.0.3** ships live-subtitles false-unsupported + VTT panel fix + overlay-with-panel + vertical position
-(prefer `v1.0.3` or latest Live tag / `origin/main`).
+**v1.0.3** ships live-subtitles false-unsupported + VTT panel fix + overlay-with-panel + vertical position;
+**v1.0.4** adds panel persistence across pause/lock/recreate and no auto-follow while paused
+(prefer `v1.0.4` or latest Live tag / `origin/main`).
 
 ---
 
@@ -55,7 +56,7 @@ git fetch origin --tags
    - Prefer a release tag: `upstream/vX.Y.Z`
    - Or tip: `upstream/main`
 3. Re-apply **branding** (see [Branding](#branding-must-keep)).
-4. Bring Live-only source trees from origin tag `v1.0.3` (or latest Live tag / `main`), then
+4. Bring Live-only source trees from origin tag `v1.0.4` (or latest Live tag / `main`), then
    **re-wire touchpoints** in shared upstream files.
 5. Prefer history when clean:
    - Cherry-pick / merge Live feature commits if they apply cleanly.
@@ -80,7 +81,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -94,6 +95,7 @@ sequence). Never publish Live under upstream’s `applicationId`.
 ```
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesPanel.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesState.kt
+feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesFollowController.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCache.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueLoader.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueParser.kt
@@ -134,6 +136,8 @@ Also keep `docs/live-subtitles.md` when present.
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
 - **Overlay + panel:** `showOverlaySubtitlesWithLivePanel` default **on** (v1.0.3).
 - **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
+- **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
+- **Pause auto-follow:** cue scroll auto-follow resumes only while playing; jump-to-current always works (v1.0.4).
 
 See `docs/live-subtitles.md`.
 
@@ -278,7 +282,7 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.0.3` / latest Live tag / Live main.
+3. Checkout Live-only paths from `v1.0.4` / latest Live tag / Live main.
 4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
    `ControlsTopView`, strings.
 5. Tests → assemble → smoke verification matrix → release.

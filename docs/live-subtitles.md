@@ -7,6 +7,10 @@ Shipped in **v1.0.3**: false-unsupported fix for empty text tracks (don’t cach
 lists; ASS/SSA retry), WebVTT panel listing for sideloaded `.vtt`, overlay together with the
 live panel (default on), and subtitle vertical position (including bottom-anchored VTT lift).
 
+Shipped in **v1.0.4**: live panel stays open across pause / screen lock / recreate
+(`liveSubtitlesPanelOpen`); scrolling cues while paused no longer jumps back after ~3s
+(auto-follow only while playing; jump-to-current still works).
+
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and **WebVTT (`.vtt`)** are parsed by `SubtitleCueParser` (including headerless VTT, NOTE/STYLE/REGION blocks, optional hours, multiline cues, `<v>` voice spans, and settings after `-->`). ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files. MIME is taken from the URI extension when possible (`text/vtt` for `.vtt`), with content sniffing and `Format.codecs` fallbacks when `content://` paths omit the extension.
