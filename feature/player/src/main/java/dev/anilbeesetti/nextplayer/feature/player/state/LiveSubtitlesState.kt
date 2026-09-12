@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.C
@@ -21,7 +22,6 @@ import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleCueLoader
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,7 +30,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val AutoFollowResumeDelay = 3.seconds
 private val FastHighlightTick = 50.milliseconds
 private val IdleHighlightTick = 500.milliseconds
 // Start centering the upcoming cue slightly before it becomes active so the
@@ -45,10 +44,21 @@ fun rememberLiveSubtitlesState(
     player: Player,
     subtitleDelayMs: Long = 0L,
     subtitleSpeed: Float = 1f,
+    initialPanelVisible: Boolean = false,
+    onPanelVisibleChanged: (Boolean) -> Unit = {},
 ): LiveSubtitlesState {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val state = remember(player) { LiveSubtitlesState(player, context, scope) }
+    val panelVisibleChanged = rememberUpdatedState(onPanelVisibleChanged)
+    val state = remember(player) {
+        LiveSubtitlesState(
+            player = player,
+            context = context,
+            scope = scope,
+            initialPanelVisible = initialPanelVisible,
+            onPanelVisibleChanged = { visible -> panelVisibleChanged.value(visible) },
+        )
+    }
     LaunchedEffect(player) { state.observe() }
     LaunchedEffect(subtitleDelayMs, subtitleSpeed) {
         state.subtitleDelayMs = subtitleDelayMs
@@ -66,6 +76,8 @@ class LiveSubtitlesState(
     private val player: Player,
     private val context: Context,
     private val scope: CoroutineScope,
+    initialPanelVisible: Boolean = false,
+    private val onPanelVisibleChanged: (Boolean) -> Unit = {},
 ) {
     var cues: List<TimedCue> by mutableStateOf(emptyList())
         private set
@@ -91,7 +103,7 @@ class LiveSubtitlesState(
     var scrollTargetKey: String? by mutableStateOf(null)
         private set
 
-    var isPanelVisible: Boolean by mutableStateOf(false)
+    var isPanelVisible: Boolean by mutableStateOf(initialPanelVisible)
         private set
 
     var isFollowing: Boolean by mutableStateOf(true)
@@ -108,41 +120,42 @@ class LiveSubtitlesState(
     var subtitleSpeed: Float by mutableFloatStateOf(1f)
 
     private var loadJob: Job? = null
-    private var resumeFollowJob: Job? = null
     private var lastTrackSignature: String? = null
     /** Realtime millis until which scroll/highlight lead is disabled (after seek). */
     private var leadDisabledUntilElapsedMs: Long = 0L
 
+    private val followController = LiveSubtitlesFollowController(
+        scope = scope,
+        isPlaying = { player.isPlaying },
+        onFollowingChanged = { following -> isFollowing = following },
+    )
+
     fun togglePanel() {
-        isPanelVisible = !isPanelVisible
-        if (isPanelVisible) {
-            isFollowing = true
-            resumeFollowJob?.cancel()
-            updateCurrentCueIndexFromPlayer()
-        }
+        updatePanelVisible(!isPanelVisible)
     }
 
     fun updatePanelVisible(visible: Boolean) {
+        if (isPanelVisible == visible) {
+            if (visible) {
+                followController.resetFollowing()
+                updateCurrentCueIndexFromPlayer()
+            }
+            return
+        }
         isPanelVisible = visible
+        onPanelVisibleChanged(visible)
         if (visible) {
-            isFollowing = true
-            resumeFollowJob?.cancel()
+            followController.resetFollowing()
             updateCurrentCueIndexFromPlayer()
         }
     }
 
     fun onUserScroll() {
-        isFollowing = false
-        resumeFollowJob?.cancel()
-        resumeFollowJob = scope.launch {
-            delay(AutoFollowResumeDelay)
-            isFollowing = true
-        }
+        followController.onUserScroll()
     }
 
     fun jumpToCurrent() {
-        resumeFollowJob?.cancel()
-        isFollowing = true
+        followController.jumpToCurrent()
     }
 
     fun seekToCue(cue: TimedCue) {
@@ -170,6 +183,9 @@ class LiveSubtitlesState(
                     }
                     if (events.contains(Player.EVENT_CUES)) {
                         updateCurrentCueIndexFromCues()
+                    }
+                    if (events.contains(Player.EVENT_IS_PLAYING_CHANGED)) {
+                        followController.onIsPlayingChanged(player.isPlaying)
                     }
                     if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) {
                         // Rewind/seek: drop lead briefly so highlight doesn't chatter

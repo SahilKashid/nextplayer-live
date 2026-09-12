@@ -49,3 +49,12 @@ On-screen (overlay) subtitles default to the current Media3 bottom placement (`s
 
 Intentionally high VTT lines (for example `line:10%`) and bitmap cues are left alone. Changing the slider updates the overlay live through `SubtitleConfiguration.verticalPosition`. The live panel's own cue list is not affected.
 
+## Panel open persistence
+
+`PlayerPreferences.liveSubtitlesPanelOpen` (default **false**) remembers whether the user left the live panel open. The player toggle and panel close control write this pref; on activity recreate (pause / screen lock) the panel restores when landscape again.
+
+Portrait / non-landscape only hides the panel via the `showLiveSubtitlesPanel = isPanelVisible && isLandscape && !isTv` predicate — it does **not** clear `isPanelVisible`, so rotating back to landscape brings the panel back if it was open.
+
+## Auto-follow while paused
+
+Scrolling the cue list unfollows live centering. While **playing**, follow resumes after ~3s (`LiveSubtitlesAutoFollowResumeDelay`). While **paused**, follow never auto-resumes — the list stays where you scrolled. A pending resume is cancelled on pause. When playback **starts** again, follow resumes immediately (YouTube-like catch-up). The jump-to-current button always re-enables follow, including while paused.

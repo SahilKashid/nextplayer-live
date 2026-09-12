@@ -15,6 +15,7 @@ class PlayerPreferencesTest {
         val preferences = PlayerPreferences()
 
         assertTrue(preferences.showOverlaySubtitlesWithLivePanel)
+        assertFalse(preferences.liveSubtitlesPanelOpen)
         assertEquals(PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION, preferences.subtitleVerticalPosition)
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = false))
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = true))
@@ -33,6 +34,7 @@ class PlayerPreferencesTest {
         val decoded = json.decodeFromString<PlayerPreferences>("{}")
 
         assertTrue(decoded.showOverlaySubtitlesWithLivePanel)
+        assertFalse(decoded.liveSubtitlesPanelOpen)
         assertEquals(0f, decoded.subtitleVerticalPosition)
     }
 
@@ -47,5 +49,15 @@ class PlayerPreferencesTest {
 
         assertFalse(decoded.showOverlaySubtitlesWithLivePanel)
         assertEquals(0.25f, decoded.subtitleVerticalPosition, 0.0001f)
+    }
+
+    @Test
+    fun liveSubtitlesPanelOpenRoundTrip() {
+        assertFalse(PlayerPreferences().liveSubtitlesPanelOpen)
+
+        val original = PlayerPreferences(liveSubtitlesPanelOpen = true)
+        val decoded = json.decodeFromString<PlayerPreferences>(json.encodeToString(original))
+
+        assertTrue(decoded.liveSubtitlesPanelOpen)
     }
 }

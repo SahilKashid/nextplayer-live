@@ -56,6 +56,7 @@ data class PlayerPreferences(
     val subtitleTextBold: Boolean = true,
     val applyEmbeddedStyles: Boolean = true,
     val showOverlaySubtitlesWithLivePanel: Boolean = true,
+    val liveSubtitlesPanelOpen: Boolean = false,
     val subtitleVerticalPosition: Float = DEFAULT_SUBTITLE_VERTICAL_POSITION,
 ) {
     fun shouldShowOverlaySubtitles(livePanelVisible: Boolean): Boolean =

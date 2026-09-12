@@ -220,16 +220,14 @@ fun MediaPlayerScreen(
         player = player,
         subtitleDelayMs = subtitleOptionsState.delayMilliseconds,
         subtitleSpeed = subtitleOptionsState.speedMultiplier,
+        initialPanelVisible = playerPreferences.liveSubtitlesPanelOpen,
+        onPanelVisibleChanged = viewModel::setLiveSubtitlesPanelOpen,
     )
     val configuration = LocalConfiguration.current
     val isLandscape = !configuration.isPortrait
+    // Hide only via this predicate when not landscape — keep isPanelVisible so
+    // returning to landscape (or after lock/recreate) restores an open panel.
     val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
-
-    LaunchedEffect(isLandscape) {
-        if (!isLandscape) {
-            liveSubtitlesState.updatePanelVisible(false)
-        }
-    }
 
     val rootFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
