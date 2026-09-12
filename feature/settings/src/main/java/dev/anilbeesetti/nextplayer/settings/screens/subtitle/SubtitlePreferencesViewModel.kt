@@ -61,6 +61,8 @@ class SubtitlePreferencesViewModel @AssistedInject constructor(
             is SubtitlePreferencesUiEvent.ToggleApplyEmbeddedStyles -> toggleApplyEmbeddedStyles()
             is SubtitlePreferencesUiEvent.UpdateSubtitleEncoding -> updateSubtitleEncoding(action.value)
             is SubtitlePreferencesUiEvent.ToggleUseSystemCaptionStyle -> toggleUseSystemCaptionStyle()
+            is SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition -> updateSubtitleVerticalPosition(action.value)
+            is SubtitlePreferencesUiEvent.ToggleShowOverlaySubtitlesWithLivePanel -> toggleShowOverlaySubtitlesWithLivePanel()
         }
     }
 
@@ -129,6 +131,27 @@ class SubtitlePreferencesViewModel @AssistedInject constructor(
             preferencesRepository.updatePlayerPreferences { it.copy(useSystemCaptionStyle = !it.useSystemCaptionStyle) }
         }
     }
+
+    private fun updateSubtitleVerticalPosition(value: Float) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(
+                    subtitleVerticalPosition = value.coerceIn(
+                        PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
+                        PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun toggleShowOverlaySubtitlesWithLivePanel() {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(showOverlaySubtitlesWithLivePanel = !it.showOverlaySubtitlesWithLivePanel)
+            }
+        }
+    }
 }
 
 @Stable
@@ -155,4 +178,6 @@ sealed interface SubtitlePreferencesUiEvent {
     data object ToggleApplyEmbeddedStyles : SubtitlePreferencesUiEvent
     data class UpdateSubtitleEncoding(val value: String) : SubtitlePreferencesUiEvent
     data object ToggleUseSystemCaptionStyle : SubtitlePreferencesUiEvent
+    data class UpdateSubtitleVerticalPosition(val value: Float) : SubtitlePreferencesUiEvent
+    data object ToggleShowOverlaySubtitlesWithLivePanel : SubtitlePreferencesUiEvent
 }

@@ -55,7 +55,11 @@ data class PlayerPreferences(
     val subtitleFont: Font = Font.DEFAULT,
     val subtitleTextBold: Boolean = true,
     val applyEmbeddedStyles: Boolean = true,
+    val showOverlaySubtitlesWithLivePanel: Boolean = true,
+    val subtitleVerticalPosition: Float = DEFAULT_SUBTITLE_VERTICAL_POSITION,
 ) {
+    fun shouldShowOverlaySubtitles(livePanelVisible: Boolean): Boolean =
+        !livePanelVisible || showOverlaySubtitlesWithLivePanel
 
     companion object {
         const val DEFAULT_SEEK_INCREMENT = 10
@@ -64,5 +68,7 @@ data class PlayerPreferences(
         const val DEFAULT_BRIGHTNESS_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
+        const val DEFAULT_SUBTITLE_VERTICAL_POSITION = 0f
+        const val MAX_SUBTITLE_VERTICAL_POSITION = 0.5f
     }
 }

@@ -322,8 +322,9 @@ fun MediaPlayerScreen(
                         textSize = playerPreferences.subtitleTextSize,
                         textBold = playerPreferences.subtitleTextBold,
                         applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                        verticalPosition = playerPreferences.subtitleVerticalPosition,
                     ),
-                    showOverlaySubtitles = !showLiveSubtitlesPanel,
+                    showOverlaySubtitles = playerPreferences.shouldShowOverlaySubtitles(showLiveSubtitlesPanel),
                 )
 
                 FadeAnimatedVisibility(

@@ -26,3 +26,21 @@ Cue timelines are cached in a session LRU and on disk under `context.subtitleCac
 Image-based subtitles (**PGS**, **VobSub**, **DVB**) cannot be turned into a text list. The panel shows the unsupported empty state **only** for those bitmap mime/codec tracks (`EmbeddedSubtitleCueExtractor.isBitmapSubtitle`).
 
 An empty cue list for a **text** track (SRT/ASS/SSA/**VTT**, including when demux finds nothing yet) shows the generic empty message (`live_subtitles_empty`), not the image-based unsupported string. OCR for PGS/VobSub/DVB is out of scope.
+
+## Overlay with the live panel
+
+The landscape panel no longer forces the on-video `SubtitleView` overlay off.
+
+`PlayerPreferences.showOverlaySubtitlesWithLivePanel` (default **true**) controls whether the normal overlay stays visible while the panel is open. When the panel is closed, the overlay is always shown. Toggle this in **Settings → Subtitle → Show on-screen subtitles with live panel**.
+
+## Overlay vertical position
+
+On-screen (overlay) subtitles default to the current Media3 bottom placement (`subtitleVerticalPosition = 0`, plus Media3's 8% `DEFAULT_BOTTOM_PADDING_FRACTION` for cues without a line).
+
+**Settings → Subtitle → Subtitle vertical position** is a slider from **Bottom** (default) toward the center (`0`–`0.5`). The player:
+
+1. Calls `SubtitleView.setBottomPaddingFraction(0.08 + position)` so SRT / unset-line cues lift immediately.
+2. Rewrites WebVTT automatic / bottom-anchored cues (`line = -1` number, or a fraction ≥ 0.85) to a matching fractional line with `ANCHOR_TYPE_END`. Media3 ignores bottom padding for spec-defined VTT lines, so this is what actually moves `.vtt` overlay text.
+
+Intentionally high VTT lines (for example `line:10%`) and bitmap cues are left alone. Changing the slider updates the overlay live through `SubtitleConfiguration.verticalPosition`. The live panel's own cue list is not affected.
+

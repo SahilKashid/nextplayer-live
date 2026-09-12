@@ -527,4 +527,9 @@
     <string name="jump_to_current_cue">Jump to current cue</string>
     <string name="live_subtitles_empty">No subtitle track selected, or this track has no cues to list.</string>
     <string name="live_subtitles_unsupported">Live subtitles are not available for this track. Image-based subtitles (PGS, VobSub, DVB) cannot be listed as text.</string>
+    <string name="subtitle_overlay_with_live_panel">Show on-screen subtitles with live panel</string>
+    <string name="subtitle_overlay_with_live_panel_desc">Keep the normal video overlay visible when the live subtitles side panel is open</string>
+    <string name="subtitle_vertical_position">Subtitle vertical position</string>
+    <string name="subtitle_vertical_position_bottom">Bottom</string>
+    <string name="subtitle_vertical_position_value">%1$d%% toward center</string>
 </resources>

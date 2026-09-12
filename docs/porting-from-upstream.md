@@ -113,7 +113,7 @@ Also keep `docs/live-subtitles.md` when present.
 
 | File | What to restore |
 |------|-----------------|
-| `feature/player/.../MediaPlayerScreen.kt` | `rememberLiveSubtitlesState`; landscape weight split ~**0.65 / 0.35**; hide on-video overlay subs when panel open; host `LiveSubtitlesPanel`; pass toggle props |
+| `feature/player/.../MediaPlayerScreen.kt` | `rememberLiveSubtitlesState`; landscape weight split ~**0.65 / 0.35**; overlay visibility follows `showOverlaySubtitlesWithLivePanel` (default both on); host `LiveSubtitlesPanel`; pass toggle props |
 | `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `showLiveSubtitlesToggle` |
 
 ### Hard-won behavior (do not “simplify” away)
@@ -259,7 +259,7 @@ Suggested run:
 | After download completes, open file | Plays immediately (not blank loading screen); DefaultDataSource path |
 | Mid-download MKV open | Starts without waiting for full file |
 | Mid-download scrub | Seeks to indexed downloaded clusters |
-| Live subtitles panel | Landscape split; highlight/scroll sync; no overlay when open |
+| Live subtitles panel | Landscape split; highlight/scroll sync; overlay stays on by default (`showOverlaySubtitlesWithLivePanel`) |
 | Open with / share sheet | Finished local video via ACTION_VIEW / `content://` plays (not blank loader) |
 | Side-by-side install | Original Next Player package **not** overwritten (`dev.sahilkashid.nextplayer`) |
 

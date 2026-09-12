@@ -47,6 +47,7 @@ import dev.anilbeesetti.nextplayer.settings.composables.OptionsDialog
 import dev.anilbeesetti.nextplayer.settings.extensions.name
 import dev.anilbeesetti.nextplayer.settings.utils.LocalesHelper
 import java.nio.charset.Charset
+import kotlin.math.roundToInt
 
 @Composable
 fun SubtitlePreferencesScreen(
@@ -165,6 +166,30 @@ private fun SubtitlePreferencesScreenContent(
                         }
                     },
                 )
+                PreferenceSlider(
+                    title = stringResource(id = R.string.subtitle_vertical_position),
+                    description = subtitleVerticalPositionLabel(state.preferences.subtitleVerticalPosition),
+                    icon = NextIcons.Reorder,
+                    value = state.preferences.subtitleVerticalPosition,
+                    valueRange = PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION..PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
+                    onValueChange = { onAction(SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition(it)) },
+                    trailingContent = {
+                        FilledIconButton(
+                            onClick = {
+                                onAction(
+                                    SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition(
+                                        PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
+                                    ),
+                                )
+                            },
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.History,
+                                contentDescription = stringResource(id = R.string.reset_seek_increment),
+                            )
+                        }
+                    },
+                )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.subtitle_background),
                     description = stringResource(id = R.string.subtitle_background_desc),
@@ -179,6 +204,20 @@ private fun SubtitlePreferencesScreenContent(
                     icon = NextIcons.Style,
                     isChecked = state.preferences.applyEmbeddedStyles,
                     onClick = { onAction(SubtitlePreferencesUiEvent.ToggleApplyEmbeddedStyles) },
+                    isLastItem = true,
+                )
+            }
+            ListSectionTitle(text = stringResource(id = R.string.live_subtitles))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
+                PreferenceSwitch(
+                    title = stringResource(id = R.string.subtitle_overlay_with_live_panel),
+                    description = stringResource(id = R.string.subtitle_overlay_with_live_panel_desc),
+                    icon = NextIcons.Caption,
+                    isChecked = state.preferences.showOverlaySubtitlesWithLivePanel,
+                    onClick = { onAction(SubtitlePreferencesUiEvent.ToggleShowOverlaySubtitlesWithLivePanel) },
+                    isFirstItem = true,
                     isLastItem = true,
                 )
             }
@@ -244,6 +283,16 @@ private fun SubtitlePreferencesScreenContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun subtitleVerticalPositionLabel(verticalPosition: Float): String {
+    val percent = (verticalPosition * 100).roundToInt()
+    return if (percent == 0) {
+        stringResource(id = R.string.subtitle_vertical_position_bottom)
+    } else {
+        stringResource(id = R.string.subtitle_vertical_position_value, percent)
     }
 }
 
