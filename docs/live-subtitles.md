@@ -5,7 +5,7 @@ The landscape live-subtitles side panel builds a full `(startMs, endMs, text)` c
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and WebVTT are parsed by `SubtitleCueParser`; ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files.
-- **Embedded** text tracks inside containers (MKV/MP4/…): `EmbeddedSubtitleCueExtractor` demuxes the media with Media3 `DefaultExtractorsFactory` (text-track transcoding enabled) on a background IO dispatcher, matches the selected `Format` (id / language / label / original mime / order), and converts `CuesWithTiming` into `TimedCue`s. Non-selected text tracks and bitmap tracks discard samples early. While demuxing, partial cue lists are published to the UI (~every 50 cues / 200ms). When playback is mid-file and a `SeekMap` is available, extraction seeks near the current position first (phase A) so the panel paints quickly, then fills earlier cues from the start (phase B) and merges/dedupes before caching.
+- **Embedded** text tracks inside containers (MKV/MP4/…): `EmbeddedSubtitleCueExtractor` demuxes the media with Media3 `DefaultExtractorsFactory` (text-track transcoding enabled) on a background IO dispatcher, matches the selected `Format` (id / language / label / original mime / order), and converts `CuesWithTiming` into `TimedCue`s. Non-selected text tracks and bitmap tracks discard samples early. While demuxing, partial cue lists are published to the UI (~every 50 cues / 200ms). When playback is mid-file and a `SeekMap` is available, extraction seeks near the current position first (phase A) so the panel paints quickly, then fills earlier cues from the start (phase B) and merges/dedupes before caching. If the transcoded pass returns no cues for a text track, a second demux retries with raw subtitle samples and Matroska EOF cue-seeking disabled (helps some ASS/SSA/SRT-in-MKV cases).
 
 Player / `MediaController` APIs (`currentTracks`, `currentMediaItem`, `currentCues`, `currentPosition`) are only read on the main application thread; demux and file I/O stay on `Dispatchers.IO`.
 
@@ -17,6 +17,10 @@ The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCue
 
 Cue timelines are cached in a session LRU and on disk under `context.subtitleCacheDir` as compact `live_cues_*.bin` files (legacy JSON is migrated on read), keyed by media id/URI + track signature (+ file length/lastModified when available). Memory hits paint immediately; disk hits avoid a full demux spinner.
 
+**Empty results are never cached.** A one-shot demux/parse miss (wrong track match, transient I/O, ASS sample miss) must be retried on the next open — otherwise the panel would stick on empty until the cache file was cleared. Legacy empty `live_cues_*.bin` files are ignored and deleted on read.
+
 ## Unsupported
 
-Image-based subtitles (**PGS**, **VobSub**, **DVB**) cannot be turned into a text list. The panel shows the unsupported empty state for those tracks.
+Image-based subtitles (**PGS**, **VobSub**, **DVB**) cannot be turned into a text list. The panel shows the unsupported empty state **only** for those bitmap mime/codec tracks (`EmbeddedSubtitleCueExtractor.isBitmapSubtitle`).
+
+An empty cue list for a **text** track (SRT/ASS/SSA/VTT, including when demux finds nothing yet) shows the generic empty message (`live_subtitles_empty`), not the image-based unsupported string. OCR for PGS/VobSub/DVB is out of scope.

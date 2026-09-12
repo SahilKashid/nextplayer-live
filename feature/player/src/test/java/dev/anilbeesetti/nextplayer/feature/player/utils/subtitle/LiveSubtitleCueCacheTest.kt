@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,5 +42,25 @@ class LiveSubtitleCueCacheTest {
         assertEquals(cues, LiveSubtitleCueCache.get(context, key))
         val cacheFiles = context.cacheDir.resolve("subtitles").list()?.toList().orEmpty()
         assertTrue(cacheFiles.any { it.startsWith("live_cues_") && it.endsWith(".bin") })
+    }
+
+    @Test
+    fun put_skipsEmptyCueLists() {
+        val context = RuntimeEnvironment.getApplication()
+        val format = Format.Builder()
+            .setId("empty")
+            .setSampleMimeType(MimeTypes.APPLICATION_SUBRIP)
+            .build()
+        val key = LiveSubtitleCueCache.buildKey(
+            mediaId = "media-empty",
+            mediaUri = Uri.parse("file:///tmp/empty.mkv"),
+            externalUri = null,
+            format = format,
+            textTrackIndex = 0,
+            context = context,
+        )
+        LiveSubtitleCueCache.put(context, key, emptyList())
+        assertNull(LiveSubtitleCueCache.getMemoryOnly(key))
+        assertNull(LiveSubtitleCueCache.get(context, key))
     }
 }

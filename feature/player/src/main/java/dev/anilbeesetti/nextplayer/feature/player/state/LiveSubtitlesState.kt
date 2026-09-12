@@ -412,7 +412,9 @@ class LiveSubtitlesState(
                 coalesceJob?.cancel()
                 pendingPartial = null
                 applyCuesPreservingActiveIdentity(result.cues)
-                isUnsupportedTrack = result.cues.isEmpty()
+                // Only true image tracks (PGS / VobSub / DVB). Empty text loads must
+                // show live_subtitles_empty — never the unsupported bitmap string.
+                isUnsupportedTrack = result.isUnsupportedBitmapTrack
                 isLoading = false
             }
         }

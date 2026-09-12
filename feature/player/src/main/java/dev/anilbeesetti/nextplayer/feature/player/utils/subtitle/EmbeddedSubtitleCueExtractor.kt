@@ -14,6 +14,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.extractor.DefaultExtractorInput
 import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.DiscardingTrackOutput
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorInput
@@ -125,7 +126,11 @@ object EmbeddedSubtitleCueExtractor {
     ): Int {
         var score = 0
         if (!selected.id.isNullOrBlank() && selected.id == candidate.id) score += 100
-        if (!selected.language.isNullOrBlank() && selected.language == candidate.language) score += 40
+        if (!selected.language.isNullOrBlank() && selected.language == candidate.language) {
+            score += 40
+        } else if (languagesLooselyMatch(selected.language, candidate.language)) {
+            score += 30
+        }
         if (!selected.label.isNullOrBlank() && selected.label == candidate.label) score += 30
 
         val selectedMime = originalSubtitleMime(selected)
@@ -134,6 +139,15 @@ object EmbeddedSubtitleCueExtractor {
         if (!selected.codecs.isNullOrBlank() && selected.codecs == candidate.codecs) score += 15
         if (candidateIndex == preferredIndex) score += 10
         return score
+    }
+
+    /** Match en↔eng style codes when Format normalization did not already equate them. */
+    private fun languagesLooselyMatch(a: String?, b: String?): Boolean {
+        if (a.isNullOrBlank() || b.isNullOrBlank()) return false
+        if (a.equals(b, ignoreCase = true)) return true
+        val a2 = a.lowercase()
+        val b2 = b.lowercase()
+        return a2.startsWith(b2) || b2.startsWith(a2)
     }
 
     internal fun cuesWithTimingToTimedCues(cuesWithTiming: CuesWithTiming): List<TimedCue> {
@@ -163,12 +177,56 @@ object EmbeddedSubtitleCueExtractor {
         playbackPositionMs: Long,
         onPartialCues: ((List<TimedCue>) -> Unit)?,
     ): List<TimedCue> {
+        // Prefer Media3 cue-transcoding with normal cue seeking (keeps near-playback
+        // phase A when SeekMap is available). If that yields nothing for a text track,
+        // retry with EOF cue-seek disabled + raw samples so ASS/SSA/SRT in awkward MKVs
+        // still have a chance.
+        val transcoded = demuxOnce(
+            dataSource = dataSource,
+            mediaUri = mediaUri,
+            selectedFormat = selectedFormat,
+            preferredTextTrackIndex = preferredTextTrackIndex,
+            playbackPositionMs = playbackPositionMs,
+            onPartialCues = onPartialCues,
+            emitRawSubtitleData = false,
+            disableSeekForCues = false,
+        )
+        if (transcoded.isNotEmpty() || isBitmapSubtitle(selectedFormat)) {
+            return transcoded
+        }
+        return demuxOnce(
+            dataSource = dataSource,
+            mediaUri = mediaUri,
+            selectedFormat = selectedFormat,
+            preferredTextTrackIndex = preferredTextTrackIndex,
+            playbackPositionMs = playbackPositionMs,
+            onPartialCues = onPartialCues,
+            emitRawSubtitleData = true,
+            disableSeekForCues = true,
+        )
+    }
+
+    private fun demuxOnce(
+        dataSource: DataSource,
+        mediaUri: Uri,
+        selectedFormat: Format,
+        preferredTextTrackIndex: Int,
+        playbackPositionMs: Long,
+        onPartialCues: ((List<TimedCue>) -> Unit)?,
+        emitRawSubtitleData: Boolean,
+        disableSeekForCues: Boolean,
+    ): List<TimedCue> {
         val output = CollectingExtractorOutput(selectedFormat, preferredTextTrackIndex)
+        val matroskaFlags =
+            if (disableSeekForCues) MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES else 0
         val extractorsFactory = DefaultExtractorsFactory()
             .setSubtitleParserFactory(subtitleParserFactory)
+            .setMatroskaExtractorFlags(matroskaFlags)
+            .setTextTrackTranscodingEnabled(!emitRawSubtitleData)
         val extractors = extractorsFactory.createExtractors(mediaUri, emptyMap())
         if (extractors.isEmpty()) return emptyList()
 
+        runCatching { dataSource.close() }
         var input: ExtractorInput = openInput(dataSource, mediaUri, position = 0L)
         val extractor = sniffExtractor(extractors, input) ?: return emptyList()
         input.resetPeekPosition()

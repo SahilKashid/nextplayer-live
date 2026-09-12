@@ -65,9 +65,15 @@ object LiveSubtitleCueCache {
 
     fun get(context: Context, key: String): List<TimedCue>? {
         lock.withLock {
-            memory[key]?.let { return it }
+            memory[key]?.takeIf { it.isNotEmpty() }?.let { return it }
         }
         val disk = readDisk(context, key) ?: return null
+        // Legacy empty files (from failed loads) must not stick as permanent misses.
+        if (disk.isEmpty()) {
+            runCatching { cacheFileBin(context, key).delete() }
+            runCatching { cacheFileJson(context, key).delete() }
+            return null
+        }
         lock.withLock {
             memory[key] = disk
         }
@@ -75,13 +81,17 @@ object LiveSubtitleCueCache {
     }
 
     fun put(context: Context, key: String, cues: List<TimedCue>) {
+        // Never persist empty timelines — a one-shot demux/parse failure would otherwise
+        // lock the panel on empty/unsupported until cache invalidation.
+        if (cues.isEmpty()) return
         lock.withLock {
             memory[key] = cues
         }
         writeDisk(context, key, cues)
     }
 
-    fun getMemoryOnly(key: String): List<TimedCue>? = lock.withLock { memory[key] }
+    fun getMemoryOnly(key: String): List<TimedCue>? =
+        lock.withLock { memory[key]?.takeIf { it.isNotEmpty() } }
 
     private fun readDisk(context: Context, key: String): List<TimedCue>? {
         val bin = cacheFileBin(context, key)

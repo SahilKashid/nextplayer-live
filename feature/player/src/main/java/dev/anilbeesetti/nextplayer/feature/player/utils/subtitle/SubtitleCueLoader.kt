@@ -34,6 +34,12 @@ object SubtitleCueLoader {
         val cues: List<TimedCue>,
         val cacheKey: String,
         val fromCache: Boolean,
+        /**
+         * True only for image-based subtitle formats (PGS / VobSub / DVB). Empty text
+         * loads must keep this false so the panel shows the empty-cues message rather
+         * than the unsupported bitmap message.
+         */
+        val isUnsupportedBitmapTrack: Boolean = false,
     )
 
     suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> =
@@ -62,17 +68,30 @@ object SubtitleCueLoader {
             textTrackIndex = selection.textTrackIndex,
             context = context,
         )
+        val isBitmap =
+            selection.format != null &&
+                EmbeddedSubtitleCueExtractor.isBitmapSubtitle(selection.format)
+
+        // Image tracks cannot become text cues — skip demux/cache entirely.
+        if (isBitmap) {
+            return LoadResult(
+                cues = emptyList(),
+                cacheKey = cacheKey,
+                fromCache = false,
+                isUnsupportedBitmapTrack = true,
+            )
+        }
 
         // Memory hit: paint immediately, no spinner.
         LiveSubtitleCueCache.getMemoryOnly(cacheKey)?.let {
-            return LoadResult(it, cacheKey, fromCache = true)
+            return LoadResult(it, cacheKey, fromCache = true, isUnsupportedBitmapTrack = false)
         }
 
         val diskHit = withContext(Dispatchers.IO) {
             LiveSubtitleCueCache.get(context, cacheKey)
         }
         if (diskHit != null) {
-            return LoadResult(diskHit, cacheKey, fromCache = true)
+            return LoadResult(diskHit, cacheKey, fromCache = true, isUnsupportedBitmapTrack = false)
         }
 
         val loaded = withContext(Dispatchers.IO) {
@@ -91,10 +110,17 @@ object SubtitleCueLoader {
                 else -> emptyList()
             }
         }
-        withContext(Dispatchers.IO) {
-            LiveSubtitleCueCache.put(context, cacheKey, loaded)
+        if (loaded.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                LiveSubtitleCueCache.put(context, cacheKey, loaded)
+            }
         }
-        return LoadResult(loaded, cacheKey, fromCache = false)
+        return LoadResult(
+            cues = loaded,
+            cacheKey = cacheKey,
+            fromCache = false,
+            isUnsupportedBitmapTrack = false,
+        )
     }
 
     /**
