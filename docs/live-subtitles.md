@@ -2,6 +2,11 @@
 
 The landscape live-subtitles side panel builds a full `(startMs, endMs, text)` cue timeline for the selected text track.
 
+
+Shipped in **v1.0.3**: false-unsupported fix for empty text tracks (don’t cache empty cue
+lists; ASS/SSA retry), WebVTT panel listing for sideloaded `.vtt`, overlay together with the
+live panel (default on), and subtitle vertical position (including bottom-anchored VTT lift).
+
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and **WebVTT (`.vtt`)** are parsed by `SubtitleCueParser` (including headerless VTT, NOTE/STYLE/REGION blocks, optional hours, multiline cues, `<v>` voice spans, and settings after `-->`). ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files. MIME is taken from the URI extension when possible (`text/vtt` for `.vtt`), with content sniffing and `Format.codecs` fallbacks when `content://` paths omit the extension.
