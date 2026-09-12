@@ -9,12 +9,15 @@ live panel (default on), and subtitle vertical position (including bottom-anchor
 
 Shipped in **v1.0.4**: live panel stays open across pause / screen lock / recreate
 (`liveSubtitlesPanelOpen`); scrolling cues while paused no longer jumps back after ~3s
-(auto-follow only while playing; jump-to-current still works).
+(auto-follow only while playing; jump-to-current still works). Expanding-window progressive
+demux (continuous growth around the playhead instead of a Phase-A / Phase-B cliff) and
+hardened cue cache (final-only puts, stable keys without flaky mtime, larger LRU, fsync,
+corrupt-file delete).
 
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and **WebVTT (`.vtt`)** are parsed by `SubtitleCueParser` (including headerless VTT, NOTE/STYLE/REGION blocks, optional hours, multiline cues, `<v>` voice spans, and settings after `-->`). ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files. MIME is taken from the URI extension when possible (`text/vtt` for `.vtt`), with content sniffing and `Format.codecs` fallbacks when `content://` paths omit the extension.
-- **Embedded** text tracks inside containers (MKV/MP4/…), including in-container WebVTT: `EmbeddedSubtitleCueExtractor` demuxes the media with Media3 `DefaultExtractorsFactory` (text-track transcoding enabled) on a background IO dispatcher, matches the selected `Format` (id / language / label / original mime / order), and converts `CuesWithTiming` into `TimedCue`s. Non-selected text tracks and bitmap tracks discard samples early. While demuxing, partial cue lists are published to the UI (~every 50 cues / 200ms). When playback is mid-file and a `SeekMap` is available, extraction seeks near the current position first (phase A) so the panel paints quickly, then fills earlier cues from the start (phase B) and merges/dedupes before caching. If the transcoded pass returns no cues for a text track, a second demux retries with raw subtitle samples and Matroska EOF cue-seeking disabled (helps some ASS/SSA/SRT-in-MKV cases).
+- **Embedded** text tracks inside containers (MKV/MP4/…), including in-container WebVTT: `EmbeddedSubtitleCueExtractor` demuxes the media with Media3 `DefaultExtractorsFactory` (text-track transcoding enabled) on a background IO dispatcher, matches the selected `Format` (id / language / label / original mime / order), and converts `CuesWithTiming` into `TimedCue`s. Non-selected text tracks and bitmap tracks discard samples early. While demuxing, partial cue lists are published to the UI often (~every 25 cues / 120ms) so the panel grows steadily. When playback is mid-file and a `SeekMap` is seekable, extraction uses an **expanding-window** strategy (`ExpandingCueWindow`): seed a modest band around the playhead (small lead, ~40 cues or ±~40s), emit ASAP, then iteratively expand earlier and later with growing steps (~45s then +30s …) until full coverage / EOF — many small updates instead of a harsh Phase-A-then-Phase-B dump. Merge/dedupe is by cue identity; later partials never shrink the list (`LiveSubtitlesState` prefers larger snapshots). Non-seekable sources or early playback fall back to a single forward pass with the same frequent partial emits. If the transcoded pass returns no cues for a text track, a second demux retries with raw subtitle samples and Matroska EOF cue-seeking disabled (helps some ASS/SSA/SRT-in-MKV cases).
 
 Sideloaded tracks are often exposed by Media3 as `APPLICATION_MEDIA3_CUES` with the original mime in `Format.codecs` (e.g. `text/vtt`). `SubtitleCueLoader.resolveExternalSubtitleUri` matches that original mime against `SubtitleConfiguration.mimeType` so a selected `.vtt` file is read directly — the panel must not demux the video container for an external VTT (that yields an empty list while the on-video overlay still works).
 
@@ -26,7 +29,19 @@ The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCue
 
 ## Cache
 
-Cue timelines are cached in a session LRU and on disk under `context.subtitleCacheDir` as compact `live_cues_*.bin` files (legacy JSON is migrated on read), keyed by media id/URI + track signature (+ file length/lastModified when available). Memory hits paint immediately; disk hits avoid a full demux spinner.
+Cue timelines are cached in a session LRU (~32 entries) and on disk under `context.subtitleCacheDir` as compact `live_cues_*.bin` files (legacy JSON is migrated on read). Memory hits paint immediately; disk hits avoid a full demux spinner on reopen of the same video+track.
+
+**Only complete final timelines are cached.** `SubtitleCueLoader` calls `LiveSubtitleCueCache.put` after demux/parse finishes with a non-empty list. Progressive `onPartialCues` updates stay in UI state only and must never write the cache.
+
+### Key policy
+
+Prefer stable `mediaId` + track identity (id / language / label / mime / codecs / text-track index). URI strings are normalized (scheme lowercased, stable encoded path/query; fragments dropped) so the same file does not miss.
+
+For `file` / `content` URIs, include **size when known**. **Do not** include `last_modified` — content providers often omit or flake that column, which would churn the key across reopen. When size is unavailable, the size field is left empty consistently.
+
+### Integrity
+
+Binary files use magic + version. Writes go to a temp file, are flushed/`fsync`'d, then renamed. On read failure (corrupt / wrong magic-version), the file is deleted and the next open re-extracts once. Debug cache hit/miss/put counters are logged at `Log.isLoggable(..., DEBUG)` only (not shown in UI).
 
 **Empty results are never cached.** A one-shot demux/parse miss (wrong track match, transient I/O, ASS sample miss) must be retried on the next open — otherwise the panel would stick on empty until the cache file was cleared. Legacy empty `live_cues_*.bin` files are ignored and deleted on read.
 

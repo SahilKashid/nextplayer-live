@@ -33,8 +33,9 @@ import java.io.EOFException
  * Demuxes a local/http media container and builds a full text cue timeline for one embedded
  * subtitle track using Media3 extractors + [DefaultSubtitleParserFactory].
  *
- * Supports progressive partial emission and a near-playback-first two-phase demux when a
- * [SeekMap] is available so the live panel can paint mid-movie without waiting for a full scan.
+ * Supports progressive partial emission and a near-playback-first expanding-window demux when a
+ * [SeekMap] is available so the live panel paints mid-movie with continuous growth (many small
+ * updates) instead of a harsh Phase-A / Phase-B cliff.
  *
  * Bitmap image subtitles (PGS / VobSub / DVB) are not converted to text and yield an empty list.
  */
@@ -44,16 +45,10 @@ object EmbeddedSubtitleCueExtractor {
     private val subtitleParserFactory = DefaultSubtitleParserFactory()
     private val cueDecoder = CueDecoder()
 
-    /** Prefer near-playback extract when the user is at least this far into the file. */
-    private const val NEAR_FIRST_THRESHOLD_MS = 15_000L
-    /** Seek a few seconds before playback so the active cue is usually included. */
-    private const val NEAR_SEEK_LEAD_MS = 5_000L
-    /** Emit a partial list at least this often while demuxing. */
-    private const val PARTIAL_EMIT_MIN_INTERVAL_MS = 200L
+    /** Emit a partial list at least this often while demuxing (tight for steady UI growth). */
+    private const val PARTIAL_EMIT_MIN_INTERVAL_MS = 120L
     /** Or whenever at least this many new cues have been decoded since the last emit. */
-    private const val PARTIAL_EMIT_CUE_BATCH = 50
-    /** Phase A aims to publish at least this many cues near playback before continuing. */
-    private const val PHASE_A_TARGET_CUES = 50
+    private const val PARTIAL_EMIT_CUE_BATCH = 25
 
     fun extract(
         context: Context,
@@ -177,10 +172,10 @@ object EmbeddedSubtitleCueExtractor {
         playbackPositionMs: Long,
         onPartialCues: ((List<TimedCue>) -> Unit)?,
     ): List<TimedCue> {
-        // Prefer Media3 cue-transcoding with normal cue seeking (keeps near-playback
-        // phase A when SeekMap is available). If that yields nothing for a text track,
-        // retry with EOF cue-seek disabled + raw samples so ASS/SSA/SRT in awkward MKVs
-        // still have a chance.
+        // Prefer Media3 cue-transcoding with normal cue seeking (keeps expanding-window
+        // near-playback seed when SeekMap is available). If that yields nothing for a text
+        // track, retry with EOF cue-seek disabled + raw samples so ASS/SSA/SRT in awkward
+        // MKVs still have a chance.
         val transcoded = demuxOnce(
             dataSource = dataSource,
             mediaUri = mediaUri,
@@ -266,14 +261,62 @@ object EmbeddedSubtitleCueExtractor {
         fun refreshMergedFromSelected(): List<TimedCue> {
             val track = selectedTrackOrNull() ?: return merged.sortedBy { it.startMs }
             if (track.samples.size < decodedSampleCount) {
-                // Sample list was trimmed (phase B); reset decode cursor.
+                // Sample list was trimmed between windows; reset decode cursor.
                 decodedSampleCount = 0
             }
-            val decoded = appendNewSamples(track, decodedSampleCount, seen, merged)
+            appendNewSamples(track, decodedSampleCount, seen, merged)
             decodedSampleCount = track.samples.size
             val snapshot = merged.sortedBy { it.startMs }
             emitter.maybeEmit(snapshot)
             return snapshot
+        }
+
+        fun seekToTimeUs(timeUs: Long, seekMap: SeekMap) {
+            val seekPoints = seekMap.getSeekPoints(timeUs)
+            reopenAt(seekPoints.first.position, timeUs)
+            output.clearAllSamples()
+            decodedSampleCount = 0
+        }
+
+        /**
+         * Demux [window] (times in ms), merging into [merged]/[seen].
+         * Stops at window end, EOF, or (for seed) [stopAfterCueCount].
+         * Returns whether EOF was hit during this read.
+         */
+        fun readWindow(
+            window: ExpandingCueWindow.Window,
+            seekMap: SeekMap,
+            stopAfterCueCount: Int? = null,
+            dropAtOrAfterMs: Long? = null,
+        ): Boolean {
+            val startUs = Util.msToUs(window.startMs)
+            val endUs = Util.msToUs(window.endMs)
+            val dropUs = dropAtOrAfterMs?.let { Util.msToUs(it) }
+            val cuesBefore = merged.size
+            seekToTimeUs(startUs, seekMap)
+            var hitEof = false
+            while (true) {
+                val result = readOnce()
+                if (dropUs != null) {
+                    output.dropSamplesAtOrAfter(dropUs)
+                }
+                refreshMergedFromSelected()
+                val newest = output.newestSampleTimeUs()
+                if (newest != C.TIME_UNSET && newest >= endUs) {
+                    break
+                }
+                if (stopAfterCueCount != null &&
+                    merged.size - cuesBefore >= stopAfterCueCount
+                ) {
+                    break
+                }
+                if (result == Extractor.RESULT_END_OF_INPUT) {
+                    hitEof = true
+                    break
+                }
+            }
+            emitter.maybeEmit(merged.sortedBy { it.startMs }, force = true)
+            return hitEof
         }
 
         try {
@@ -285,55 +328,109 @@ object EmbeddedSubtitleCueExtractor {
             }
 
             val seekMap = output.seekMap
-            if (playbackPositionMs >= NEAR_FIRST_THRESHOLD_MS &&
-                seekMap != null &&
-                seekMap.isSeekable
+            if (seekMap != null &&
+                ExpandingCueWindow.shouldUseExpandingWindow(
+                    playbackPositionMs,
+                    seekable = seekMap.isSeekable,
+                )
             ) {
-                val seekTimeMs = (playbackPositionMs - NEAR_SEEK_LEAD_MS).coerceAtLeast(0L)
-                val seekTimeUs = Util.msToUs(seekTimeMs)
-                val seekPoints = seekMap.getSeekPoints(seekTimeUs)
-                val seekPos = seekPoints.first.position
-                reopenAt(seekPos, seekTimeUs)
-                // Fresh sample buffer after seek — clear any bootstrap leftovers.
+                // Fresh buffers for expanding-window pass (drop bootstrap leftovers).
                 output.clearAllSamples()
                 decodedSampleCount = 0
                 merged.clear()
                 seen.clear()
 
-                // Phase A: read forward from near playback; emit ASAP once we have a batch.
-                var phaseAEmitted = false
-                while (true) {
-                    val result = readOnce()
-                    val current = refreshMergedFromSelected()
-                    if (!phaseAEmitted && current.size >= PHASE_A_TARGET_CUES) {
-                        emitter.maybeEmit(current, force = true)
-                        phaseAEmitted = true
+                val seed = ExpandingCueWindow.seedWindow(playbackPositionMs)
+                var coverage = ExpandingCueWindow.Coverage(
+                    startMs = seed.startMs,
+                    endMs = seed.endMs,
+                    reachedStart = seed.startMs <= 0L,
+                    reachedEof = false,
+                )
+
+                // Seed: modest band around playhead — emit ASAP (cue-count or time bound).
+                val seedEof = readWindow(
+                    window = seed,
+                    seekMap = seekMap,
+                    stopAfterCueCount = ExpandingCueWindow.SEED_TARGET_CUES,
+                )
+                if (seedEof) {
+                    coverage = coverage.copy(reachedEof = true)
+                } else {
+                    // If we stopped early on cue count, shrink covered end to what we scanned.
+                    val newest = output.newestSampleTimeUs()
+                    if (newest != C.TIME_UNSET) {
+                        val newestMs = Util.usToMs(newest)
+                        if (newestMs < coverage.endMs) {
+                            coverage = coverage.copy(endMs = newestMs.coerceAtLeast(coverage.startMs))
+                        }
                     }
-                    if (result == Extractor.RESULT_END_OF_INPUT) break
                 }
-                emitter.maybeEmit(merged.sortedBy { it.startMs }, force = true)
 
-                // Phase B: fill cues from the start up to the phase-A join point.
-                val joinTimeUs = seekTimeUs
-                reopenAt(0L, 0L)
-                output.clearAllSamples()
-                decodedSampleCount = 0
-                // Keep merged/seen so phase-A cues remain; only add earlier ones.
+                var stepMs = ExpandingCueWindow.INITIAL_EXPAND_STEP_MS
+                var guard = 0
+                while (!coverage.isComplete && guard < 64) {
+                    guard++
 
-                while (true) {
-                    val result = readOnce()
-                    val newestBeforeTrim = output.newestSampleTimeUs()
-                    output.dropSamplesAtOrAfter(joinTimeUs)
-                    refreshMergedFromSelected()
-                    // Stop once the demux has reached the phase-A join; later cues are
-                    // already in [merged] from phase A.
-                    if (newestBeforeTrim != C.TIME_UNSET && newestBeforeTrim >= joinTimeUs) {
-                        break
+                    val earlier = ExpandingCueWindow.nextEarlierWindow(coverage.startMs, stepMs)
+                    if (earlier != null) {
+                        readWindow(
+                            window = earlier,
+                            seekMap = seekMap,
+                            // Avoid re-decoding samples already covered by later windows.
+                            dropAtOrAfterMs = coverage.startMs,
+                        )
+                        coverage = coverage.copy(
+                            startMs = earlier.startMs,
+                            reachedStart = earlier.startMs <= 0L,
+                        )
+                    } else {
+                        coverage = coverage.copy(reachedStart = true)
                     }
-                    if (result == Extractor.RESULT_END_OF_INPUT) break
+
+                    if (!coverage.reachedEof) {
+                        val later = ExpandingCueWindow.nextLaterWindow(
+                            coveredEndMs = coverage.endMs,
+                            stepMs = stepMs,
+                            reachedEof = false,
+                        )
+                        if (later != null) {
+                            val sizeBefore = merged.size
+                            val laterEof = readWindow(window = later, seekMap = seekMap)
+                            val newest = output.newestSampleTimeUs()
+                            val scannedEndMs = when {
+                                laterEof -> later.endMs
+                                newest != C.TIME_UNSET ->
+                                    Util.usToMs(newest).coerceAtLeast(coverage.endMs)
+                                else -> later.endMs
+                            }
+                            // No forward progress and no EOF flag → treat as done (seek stuck at end).
+                            val stuck =
+                                !laterEof &&
+                                    merged.size == sizeBefore &&
+                                    scannedEndMs <= coverage.endMs
+                            coverage = coverage.copy(
+                                endMs = scannedEndMs.coerceAtLeast(coverage.endMs),
+                                reachedEof = laterEof || stuck,
+                            )
+                        }
+                    }
+
+                    stepMs = ExpandingCueWindow.growStep(stepMs)
+                }
+
+                // If we never hit EOF on a later pass (e.g. duration unknown and seeks
+                // undershoot), finish with one forward read from current coverage end.
+                if (!coverage.reachedEof) {
+                    val finish = ExpandingCueWindow.Window(
+                        startMs = coverage.endMs,
+                        // Large bound; EOF is the real stop.
+                        endMs = coverage.endMs + 24 * 60 * 60 * 1000L,
+                    )
+                    readWindow(window = finish, seekMap = seekMap)
                 }
             } else {
-                // Single full pass with progressive emission.
+                // Non-seekable / early playback: single forward pass with frequent partials.
                 while (true) {
                     val result = readOnce()
                     refreshMergedFromSelected()

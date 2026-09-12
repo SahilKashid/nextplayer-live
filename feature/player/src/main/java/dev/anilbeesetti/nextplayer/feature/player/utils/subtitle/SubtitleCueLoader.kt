@@ -22,9 +22,10 @@ import kotlinx.coroutines.withContext
  * External SRT/VTT (and other Media3-parseable text files) are read from their URI.
  * Embedded in-container text tracks are demuxed on a background thread via
  * [EmbeddedSubtitleCueExtractor] with progressive partial updates and optional
- * near-playback-first seeking. MediaController player APIs stay on Main.
+ * near-playback-first expanding-window seeking. MediaController player APIs stay on Main.
  *
- * Results are cached in-memory (session LRU) and on disk under `subtitleCacheDir`.
+ * Only the **final** non-empty timeline is written to [LiveSubtitleCueCache] after demux/parse
+ * completes — progressive [onPartialCues] updates must not touch the cache (UI state only).
  */
 @UnstableApi
 object SubtitleCueLoader {
@@ -112,6 +113,7 @@ object SubtitleCueLoader {
                 else -> emptyList()
             }
         }
+        // Cache only the complete final list — never mid-progressive partials.
         if (loaded.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 LiveSubtitleCueCache.put(context, cacheKey, loaded)
