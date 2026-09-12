@@ -9,10 +9,12 @@ live panel (default on), and subtitle vertical position (including bottom-anchor
 
 Shipped in **v1.0.4**: live panel stays open across pause / screen lock / recreate
 (`liveSubtitlesPanelOpen`); scrolling cues while paused no longer jumps back after ~3s
-(auto-follow only while playing; jump-to-current still works). Expanding-window progressive
-demux (continuous growth around the playhead instead of a Phase-A / Phase-B cliff) and
-hardened cue cache (final-only puts, stable keys without flaky mtime, larger LRU, fsync,
-corrupt-file delete).
+(auto-follow only while playing; jump-to-current still works).
+
+Shipped in **v1.0.5**: expanding-window progressive demux (seed near playhead, grow earlier/later
+bands with frequent partial emits instead of a Phase-A / Phase-B cliff) and hardened cue cache
+(final-only puts, stable keys without flaky mtime, larger LRU, fsync+rename, corrupt-file delete
+for reliable reopen hits). Anti-stutter scroll/highlight identity path unchanged.
 
 ## Sources
 
