@@ -25,8 +25,8 @@ Side-by-side install is intentional: Live uses a different `applicationId` so it
 overwrite the original Next Player package.
 
 Baseline: Live **v1.0.0** was based around the upstream **~v0.17.5** lineage. Origin tag
-`v1.0.0` is the first Live release; **v1.0.1** adds the finished-download / settled-complete
-handoff fix (prefer `v1.0.1` or latest Live tag / `origin/main` as the feature source).
+`v1.0.0` is the first Live release; **v1.0.1** adds finished-download settled-complete handoff;
+**v1.0.2** adds the same for **Open with / share-sheet `content://` URIs** (prefer `v1.0.2` or latest Live tag / `origin/main`).
 
 ---
 
@@ -53,7 +53,7 @@ git fetch origin --tags
    - Prefer a release tag: `upstream/vX.Y.Z`
    - Or tip: `upstream/main`
 3. Re-apply **branding** (see [Branding](#branding-must-keep)).
-4. Bring Live-only source trees from origin tag `v1.0.1` (or latest Live tag / `main`), then
+4. Bring Live-only source trees from origin tag `v1.0.2` (or latest Live tag / `main`), then
    **re-wire touchpoints** in shared upstream files.
 5. Prefer history when clean:
    - Cherry-pick / merge Live feature commits if they apply cleanly.
@@ -78,7 +78,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, then `v1.0.1` / `101`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -174,7 +174,8 @@ Also keep `docs/play-while-downloading.md` when present.
   `NextDataSourceFactory` (DefaultDataSource when settled-complete), Growing* open/EOF behavior,
   and `GrowingAwareExtractorsFactory` (wrap / disable cue-seek **only** while incomplete).
   Always routing finished files through Growing* (`LENGTH_UNSET`) + leftover `SEEK_HOLE` ⇒
-  **blank loading screen forever**. Fixed at `11c919b2`; shipped in Live **v1.0.1**.
+  **blank loading screen forever**. Fixed at `11c919b2` (**v1.0.1**) for path-resolvable URIs;
+  Open-with / share-sheet `content://` finished files fixed at `0e968022` (**v1.0.2**) via AFD inspection.
   Do **not** reintroduce always-Growing for finished files or path heuristics.
 
 See `docs/play-while-downloading.md`.
@@ -259,6 +260,7 @@ Suggested run:
 | Mid-download MKV open | Starts without waiting for full file |
 | Mid-download scrub | Seeks to indexed downloaded clusters |
 | Live subtitles panel | Landscape split; highlight/scroll sync; no overlay when open |
+| Open with / share sheet | Finished local video via ACTION_VIEW / `content://` plays (not blank loader) |
 | Side-by-side install | Original Next Player package **not** overwritten (`dev.sahilkashid.nextplayer`) |
 
 ---
@@ -269,7 +271,7 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.0.1` / latest Live tag / Live main.
+3. Checkout Live-only paths from `v1.0.2` / latest Live tag / Live main.
 4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
    `ControlsTopView`, strings.
 5. Tests → assemble → smoke verification matrix → release.

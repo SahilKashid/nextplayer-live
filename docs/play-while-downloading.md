@@ -55,8 +55,9 @@ must never decide this.
 
 Always routing local URIs through Growing* (`LENGTH_UNSET`) while a leftover `SEEK_HOLE` (or
 incomplete-MKV wrapper) remains → ExoPlayer never settles → **blank loading screen forever**
-after the download has finished. Fixed in Live at `11c919b2` (shipped in **v1.0.1**) for
-path-resolvable / `file://` media.
+after the download has finished. Fixed in Live at `11c919b2` (**v1.0.1**) for
+path-resolvable / `file://` media, and at `0e968022` (**v1.0.2**) for Open-with / share-sheet
+`content://` URIs (AFD inspection).
 
 ### Pitfall — blank loading screen on Open-with / share sheet
 

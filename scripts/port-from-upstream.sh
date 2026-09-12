@@ -15,7 +15,7 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.0.1 if tagged,
+  live-source-ref  Live tree to copy features from (default: v1.0.2 if tagged,
                    else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
@@ -110,8 +110,11 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.0.1 (finished-download handoff), else newest v* tag, else origin/main.
-  if git rev-parse --verify -q "v1.0.1" >/dev/null 2>&1 || \
+  # Prefer v1.0.2 (Open-with content:// handoff), else v1.0.1, else newest v* tag, else origin/main.
+  if git rev-parse --verify -q "v1.0.2" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.0.2" >/dev/null 2>&1; then
+    LIVE_ARG="v1.0.2"
+  elif git rev-parse --verify -q "v1.0.1" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.0.1" >/dev/null 2>&1; then
     LIVE_ARG="v1.0.1"
   else
@@ -260,7 +263,7 @@ cat <<'TOUCH'
   NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
-                             (never always-Growing; blank loader pitfall fixed in v1.0.1 / 11c919b2)
+                             (never always-Growing; finished + Open-with content:// handoff: v1.0.1 / 11c919b2, v1.0.2 / 0e968022)
   PlayerService: DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory) + setDataSourceFactory
                  + GrowingFileLoadErrorHandlingPolicy  (Media3 1.11: extractors via constructor)
   strings.xml: live_subtitles* + jump_to_current_cue (+ app_name)
