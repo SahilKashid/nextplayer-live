@@ -415,4 +415,164 @@ class GrowingFileDataSourceTest {
     fun shouldPlayAsGrowing_missingFileIsGrowing() {
         assertTrue(IncompleteLocalMedia.shouldPlayAsGrowing("/tmp/does-not-exist-nextplayer-test.mkv"))
     }
+
+    @Test
+    fun shouldPlayAsGrowing_fdApi_finishedStableIsFalse() {
+        val file = File.createTempFile("finished-fd-api", ".mkv")
+        try {
+            val size = 2L * 1024L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.write(ByteArray(size.toInt()) { 0x5A })
+            }
+            RandomAccessFile(file, "r").use { raf ->
+                assertFalse(
+                    IncompleteLocalMedia.shouldPlayAsGrowing(
+                        declaredLength = size,
+                        fd = raf.fd,
+                        fileName = "finished.mkv",
+                        lastModifiedMs = System.currentTimeMillis() - 60_000L,
+                    ),
+                )
+            }
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun shouldPlayAsGrowing_fdApi_nullFdSettledDeclaredIsFalse() {
+        // When tip probing is unavailable (fd=null), a positive declared length with a
+        // non-partial name and stable mtime is treated as settled-complete.
+        assertFalse(
+            IncompleteLocalMedia.shouldPlayAsGrowing(
+                declaredLength = 2L * 1024L * 1024L,
+                fd = null,
+                fileName = "finished.mkv",
+                lastModifiedMs = System.currentTimeMillis() - 60_000L,
+            ),
+        )
+    }
+
+    @Test
+    fun shouldPlayAsGrowing_fdApi_partialNameIsTrueEvenWhenComplete() {
+        val file = File.createTempFile("named-part", ".mkv.part")
+        try {
+            val size = 2L * 1024L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.write(ByteArray(size.toInt()) { 0x5A })
+            }
+            RandomAccessFile(file, "r").use { raf ->
+                assertTrue(
+                    IncompleteLocalMedia.shouldPlayAsGrowing(
+                        declaredLength = size,
+                        fd = raf.fd,
+                        fileName = "movie.mkv.part",
+                        lastModifiedMs = System.currentTimeMillis() - 60_000L,
+                    ),
+                )
+            }
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun shouldPlayAsGrowing_contentUri_finishedStableIsFalse() {
+        val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+        val file = File.createTempFile("finished-content-uri", ".mkv")
+        try {
+            val size = 2L * 1024L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.write(ByteArray(size.toInt()) { 0x5A })
+            }
+            file.setLastModified(System.currentTimeMillis() - 60_000L)
+            val uri = registerFileContentProvider(ctx, file, "finished.mkv")
+            assertFalse(
+                "finished Open-with content:// must leave growing path",
+                IncompleteLocalMedia.shouldPlayAsGrowing(ctx, uri),
+            )
+            val snap = IncompleteLocalMedia.inspect(ctx, uri)
+            assertTrue(snap.settledComplete)
+            assertFalse(snap.incomplete)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun shouldPlayAsGrowing_contentUri_partialNameIsTrue() {
+        val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+        val file = File.createTempFile("partial-content-uri", ".mkv")
+        try {
+            val size = 2L * 1024L * 1024L
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.write(ByteArray(size.toInt()) { 0x5A })
+            }
+            file.setLastModified(System.currentTimeMillis() - 60_000L)
+            val uri = registerFileContentProvider(ctx, file, "movie.mkv.part")
+            assertTrue(
+                "partial OpenableColumns.DISPLAY_NAME must stay on growing path",
+                IncompleteLocalMedia.shouldPlayAsGrowing(ctx, uri),
+            )
+        } finally {
+            file.delete()
+        }
+    }
+
+    private fun registerFileContentProvider(
+        context: android.content.Context,
+        file: File,
+        displayName: String,
+    ): android.net.Uri {
+        val authority = "dev.anilbeesetti.nextplayer.test.incomplete." + java.util.UUID.randomUUID()
+        val provider = object : android.content.ContentProvider() {
+            override fun onCreate(): Boolean = true
+            override fun query(
+                uri: android.net.Uri,
+                projection: Array<out String>?,
+                selection: String?,
+                selectionArgs: Array<out String>?,
+                sortOrder: String?,
+            ): android.database.Cursor {
+                val cols = projection ?: arrayOf(
+                    android.provider.OpenableColumns.DISPLAY_NAME,
+                    android.provider.OpenableColumns.SIZE,
+                )
+                val matrix = android.database.MatrixCursor(cols)
+                val row = Array<Any?>(cols.size) { null }
+                cols.forEachIndexed { i, col ->
+                    row[i] = when (col) {
+                        android.provider.OpenableColumns.DISPLAY_NAME -> displayName
+                        android.provider.OpenableColumns.SIZE -> file.length()
+                        else -> null
+                    }
+                }
+                matrix.addRow(row)
+                return matrix
+            }
+            override fun getType(uri: android.net.Uri): String = "video/x-matroska"
+            override fun insert(uri: android.net.Uri, values: android.content.ContentValues?) = null
+            override fun delete(uri: android.net.Uri, selection: String?, selectionArgs: Array<out String>?) = 0
+            override fun update(
+                uri: android.net.Uri,
+                values: android.content.ContentValues?,
+                selection: String?,
+                selectionArgs: Array<out String>?,
+            ) = 0
+            override fun openAssetFile(uri: android.net.Uri, mode: String): android.content.res.AssetFileDescriptor {
+                val pfd = android.os.ParcelFileDescriptor.open(
+                    file,
+                    android.os.ParcelFileDescriptor.MODE_READ_ONLY,
+                )
+                return android.content.res.AssetFileDescriptor(pfd, 0, file.length())
+            }
+        }
+        val info = android.content.pm.ProviderInfo().apply {
+            this.authority = authority
+            this.exported = true
+        }
+        provider.attachInfo(context, info)
+        org.robolectric.shadows.ShadowContentResolver.registerProviderInternal(authority, provider)
+        return android.net.Uri.parse("content://$authority/video")
+    }
 }

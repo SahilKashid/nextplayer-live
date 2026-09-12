@@ -370,7 +370,12 @@ object SparseAwareFileLength {
     ): Boolean {
         if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
         val start = maxOf(0L, declaredLength - tailBytes)
-        return !windowHasDataFd(fd, start, declaredLength)
+        // Probe failure (Os.read unsupported / EIO) must NOT look like an all-zero tail,
+        // or finished content:// Open-with URIs collapse tip→0 and hang on Growing*.
+        return when (val probe = windowHasDataFdOrNull(fd, start, declaredLength)) {
+            null -> false
+            else -> !probe
+        }
     }
 
     private fun findZeroPaddedTipFd(
@@ -429,27 +434,45 @@ object SparseAwareFileLength {
         return start
     }
 
-    private fun windowHasDataFd(fd: FileDescriptor, start: Long, end: Long): Boolean {
+    private fun windowHasDataFd(fd: FileDescriptor, start: Long, end: Long): Boolean =
+        windowHasDataFdOrNull(fd, start, end) == true
+
+    /**
+     * @return true if a non-zero byte was seen, false if the window is all zeros,
+     *   null if the probe could not be completed (FD not readable via Os.read).
+     */
+    private fun windowHasDataFdOrNull(fd: FileDescriptor, start: Long, end: Long): Boolean? {
         if (end <= start) return false
         val bufSize = min(ZERO_TAIL_PROBE_BYTES.toLong(), end - start).toInt().coerceAtLeast(1)
         val buf = ByteArray(bufSize)
         val bb = java.nio.ByteBuffer.wrap(buf)
         var pos = start
+        var readAnything = false
         while (pos < end) {
             val toRead = min(buf.size.toLong(), end - pos).toInt()
-            Os.lseek(fd, pos, OsConstants.SEEK_SET)
-            bb.clear()
-            bb.limit(toRead)
-            var got = 0
-            while (got < toRead) {
-                val n = Os.read(fd, bb)
-                if (n <= 0) return false
-                got += n
+            try {
+                Os.lseek(fd, pos, OsConstants.SEEK_SET)
+                bb.clear()
+                bb.limit(toRead)
+                var got = 0
+                while (got < toRead) {
+                    val n = Os.read(fd, bb)
+                    if (n <= 0) {
+                        // EOF / error before filling the window.
+                        return if (readAnything || got > 0) false else null
+                    }
+                    got += n
+                    readAnything = true
+                }
+                for (i in 0 until got) {
+                    if (buf[i] != 0.toByte()) return true
+                }
+                pos += got
+            } catch (_: ErrnoException) {
+                return null
+            } catch (_: Exception) {
+                return null
             }
-            for (i in 0 until got) {
-                if (buf[i] != 0.toByte()) return true
-            }
-            pos += got
         }
         return false
     }

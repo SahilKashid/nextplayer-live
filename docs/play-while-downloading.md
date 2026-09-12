@@ -16,8 +16,11 @@ EOF), and mtime is stable or a short poll sees no further growth — `NextDataSo
 routes it to Media3 `DefaultDataSource`. Playback then uses a finite length, normal Matroska
 cue-seek, and no incomplete-MKV wrapper.
 
-Unresolvable `content://` URIs use `GrowingContentDataSource` (AFD / PFD, same `LENGTH_UNSET` +
-reopen-on-EOF semantics). Media3’s fixed-length `ContentDataSource` is not used for this path.
+Unresolvable `content://` URIs (typical for Android **Open with** / share sheet) are inspected
+via AFD / PFD the same way as file paths. Still-incomplete ones use `GrowingContentDataSource`
+(`LENGTH_UNSET` + reopen-on-EOF). **Settled-complete** ones use Media3 `DefaultDataSource`
+(finite length) — the same handoff as finished `file://` / path-resolvable media. Media3’s
+fixed-length `ContentDataSource` is not used while the file is still growing.
 
 Network schemes (`smb` / `ftp` / `sftp` / `webdav`) still use `NetworkDataSource`. http(s) still
 uses Media3 `DefaultDataSource`.
@@ -44,17 +47,28 @@ A local file is settled-complete when **all** of the following hold:
 3. `shouldPlayAsGrowing` is then false once mtime is stable, or a short growth poll sees no
    further growth.
 
-`NextDataSourceFactory` is the router: Growing* only while `shouldPlayAsGrowing`; otherwise
-`DefaultDataSource`. Path / folder-name heuristics must never decide this.
+`NextDataSourceFactory` is the router: Growing* only while `shouldPlayAsGrowing` (path or
+content-URI AFD inspection); otherwise `DefaultDataSource`. Path / folder-name heuristics
+must never decide this.
 
 ### Pitfall — blank loading screen after download finishes
 
 Always routing local URIs through Growing* (`LENGTH_UNSET`) while a leftover `SEEK_HOLE` (or
 incomplete-MKV wrapper) remains → ExoPlayer never settles → **blank loading screen forever**
-after the download has finished. Fixed in Live at `11c919b2` (shipped in **v1.0.1**).
+after the download has finished. Fixed in Live at `11c919b2` (shipped in **v1.0.1**) for
+path-resolvable / `file://` media.
 
-**Do not** reintroduce always-Growing for finished files, path heuristics, or
-`ApproximateByteSeekMap`.
+### Pitfall — blank loading screen on Open-with / share sheet
+
+External `ACTION_VIEW` often delivers an unresolvable `content://` URI (no readable filesystem
+path). Always routing that URI through `GrowingContentDataSource` + treating it as growing in
+`GrowingAwareExtractorsFactory` caused the same blank loader for **finished** local videos,
+even though the same file played when opened from the in-app library. Fixed by inspecting the
+AFD/PFD tip (`IncompleteLocalMedia.shouldPlayAsGrowing(context, uri)`) and handing
+settled-complete content URIs to `DefaultDataSource` with cue-seek left enabled.
+
+**Do not** reintroduce always-Growing for finished files (path **or** content URI), path
+heuristics, or `ApproximateByteSeekMap`.
 
 ## Universal incomplete detection
 
@@ -83,6 +97,10 @@ Downloaders may preallocate the destination at the final size and fill it sequen
 sparse holes (`SEEK_HOLE` on API 26+) or real zero bytes. `SparseAwareFileLength` takes
 `readableEnd = min(holeTip, zeroTailTipIfApplicable)` and the datasource polls at that tip —
 never returning padding zeros as media.
+
+AFD/PFD tip probes that **fail** (`Os.read` / `ErrnoException`) are treated as unknown — not as
+an all-zero tip — so a finished Open-with `content://` URI does not collapse to tip 0 and hang
+on the growing path.
 
 ## Extractors and retries
 

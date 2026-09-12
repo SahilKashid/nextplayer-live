@@ -3,7 +3,6 @@ package dev.anilbeesetti.nextplayer.feature.player.service
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.Extractor
@@ -36,8 +35,8 @@ import dev.anilbeesetti.nextplayer.core.media.network.datasource.ReadableTipTrac
  * - optional: declared / readable length growing across a short poll (only if mtime is recent)
  *
  * Finished local MKVs (real cues / non-zero tail, not a partial name, mtime not growing)
- * keep cue-seek enabled and are **not** wrapped, so seeking is unchanged. Directory names
- * are never used.
+ * keep cue-seek enabled and are **not** wrapped, so seeking is unchanged — including
+ * finished `content://` Open-with URIs inspected via AFD/PFD. Directory names are never used.
  *
  * The no-arg [createExtractors] disables cue-seek (unknown URI — safe default) but does not wrap
  * (no tip key). Non-local / network URIs keep cue-seek enabled.
@@ -107,16 +106,9 @@ class GrowingAwareExtractorsFactory(
                 return IncompleteLocalMedia.shouldPlayAsGrowing(path)
             }
 
-            // content:// without a resolvable path — cannot inspect bytes.
+            // content:// without a resolvable path — inspect via AFD/PFD (Open-with).
             if (ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)) {
-                val displayName = queryDisplayName(context, uri)
-                if (IncompleteLocalMedia.looksPartialFileName(displayName) ||
-                    IncompleteLocalMedia.looksPartialFileName(uri.lastPathSegment)
-                ) {
-                    return true
-                }
-                // Safe default: disable cue-seek when we cannot see the file.
-                return true
+                return IncompleteLocalMedia.shouldPlayAsGrowing(context, uri)
             }
 
             return false
@@ -175,25 +167,5 @@ class GrowingAwareExtractorsFactory(
             return -1L
         }
 
-        private fun queryDisplayName(context: Context, uri: Uri): String? {
-            return try {
-                context.contentResolver.query(
-                    uri,
-                    arrayOf(OpenableColumns.DISPLAY_NAME),
-                    null,
-                    null,
-                    null,
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        if (idx >= 0) cursor.getString(idx) else null
-                    } else {
-                        uri.lastPathSegment
-                    }
-                } ?: uri.lastPathSegment
-            } catch (_: Exception) {
-                uri.lastPathSegment
-            }
-        }
     }
 }

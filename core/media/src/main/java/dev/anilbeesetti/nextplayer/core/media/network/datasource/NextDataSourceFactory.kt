@@ -24,9 +24,11 @@ import javax.inject.Singleton
  * - The same URIs, once settled-complete (tip caught up / real tail, mtime not growing),
  *   use Media3 [DefaultDataSource] so ExoPlayer sees a **finite** length, normal
  *   Matroska cue-seek, and no incomplete wrapper.
- * - Unresolvable `content://` media uses [GrowingContentDataSource] (PFD / AFD with
- *   [androidx.media3.common.C.LENGTH_UNSET]) — never Media3's fixed-length ContentDataSource
- *   for video playback when growing support is desired.
+ * - Unresolvable `content://` media that still looks incomplete uses
+ *   [GrowingContentDataSource] (PFD / AFD with [androidx.media3.common.C.LENGTH_UNSET]).
+ *   Once settled-complete (AFD tip caught up / real tail), the same URIs use
+ *   [DefaultDataSource] — critical for ACTION_VIEW / Open-with / share sheet into a
+ *   finished local file. Never Media3's fixed-length ContentDataSource while growing.
  * - Other local / http(s) media uses Media3 [DefaultDataSource].
  * - `smb`/`ftp`/`sftp`/`webdav` use [NetworkDataSource].
  *
@@ -95,8 +97,12 @@ private class SchemeDispatchingDataSource(
                         // Rewrite to file:// so GrowingFileDataSource can open via RandomAccessFile.
                         growingFile to dataSpec.withUri(File(path).toUri())
                     }
+                } else if (!IncompleteLocalMedia.shouldPlayAsGrowing(context, uri)) {
+                    // Path unresolved/unreadable but AFD tip is settled-complete
+                    // (typical Open-with / share-sheet content:// into a finished file).
+                    default to dataSpec
                 } else {
-                    // Path unresolved — grow via ContentResolver AFD/PFD, never fixed ContentDataSource.
+                    // Still incomplete — grow via ContentResolver AFD/PFD.
                     growingContent to dataSpec
                 }
             }
