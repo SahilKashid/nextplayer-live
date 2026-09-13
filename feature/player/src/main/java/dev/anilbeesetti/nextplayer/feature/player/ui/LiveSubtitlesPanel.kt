@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,7 +69,10 @@ fun LiveSubtitlesPanel(
     state: LiveSubtitlesState,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
+    // Fresh LazyListState per media/track signature so next/prev does not keep
+    // the previous video's firstVisibleItemIndex. Progressive fills keep the
+    // same listResetKey and therefore the same scroll state.
+    val listState = remember(state.listResetKey) { LazyListState() }
     val density = LocalDensity.current
     // Same early-lead identity scroll uses — stable across remux index shifts.
     val highlightedKey = state.scrollTargetKey
@@ -95,7 +97,9 @@ fun LiveSubtitlesPanel(
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
             // Scroll only — keyed on cue identity so remux prepends don't restart scroll.
-            LaunchedEffect(state.isFollowing, halfViewportPx) {
+            // Restart when listResetKey / listState changes so we do not scroll an
+            // orphaned LazyListState after next/prev media.
+            LaunchedEffect(state.isFollowing, halfViewportPx, state.listResetKey, listState) {
                 if (!state.isFollowing) return@LaunchedEffect
                 snapshotFlow { state.scrollTargetKey }
                     .distinctUntilChanged()

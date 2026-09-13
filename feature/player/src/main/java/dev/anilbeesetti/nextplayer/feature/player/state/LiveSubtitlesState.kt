@@ -115,6 +115,14 @@ class LiveSubtitlesState(
     var isUnsupportedTrack: Boolean by mutableStateOf(false)
         private set
 
+    /**
+     * Changes whenever the media item / selected text track signature changes.
+     * Key [LazyListState] on this so scroll offset is not
+     * carried across next/prev video.
+     */
+    var listResetKey: String by mutableStateOf("")
+        private set
+
     var subtitleDelayMs: Long = 0L
 
     var subtitleSpeed: Float by mutableFloatStateOf(1f)
@@ -372,10 +380,21 @@ class LiveSubtitlesState(
     private fun reloadIfNeeded(force: Boolean) {
         val signature = trackSignature()
         if (!force && signature == lastTrackSignature) return
+        val trackChanged = LiveSubtitlesTrackChange.shouldResetForSignature(
+            lastTrackSignature,
+            signature,
+        )
         lastTrackSignature = signature
         loadJob?.cancel()
+        // Next/prev / new URI / track reselect: drop old scroll/highlight identities and
+        // re-enable following. Progressive fills within the same signature skip this.
+        if (trackChanged) {
+            resetForMediaOrTrackChange(signature)
+        }
         loadJob = scope.launch {
             if (signature == "none") {
+                // Already cleared in resetForMediaOrTrackChange when trackChanged;
+                // keep this branch for force-reload of the same "none" signature.
                 cues = emptyList()
                 isUnsupportedTrack = false
                 isLoading = false
@@ -437,9 +456,31 @@ class LiveSubtitlesState(
     }
 
     /**
+     * Clear list/highlight/scroll state for a new media item or text track.
+     * Does not touch [isPanelVisible] (panel stays open across videos by design).
+     * Anti-stutter identity preservation remains for progressive fills of *this*
+     * signature via [applyCuesPreservingActiveIdentity].
+     */
+    private fun resetForMediaOrTrackChange(signature: String) {
+        val snap = LiveSubtitlesTrackChange.resetSnapshotForSignature(signature)
+        followController.resetFollowing()
+        cues = emptyList()
+        currentCueIndex = snap.currentCueIndex
+        scrollTargetIndex = snap.scrollTargetIndex
+        highlightedCueKey = snap.highlightedCueKey
+        scrollTargetKey = snap.scrollTargetKey
+        isUnsupportedTrack = snap.isUnsupportedTrack
+        isLoading = snap.isLoading
+        listResetKey = snap.listResetKey
+    }
+
+    /**
      * Replace the cue list while keeping highlight on the same cue identity when
      * Phase-B prepends earlier cues (index shifts, identity unchanged). Only fall
      * back to player matching when that cue disappeared from the new list.
+     *
+     * Callers must [resetForMediaOrTrackChange] before loading a *different*
+     * signature so old identities are not matched into the new track's cues.
      */
     private fun applyCuesPreservingActiveIdentity(newCues: List<TimedCue>) {
         // Preserve by identity strings so remux completion does not change keys

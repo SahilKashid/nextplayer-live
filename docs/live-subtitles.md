@@ -21,7 +21,7 @@ brightness, double-tap play/pause, long-press 2x, subtitle vertical 20% toward c
 subtitle language English); sidecar auto-discovery (`.vtt/.srt/.ass/.ssa/.ttml`) with all-files
 access, path-probe fallback, and rescan on every open; auto-select a subtitle when any track
 exists (prefer English — never leave Disable if tracks present); selector labels decode `%20`
-to spaces.
+to spaces; live panel scroll resets on next/prev media (fresh `LazyListState` + follow).
 
 ## Sources
 
@@ -102,6 +102,10 @@ Intentionally high VTT lines (for example `line:10%`) and bitmap cues are left a
 `PlayerPreferences.liveSubtitlesPanelOpen` (default **false**) remembers whether the user left the live panel open. The player toggle and panel close control write this pref; on activity recreate (pause / screen lock) the panel restores when landscape again.
 
 Portrait / non-landscape only hides the panel via the `showLiveSubtitlesPanel = isPanelVisible && isLandscape && !isTv` predicate — it does **not** clear `isPanelVisible`, so rotating back to landscape brings the panel back if it was open.
+
+## Media item / track change (next/prev)
+
+When the media item or selected text-track signature changes, `LiveSubtitlesState` clears cues / highlight / scroll identities, re-enables follow (`isFollowing = true`), and bumps `listResetKey`. The panel keys `LazyListState` on that key so the list starts at the top (then follows the new playhead). Progressive cue fills **within** the same signature still preserve identity (anti-stutter). Panel open preference is unchanged across videos.
 
 ## Auto-follow while paused
 
