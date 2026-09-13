@@ -31,7 +31,8 @@ Baseline: Live **v1.0.0** was based around the upstream **~v0.17.5** lineage. Or
 **v1.0.4** adds panel persistence across pause/lock/recreate and no auto-follow while paused;
 **v1.0.5** adds expanding-window progressive cue fill + hardened final-only cue cache;
 **v1.0.6** adds SYSTEM+high-contrast defaults, all-files sidecar discovery with rescan/auto-select
-and decoded labels (prefer `v1.0.6` or latest Live tag / `origin/main`).
+and decoded labels;
+**v1.0.7** snaps the live panel to the new playhead’s cue zone on media change (prefer `v1.0.7` or latest Live tag / `origin/main`).
 
 ---
 
@@ -58,7 +59,7 @@ git fetch origin --tags
    - Prefer a release tag: `upstream/vX.Y.Z`
    - Or tip: `upstream/main`
 3. Re-apply **branding** (see [Branding](#branding-must-keep)).
-4. Bring Live-only source trees from origin tag `v1.0.6` (or latest Live tag / `main`), then
+4. Bring Live-only source trees from origin tag `v1.0.7` (or latest Live tag / `main`), then
    **re-wire touchpoints** in shared upstream files.
 5. Prefer history when clean:
    - Cherry-pick / merge Live feature commits if they apply cleanly.
@@ -83,7 +84,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -144,6 +145,7 @@ Also keep `docs/live-subtitles.md` when present.
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).
 - **Defaults:** theme SYSTEM + high-contrast dark; remember brightness; double-tap play/pause; long-press 2x; subtitle vertical 20%; preferred subtitle language English (v1.0.6).
 - **Sidecar discovery:** all-files access + path probe for `.vtt/.srt/.ass/.ssa/.ttml`; rescan every open; auto-select when tracks exist (prefer eng); never leave Disable; decode `%20` in labels (v1.0.6).
+- **Media-change snap:** on next/prev, drop previous-video list offset (`listResetKey`) and re-anchor to playhead nearest-cue immediately, even with empty currentCues (v1.0.7).
 
 See `docs/live-subtitles.md`.
 
@@ -288,7 +290,7 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.0.6` / latest Live tag / Live main.
+3. Checkout Live-only paths from `v1.0.7` / latest Live tag / Live main.
 4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
    `ControlsTopView`, strings.
 5. Tests → assemble → smoke verification matrix → release.

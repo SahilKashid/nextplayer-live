@@ -15,7 +15,7 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.0.6 if tagged,
+  live-source-ref  Live tree to copy features from (default: v1.0.7 if tagged,
                    else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
@@ -110,13 +110,13 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.0.6 (defaults + sidecar all-files/rescan/auto-select), else v1.0.5, else newest v* tag, else origin/main.
-  if git rev-parse --verify -q "v1.0.6" >/dev/null 2>&1 || \
+  # Prefer v1.0.7 (media-change panel snap to playhead zone), else v1.0.6, else newest v* tag, else origin/main.
+  if git rev-parse --verify -q "v1.0.7" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.0.7" >/dev/null 2>&1; then
+    LIVE_ARG="v1.0.7"
+  elif git rev-parse --verify -q "v1.0.6" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.0.6" >/dev/null 2>&1; then
     LIVE_ARG="v1.0.6"
-  elif git rev-parse --verify -q "v1.0.5" >/dev/null 2>&1 || \
-     git rev-parse --verify -q "refs/tags/v1.0.5" >/dev/null 2>&1; then
-    LIVE_ARG="v1.0.5"
   else
     latest="$(git tag -l 'v*' --sort=-v:refname 2>/dev/null | head -n1 || true)"
     if [[ -n "${latest:-}" ]]; then
@@ -267,7 +267,8 @@ cat <<'TOUCH'
                              live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position: v1.0.3;
                              panel persist + no auto-follow while paused: v1.0.4;
                              expanding-window progressive fill + hardened final-only cue cache: v1.0.5;
-                             defaults SYSTEM+high-contrast, sidecar all-files/rescan/auto-select/%20 labels: v1.0.6)
+                             defaults SYSTEM+high-contrast, sidecar all-files/rescan/auto-select/%20 labels: v1.0.6;
+                             media-change panel snap to playhead zone (listResetKey + nearest-cue): v1.0.7)
   PlayerService: DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory) + setDataSourceFactory
                  + GrowingFileLoadErrorHandlingPolicy  (Media3 1.11: extractors via constructor)
   strings.xml: live_subtitles* + jump_to_current_cue (+ app_name)

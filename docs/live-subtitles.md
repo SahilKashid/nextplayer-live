@@ -21,7 +21,11 @@ brightness, double-tap play/pause, long-press 2x, subtitle vertical 20% toward c
 subtitle language English); sidecar auto-discovery (`.vtt/.srt/.ass/.ssa/.ttml`) with all-files
 access, path-probe fallback, and rescan on every open; auto-select a subtitle when any track
 exists (prefer English — never leave Disable if tracks present); selector labels decode `%20`
-to spaces; live panel scroll re-anchors on next/prev media (fresh `LazyListState` + playhead nearest-cue).
+to spaces.
+
+Shipped in **v1.0.7**: on next/prev media, the live panel snaps immediately to the new
+playhead’s cue zone (`listResetKey` + `nearestCueIndexByPlayhead`) even if no cue is
+active on that frame — no stuck previous-video scroll offset.
 
 ## Sources
 
