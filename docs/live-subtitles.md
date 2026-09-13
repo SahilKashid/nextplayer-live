@@ -21,7 +21,7 @@ brightness, double-tap play/pause, long-press 2x, subtitle vertical 20% toward c
 subtitle language English); sidecar auto-discovery (`.vtt/.srt/.ass/.ssa/.ttml`) with all-files
 access, path-probe fallback, and rescan on every open; auto-select a subtitle when any track
 exists (prefer English — never leave Disable if tracks present); selector labels decode `%20`
-to spaces; live panel scroll resets on next/prev media (fresh `LazyListState` + follow).
+to spaces; live panel scroll re-anchors on next/prev media (fresh `LazyListState` + playhead nearest-cue).
 
 ## Sources
 
@@ -105,7 +105,7 @@ Portrait / non-landscape only hides the panel via the `showLiveSubtitlesPanel = 
 
 ## Media item / track change (next/prev)
 
-When the media item or selected text-track signature changes, `LiveSubtitlesState` clears cues / highlight / scroll identities, re-enables follow (`isFollowing = true`), and bumps `listResetKey`. The panel keys `LazyListState` on that key so the list starts at the top (then follows the new playhead). Progressive cue fills **within** the same signature still preserve identity (anti-stutter). Panel open preference is unchanged across videos.
+When the media item or selected text-track signature changes, `LiveSubtitlesState` clears cues / highlight / scroll identities, re-enables follow (`isFollowing = true`), and bumps `listResetKey`. The panel keys `LazyListState` on that key so the previous video's offset is dropped; the first cue-list apply (cache hit or progressive seed) then anchors scroll/highlight via `nearestCueIndexByPlayhead` to the new playhead's time zone immediately — even with empty `currentCues` (top only when the playhead is near the start). Progressive fills **within** the same signature keep anti-stutter identity preservation and still re-resolve by playhead while following. Panel open preference is unchanged across videos.
 
 ## Auto-follow while paused
 

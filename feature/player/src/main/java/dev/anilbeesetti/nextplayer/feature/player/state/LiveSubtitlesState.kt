@@ -266,9 +266,8 @@ class LiveSubtitlesState(
         }
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
         val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
-        val index = cues.indexOfLast { cue ->
-            effective >= cue.startMs && effective < cue.endMs
-        }.takeIf { it >= 0 } ?: cues.indexOfLast { cue -> effective >= cue.startMs }
+        // Nearest cue by time — works with empty currentCues (gaps / before first).
+        val index = LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(cues, effective)
         commitCurrentCueIndex(index)
         updateScrollTarget(positionMs)
     }
@@ -283,7 +282,18 @@ class LiveSubtitlesState(
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex
         if (current !in cues.indices) {
-            commitScrollTargetIndex(current)
+            // No active-index highlight (e.g. empty list) — still anchor scroll to
+            // the nearest cue by playhead when the timeline is non-empty.
+            if (cues.isNotEmpty()) {
+                val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+                val effective =
+                    (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
+                commitScrollTargetIndex(
+                    LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(cues, effective),
+                )
+            } else {
+                commitScrollTargetIndex(current)
+            }
             return
         }
         val next = current + 1
@@ -491,6 +501,14 @@ class LiveSubtitlesState(
             ?: cues.getOrNull(scrollTargetIndex)?.identityKey()
 
         cues = newCues
+
+        // Following (incl. first apply after media/track change): resolve from
+        // playhead alone so scroll sits in the right time zone immediately —
+        // even when currentCues is empty. Do not wait for EVENT_CUES.
+        if (isFollowing) {
+            updateCurrentCueIndexFromPosition(player.currentPosition)
+            return
+        }
 
         if (prevHighlight != null) {
             val highlightIndex = newCues.indexOfFirst { it.identityKey() == prevHighlight }
