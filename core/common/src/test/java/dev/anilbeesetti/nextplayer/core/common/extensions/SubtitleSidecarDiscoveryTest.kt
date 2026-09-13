@@ -72,4 +72,47 @@ class SubtitleSidecarDiscoveryTest {
         val video = File(dir, "video.mkv").also { it.writeText("v") }
         assertEquals(emptyList<File>(), findSubtitleSidecars(video))
     }
+
+    @Test
+    fun probesCandidatesWhenListFilesFails() {
+        val dir = tempFolder.newFolder("probe")
+        val video = File(dir, "movie.mkv").also { it.writeText("v") }
+        File(dir, "movie.en.vtt").writeText("en")
+        File(dir, "movie.vtt").writeText("exact")
+        File(dir, "movie.srt").writeText("srt")
+        File(dir, "movie.xyz.vtt").writeText("uncommon-tag")
+        File(dir, "other.vtt").writeText("other")
+
+        val found = findSubtitleSidecars(video) { null }.map { it.name }
+
+        // Probe finds exact + known tags; uncommon .xyz is not in the probe list
+        assertEquals(
+            listOf("movie.srt", "movie.vtt", "movie.en.vtt"),
+            found,
+        )
+        assertFalse(found.contains("movie.xyz.vtt"))
+        assertFalse(found.contains("other.vtt"))
+    }
+
+    @Test
+    fun probesWhenListFilesReturnsEmpty() {
+        val dir = tempFolder.newFolder("probe-empty-list")
+        val video = File(dir, "clip.mp4").also { it.writeText("v") }
+        File(dir, "clip.eng.forced.srt").writeText("forced")
+
+        val found = findSubtitleSidecars(video) { emptyArray() }.map { it.name }
+
+        assertEquals(listOf("clip.eng.forced.srt"), found)
+    }
+
+    @Test
+    fun listFilesPreferredOverProbeForUncommonTags() {
+        val dir = tempFolder.newFolder("list-preferred")
+        val video = File(dir, "show.mkv").also { it.writeText("v") }
+        File(dir, "show.xyz.vtt").writeText("uncommon")
+
+        val found = findSubtitleSidecars(video).map { it.name }
+
+        assertEquals(listOf("show.xyz.vtt"), found)
+    }
 }

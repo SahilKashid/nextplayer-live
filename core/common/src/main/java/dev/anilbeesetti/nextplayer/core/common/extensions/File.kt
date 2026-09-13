@@ -12,12 +12,29 @@ import kotlinx.coroutines.withContext
 val SUBTITLE_FILE_EXTENSIONS = listOf("srt", "ssa", "ass", "vtt", "ttml")
 
 /**
+ * Modest language / variant tags probed when directory listing is unavailable
+ * (scoped storage on Android 13+ with only READ_MEDIA_VIDEO).
+ */
+val SUBTITLE_LANGUAGE_TAGS = listOf(
+    "en", "eng", "en.forced", "eng.forced", "en.sdh", "eng.sdh",
+    "es", "spa", "fr", "fre", "fra", "de", "ger", "deu",
+    "it", "ita", "pt", "por", "pt.br", "ru", "rus",
+    "ja", "jpn", "zh", "chi", "zho", "ko", "kor",
+    "hi", "hin", "ar", "ara",
+    "forced", "sdh", "cc",
+)
+
+/**
  * Finds subtitle sidecar files in the same directory as this media file.
  *
  * Matches exact basename (`video.vtt`) and language-tagged variants
  * (`video.en.vtt`, `video.en.srt`). Exact basename matches are listed first,
  * then tagged variants, sorted by filename. All matches are returned so the
  * player can expose them as selectable tracks.
+ *
+ * Prefers [File.listFiles] when available (finds arbitrary language tags).
+ * When listing returns null/empty — common with scoped storage without all-files
+ * access — probes known basename + extension (+ language tag) candidates.
  */
 suspend fun File.getSubtitles(): List<File> = withContext(Dispatchers.IO) {
     findSubtitleSidecars(this@getSubtitles)
@@ -25,23 +42,55 @@ suspend fun File.getSubtitles(): List<File> = withContext(Dispatchers.IO) {
 
 /**
  * Pure discovery used by [getSubtitles]; exposed for unit tests.
+ *
+ * @param listDirectory injectable directory listing; defaults to [File.listFiles].
  */
-fun findSubtitleSidecars(mediaFile: File): List<File> {
+fun findSubtitleSidecars(
+    mediaFile: File,
+    listDirectory: (File) -> Array<File>? = { it.listFiles() },
+): List<File> {
     val mediaName = mediaFile.nameWithoutExtension
     val parentDir = mediaFile.parentFile ?: return emptyList()
     val mediaNameLower = mediaName.lowercase()
-    val files = parentDir.listFiles() ?: return emptyList()
 
-    return files.asSequence()
-        .filter { it.isFile }
-        .filter { it.extension.lowercase() in SUBTITLE_FILE_EXTENSIONS }
-        .filter { candidate -> matchesSubtitleBasename(mediaNameLower, candidate.nameWithoutExtension) }
-        .sortedWith(
-            compareBy<File> { candidate ->
-                if (candidate.nameWithoutExtension.equals(mediaName, ignoreCase = true)) 0 else 1
-            }.thenBy { it.name.lowercase() },
-        )
-        .toList()
+    val listed = listDirectory(parentDir)
+        ?.asSequence()
+        ?.filter { it.isFile }
+        ?.filter { it.extension.lowercase() in SUBTITLE_FILE_EXTENSIONS }
+        ?.filter { candidate -> matchesSubtitleBasename(mediaNameLower, candidate.nameWithoutExtension) }
+        ?.toList()
+        .orEmpty()
+
+    val candidates = if (listed.isNotEmpty()) {
+        listed
+    } else {
+        probeSubtitleSidecars(parentDir, mediaName)
+    }
+
+    return candidates.sortedWith(
+        compareBy<File> { candidate ->
+            if (candidate.nameWithoutExtension.equals(mediaName, ignoreCase = true)) 0 else 1
+        }.thenBy { it.name.lowercase() },
+    )
+}
+
+/**
+ * Probes candidate sidecar paths without directory listing.
+ * Exact basename extensions first, then modest language-tagged variants.
+ */
+fun probeSubtitleSidecars(parentDir: File, mediaName: String): List<File> {
+    val found = LinkedHashSet<File>()
+    for (ext in SUBTITLE_FILE_EXTENSIONS) {
+        val exact = File(parentDir, "$mediaName.$ext")
+        if (exact.isFile) found.add(exact)
+    }
+    for (tag in SUBTITLE_LANGUAGE_TAGS) {
+        for (ext in SUBTITLE_FILE_EXTENSIONS) {
+            val tagged = File(parentDir, "$mediaName.$tag.$ext")
+            if (tagged.isFile) found.add(tagged)
+        }
+    }
+    return found.toList()
 }
 
 /**

@@ -79,12 +79,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import dev.anilbeesetti.nextplayer.core.common.canRequestAllFilesAccess
+import dev.anilbeesetti.nextplayer.core.common.createManageAllFilesIntent
 import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
+import dev.anilbeesetti.nextplayer.core.common.hasAllFilesAccess
 import dev.anilbeesetti.nextplayer.core.common.storagePermission
 import dev.anilbeesetti.nextplayer.core.domain.MediaHolder
 import dev.anilbeesetti.nextplayer.core.media.services.MediaOperationsService
@@ -109,6 +113,7 @@ import dev.anilbeesetti.nextplayer.core.ui.components.TopLevelFabKey
 import dev.anilbeesetti.nextplayer.core.ui.components.rememberRestorableFocusState
 import dev.anilbeesetti.nextplayer.core.ui.components.thenIf
 import dev.anilbeesetti.nextplayer.core.ui.components.tvFocusRing
+import dev.anilbeesetti.nextplayer.core.ui.composables.AllFilesAccessDialog
 import dev.anilbeesetti.nextplayer.core.ui.composables.PermissionMissingView
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import dev.anilbeesetti.nextplayer.core.ui.extensions.copy
@@ -172,6 +177,17 @@ internal fun MediaPickerScreenContent(
     }
     val permissionState = rememberPermissionState(permission = storagePermission)
     var wasPermissionGranted by remember { mutableStateOf(permissionState.status.isGranted) }
+    var hasAllFilesAccess by remember { mutableStateOf(context.hasAllFilesAccess()) }
+    var allFilesPromptDismissed by rememberSaveable { mutableStateOf(false) }
+    val showAllFilesAccessPrompt = permissionState.status.isGranted &&
+        !hasAllFilesAccess &&
+        !allFilesPromptDismissed &&
+        context.canRequestAllFilesAccess()
+
+    LifecycleResumeEffect(Unit) {
+        hasAllFilesAccess = context.hasAllFilesAccess()
+        onPauseOrDispose { }
+    }
 
     LaunchedEffect(permissionState.status.isGranted) {
         val isPermissionGranted = permissionState.status.isGranted
@@ -388,6 +404,17 @@ internal fun MediaPickerScreenContent(
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(MaterialTheme.colorScheme.background),
         ) {
+            if (showAllFilesAccessPrompt) {
+                AllFilesAccessDialog(
+                    onConfirm = {
+                        context.createManageAllFilesIntent()?.let { intent ->
+                            runCatching { context.startActivity(intent) }
+                                .onFailure { allFilesPromptDismissed = true }
+                        } ?: run { allFilesPromptDismissed = true }
+                    },
+                    onDismiss = { allFilesPromptDismissed = true },
+                )
+            }
             if (!permissionState.status.isGranted) {
                 PermissionMissingView(
                     isGranted = permissionState.status.isGranted,

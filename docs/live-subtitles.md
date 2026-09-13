@@ -25,6 +25,19 @@ Sideloaded tracks are often exposed by Media3 as `APPLICATION_MEDIA3_CUES` with 
 
 Player / `MediaController` APIs (`currentTracks`, `currentMediaItem`, `currentCues`, `currentPosition`) are only read on the main application thread; demux and file I/O stay on `Dispatchers.IO`.
 
+## Sidecar discovery and storage access
+
+External subtitle files next to a video (`movie.srt`, `movie.en.vtt`, …) are discovered by
+`findSubtitleSidecars` in `core/common`. On Android 11+ (especially 13+ with only
+`READ_MEDIA_VIDEO`), listing a folder and reading non-media siblings fails — photos/videos
+access is not enough. **All files access** (`MANAGE_EXTERNAL_STORAGE` /
+`Environment.isExternalStorageManager()`) is required for reliable sidecar discovery.
+
+The app requests All files access after media permission (and again when opening local
+playback if still missing). TV builds degrade gracefully when the system settings page is
+unavailable. When directory listing returns null/empty, discovery also **probes** exact and
+common language-tagged candidate paths without listing.
+
 ## Highlight sync
 
 The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCues` (same path as the on-video overlay). Text is matched against the loaded `TimedCue` list so the panel stays in lockstep with nextlib's delay-adjusted `NextTextRenderer`. A ~50ms position tick while the panel is open is used only as a fallback between cues. Position fallback applies OffsetRenderer semantics (`position * speed - delay`); EVENT_CUES matching does **not** double-apply delay.

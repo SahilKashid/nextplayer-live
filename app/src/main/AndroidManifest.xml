@@ -19,6 +19,12 @@
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
 
+    <!-- Sidecar subtitles (.srt/.vtt/…) next to videos need all-files access on API 30+;
+         READ_MEDIA_VIDEO alone cannot list or read non-media siblings. -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
     <application
         android:name=".NextPlayerApplication"
         android:allowBackup="true"

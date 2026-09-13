@@ -18,8 +18,11 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -32,10 +35,14 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import dev.anilbeesetti.nextplayer.core.common.canRequestAllFilesAccess
+import dev.anilbeesetti.nextplayer.core.common.createManageAllFilesIntent
 import dev.anilbeesetti.nextplayer.core.common.extensions.getInitialDirectoryUri
 import dev.anilbeesetti.nextplayer.core.common.extensions.getMediaContentUri
+import dev.anilbeesetti.nextplayer.core.common.hasAllFilesAccess
 import dev.anilbeesetti.nextplayer.core.common.service.registerForSuspendActivityResult
 import dev.anilbeesetti.nextplayer.core.data.repository.PlaylistRepository
+import dev.anilbeesetti.nextplayer.core.ui.composables.AllFilesAccessDialog
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
 import dev.anilbeesetti.nextplayer.feature.player.extensions.OpenDocumentAtInitialUri
 import dev.anilbeesetti.nextplayer.feature.player.extensions.setExtras
@@ -122,6 +129,24 @@ class PlayerActivity : ComponentActivity() {
 
             CompositionLocalProvider(LocalUseMaterialYouControls provides (uiState.playerPreferences?.useMaterialYouControls == true)) {
                 NextPlayerTheme(darkTheme = true) {
+                    val context = LocalContext.current
+                    var hasAllFilesAccess by remember { mutableStateOf(context.hasAllFilesAccess()) }
+                    var allFilesPromptDismissed by rememberSaveable { mutableStateOf(false) }
+                    LifecycleResumeEffect(Unit) {
+                        hasAllFilesAccess = context.hasAllFilesAccess()
+                        onPauseOrDispose { }
+                    }
+                    if (!hasAllFilesAccess && !allFilesPromptDismissed && context.canRequestAllFilesAccess()) {
+                        AllFilesAccessDialog(
+                            onConfirm = {
+                                context.createManageAllFilesIntent()?.let { intent ->
+                                    runCatching { context.startActivity(intent) }
+                                        .onFailure { allFilesPromptDismissed = true }
+                                } ?: run { allFilesPromptDismissed = true }
+                            },
+                            onDismiss = { allFilesPromptDismissed = true },
+                        )
+                    }
                     MediaPlayerScreen(
                         player = player,
                         decoderServiceState = decoderServiceState,

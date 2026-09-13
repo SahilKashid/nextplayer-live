@@ -24,10 +24,13 @@
     <string name="navigate_up">Navigate up</string>
     <string name="no_videos_found">No videos found</string>
     <string name="open_settings">Open Settings</string>
-    <string name="permission_info">The Next Player Live app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission.</string>
+    <string name="permission_info">The Next Player Live app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. Subtitle sidecar files (.srt, .vtt, …) next to videos also need All files access on modern Android. To use the app fully, grant the permission.</string>
     <string name="permission_not_granted">Permission Not Granted</string>
     <string name="permission_request">Permission Request</string>
-    <string name="permission_settings">The Next Player Live app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission from settings since it was permanently denied.</string>
+    <string name="permission_settings">The Next Player Live app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. Subtitle sidecar files (.srt, .vtt, …) next to videos also need All files access on modern Android. To use the app fully, grant the permission from settings since it was permanently denied.</string>
+    <string name="all_files_access_title">All files access</string>
+    <string name="all_files_access_info">Photos and videos access is not enough to load subtitle files next to your videos (.srt, .vtt, and similar). Grant All files access so Next Player Live can find and read those sidecar subtitles.</string>
+    <string name="all_files_access_not_now">Not now</string>
     <string name="player_controls_exit">Navigate up</string>
     <string name="player_controls_next">Player next</string>
     <string name="player_controls_play_pause">Player play pause</string>
