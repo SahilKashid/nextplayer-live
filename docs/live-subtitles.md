@@ -61,9 +61,9 @@ The landscape panel no longer forces the on-video `SubtitleView` overlay off.
 
 ## Overlay vertical position
 
-On-screen (overlay) subtitles default to the current Media3 bottom placement (`subtitleVerticalPosition = 0`, plus Media3's 8% `DEFAULT_BOTTOM_PADDING_FRACTION` for cues without a line).
+On-screen (overlay) subtitles default to **20% toward center** (`subtitleVerticalPosition = 0.2`, plus Media3's 8% `DEFAULT_BOTTOM_PADDING_FRACTION` for cues without a line). Fresh installs and **Reset settings** use this default; existing installs keep saved values until reset.
 
-**Settings → Subtitle → Subtitle vertical position** is a slider from **Bottom** (default) toward the center (`0`–`0.5`). The player:
+**Settings → Subtitle → Subtitle vertical position** is a slider from **Bottom** (`0`) toward the center (`0.5`); the reset control restores the **0.2** default. The player:
 
 1. Calls `SubtitleView.setBottomPaddingFraction(0.08 + position)` so SRT / unset-line cues lift immediately.
 2. Rewrites WebVTT automatic / bottom-anchored cues (`line = -1` number, or a fraction ≥ 0.85) to a matching fractional line with `ANCHOR_TYPE_END`. Media3 ignores bottom padding for spec-defined VTT lines, so this is what actually moves `.vtt` overlay text.

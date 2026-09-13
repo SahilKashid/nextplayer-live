@@ -18,7 +18,7 @@ object SubtitleVerticalPosition {
     const val DEFAULT_BOTTOM_PADDING_FRACTION = 0.08f
 
     fun coerce(verticalPosition: Float): Float = verticalPosition.coerceIn(
-        PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
+        PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION,
         PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
     )
 
@@ -27,7 +27,7 @@ object SubtitleVerticalPosition {
 
     fun applyToCues(cues: List<Cue>, verticalPosition: Float): List<Cue> {
         val lift = coerce(verticalPosition)
-        if (lift == PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION) {
+        if (lift == PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION) {
             return cues
         }
         val lineFromTop = (1f - bottomPaddingFraction(lift)).coerceIn(0f, 1f)

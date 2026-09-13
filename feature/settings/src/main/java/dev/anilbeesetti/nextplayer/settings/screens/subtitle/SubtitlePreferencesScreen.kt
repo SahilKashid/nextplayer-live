@@ -171,7 +171,7 @@ private fun SubtitlePreferencesScreenContent(
                     description = subtitleVerticalPositionLabel(state.preferences.subtitleVerticalPosition),
                     icon = NextIcons.Reorder,
                     value = state.preferences.subtitleVerticalPosition,
-                    valueRange = PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION..PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
+                    valueRange = PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION..PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
                     onValueChange = { onAction(SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition(it)) },
                     trailingContent = {
                         FilledIconButton(

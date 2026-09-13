@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PlayerPreferences(
     val resume: Resume = Resume.YES,
-    val rememberPlayerBrightness: Boolean = false,
+    val rememberPlayerBrightness: Boolean = true,
     val playerBrightness: Float = 0.5f,
     val minDurationForFastSeek: Long = 120000L,
     val rememberSelections: Boolean = true,
@@ -25,8 +25,8 @@ data class PlayerPreferences(
     val useSeekControls: Boolean = true,
     val useZoomControls: Boolean = true,
     val enablePanGesture: Boolean = false,
-    val doubleTapGesture: DoubleTapGesture = DoubleTapGesture.BOTH,
-    val useLongPressControls: Boolean = false,
+    val doubleTapGesture: DoubleTapGesture = DoubleTapGesture.PLAY_PAUSE,
+    val useLongPressControls: Boolean = true,
     val longPressControlsSpeed: Float = 2.0f,
     val seekIncrement: Int = DEFAULT_SEEK_INCREMENT,
     val seekSensitivity: Float = DEFAULT_SEEK_SENSITIVITY,
@@ -69,7 +69,8 @@ data class PlayerPreferences(
         const val DEFAULT_BRIGHTNESS_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
-        const val DEFAULT_SUBTITLE_VERTICAL_POSITION = 0f
+        const val MIN_SUBTITLE_VERTICAL_POSITION = 0f
+        const val DEFAULT_SUBTITLE_VERTICAL_POSITION = 0.2f
         const val MAX_SUBTITLE_VERTICAL_POSITION = 0.5f
     }
 }

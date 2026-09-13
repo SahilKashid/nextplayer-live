@@ -11,11 +11,18 @@ class PlayerPreferencesTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun overlayAndVerticalPositionDefaults() {
+    fun playerControlAndSubtitleDefaults() {
         val preferences = PlayerPreferences()
 
+        assertTrue(preferences.rememberPlayerBrightness)
+        assertEquals(DoubleTapGesture.PLAY_PAUSE, preferences.doubleTapGesture)
+        assertTrue(preferences.useLongPressControls)
+        assertEquals(2.0f, preferences.longPressControlsSpeed, 0.0001f)
         assertTrue(preferences.showOverlaySubtitlesWithLivePanel)
         assertFalse(preferences.liveSubtitlesPanelOpen)
+        assertEquals(0f, PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION, 0.0001f)
+        assertEquals(0.2f, PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION, 0.0001f)
+        assertEquals(0.5f, PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION, 0.0001f)
         assertEquals(PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION, preferences.subtitleVerticalPosition)
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = false))
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = true))
@@ -33,9 +40,13 @@ class PlayerPreferencesTest {
     fun missingKeysUseOverlayAndVerticalDefaults() {
         val decoded = json.decodeFromString<PlayerPreferences>("{}")
 
+        assertTrue(decoded.rememberPlayerBrightness)
+        assertEquals(DoubleTapGesture.PLAY_PAUSE, decoded.doubleTapGesture)
+        assertTrue(decoded.useLongPressControls)
+        assertEquals(2.0f, decoded.longPressControlsSpeed, 0.0001f)
         assertTrue(decoded.showOverlaySubtitlesWithLivePanel)
         assertFalse(decoded.liveSubtitlesPanelOpen)
-        assertEquals(0f, decoded.subtitleVerticalPosition)
+        assertEquals(0.2f, decoded.subtitleVerticalPosition)
     }
 
     @Test

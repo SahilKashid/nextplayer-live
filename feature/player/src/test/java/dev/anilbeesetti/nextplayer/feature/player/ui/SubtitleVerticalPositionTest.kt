@@ -39,6 +39,21 @@ class SubtitleVerticalPositionTest {
     }
 
     @Test
+    fun defaultPreferenceLiftAppliesToBottomAnchoredCues() {
+        val vttAuto = Cue.Builder()
+            .setText("Hello")
+            .setLine(-1f, Cue.LINE_TYPE_NUMBER)
+            .build()
+
+        val result = SubtitleVerticalPosition.applyToCues(listOf(vttAuto), 0.2f).single()
+
+        // 1 - (0.08 + 0.2) = 0.72
+        assertEquals(0.72f, result.line, 0.0001f)
+        assertEquals(Cue.LINE_TYPE_FRACTION, result.lineType)
+        assertEquals(Cue.ANCHOR_TYPE_END, result.lineAnchor)
+    }
+
+    @Test
     fun liftRewritesWebVttAutoLineToMatchingFraction() {
         val vttAuto = Cue.Builder()
             .setText("Hello")

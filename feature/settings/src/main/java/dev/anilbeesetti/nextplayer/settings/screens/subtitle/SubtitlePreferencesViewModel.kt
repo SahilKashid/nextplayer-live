@@ -137,7 +137,7 @@ class SubtitlePreferencesViewModel @AssistedInject constructor(
             preferencesRepository.updatePlayerPreferences {
                 it.copy(
                     subtitleVerticalPosition = value.coerceIn(
-                        PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
+                        PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION,
                         PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
                     ),
                 )
