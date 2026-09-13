@@ -19,6 +19,8 @@ class PlayerPreferencesTest {
         assertTrue(preferences.useLongPressControls)
         assertEquals(2.0f, preferences.longPressControlsSpeed, 0.0001f)
         assertTrue(preferences.showOverlaySubtitlesWithLivePanel)
+        assertEquals(PlayerPreferences.DEFAULT_PREFERRED_SUBTITLE_LANGUAGE, preferences.preferredSubtitleLanguage)
+        assertEquals("eng", preferences.preferredSubtitleLanguage)
         assertFalse(preferences.liveSubtitlesPanelOpen)
         assertEquals(0f, PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION, 0.0001f)
         assertEquals(0.2f, PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION, 0.0001f)
@@ -45,6 +47,7 @@ class PlayerPreferencesTest {
         assertTrue(decoded.useLongPressControls)
         assertEquals(2.0f, decoded.longPressControlsSpeed, 0.0001f)
         assertTrue(decoded.showOverlaySubtitlesWithLivePanel)
+        assertEquals("eng", decoded.preferredSubtitleLanguage)
         assertFalse(decoded.liveSubtitlesPanelOpen)
         assertEquals(0.2f, decoded.subtitleVerticalPosition)
     }

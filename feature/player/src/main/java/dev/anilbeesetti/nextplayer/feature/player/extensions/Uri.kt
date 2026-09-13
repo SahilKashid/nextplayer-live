@@ -10,6 +10,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import dev.anilbeesetti.nextplayer.core.common.extensions.convertToUTF8
+import dev.anilbeesetti.nextplayer.core.common.extensions.extractSubtitleLanguageFromFilename
 import dev.anilbeesetti.nextplayer.core.common.extensions.getFilenameFromUri
 import java.nio.charset.Charset
 
@@ -56,11 +57,13 @@ suspend fun Context.uriToSubtitleConfiguration(
     }
     val label = getFilenameFromUri(uri)
     val mimeType = uri.getSubtitleMime()
+    val language = extractSubtitleLanguageFromFilename(label)
     val utf8ConvertedUri = convertToUTF8(uri = uri, charset = charset)
     return MediaItem.SubtitleConfiguration.Builder(utf8ConvertedUri).apply {
         setId(uri.toString())
         setMimeType(mimeType)
         setLabel(label)
+        if (language != null) setLanguage(language)
         if (isSelected) setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
     }.build()
 }

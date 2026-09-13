@@ -48,7 +48,7 @@ data class PlayerPreferences(
 
     // Subtitle Preferences
     val useSystemCaptionStyle: Boolean = false,
-    val preferredSubtitleLanguage: String = "",
+    val preferredSubtitleLanguage: String = DEFAULT_PREFERRED_SUBTITLE_LANGUAGE,
     val subtitleTextEncoding: String = "",
     val subtitleTextSize: Int = DEFAULT_SUBTITLE_TEXT_SIZE,
     val subtitleBackground: Boolean = false,
@@ -67,6 +67,9 @@ data class PlayerPreferences(
         const val DEFAULT_SEEK_SENSITIVITY = 0.50f
         const val DEFAULT_VOLUME_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_BRIGHTNESS_GESTURE_SENSITIVITY = 0.50f
+
+        /** ISO639-2/T code matching LocalesHelper / Settings subtitle language list. */
+        const val DEFAULT_PREFERRED_SUBTITLE_LANGUAGE = "eng"
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
         const val MIN_SUBTITLE_VERTICAL_POSITION = 0f

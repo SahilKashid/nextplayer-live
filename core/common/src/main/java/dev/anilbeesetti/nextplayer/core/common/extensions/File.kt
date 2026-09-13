@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Environment
 import androidx.core.net.toUri
 import java.io.File
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -100,6 +102,46 @@ fun probeSubtitleSidecars(parentDir: File, mediaName: String): List<File> {
 fun matchesSubtitleBasename(mediaNameLower: String, subtitleBaseName: String): Boolean {
     val base = subtitleBaseName.lowercase()
     return base == mediaNameLower || base.startsWith("$mediaNameLower.")
+}
+
+
+
+/**
+ * Decodes a URI path segment / filename for UI display.
+ * Turns `My%20Movie.en.vtt` into `My Movie.en.vtt`.
+ * Pure JVM helper (no Android Uri) so unit tests do not touch MediaStore.
+ */
+fun decodeUriDisplayName(name: String): String {
+    if (name.isEmpty()) return name
+    val leaf = name.substringAfterLast('/').substringAfterLast(':')
+    if ('%' !in leaf) return leaf
+    return try {
+        URLDecoder.decode(leaf.replace("+", "%2B"), StandardCharsets.UTF_8.name())
+    } catch (_: Exception) {
+        leaf
+    }
+}
+
+/**
+ * Extracts a language / locale tag from a subtitle sidecar filename.
+ * Examples: `movie.en.vtt` → `en`, `movie.eng.srt` → `eng`,
+ * `movie.en.forced.vtt` → `en`. Exact basename (`movie.srt`) → null.
+ */
+fun extractSubtitleLanguageFromFilename(filename: String): String? {
+    val leaf = decodeUriDisplayName(filename)
+    val base = leaf.substringBeforeLast('.').takeIf { it != leaf } ?: return null
+    val parts = base.split('.').filter { it.isNotEmpty() }
+    if (parts.size < 2) return null
+    val skip = setOf("forced", "sdh", "cc")
+    for (part in parts.drop(1)) {
+        val tag = part.lowercase()
+        if (tag in skip) continue
+        if (tag.length in 2..3 && tag.all { it.isLetter() }) return tag
+        if (tag.matches(Regex("^[a-z]{2}(-[a-z]{2,8})?$", RegexOption.IGNORE_CASE))) {
+            return tag.substringBefore('-').lowercase()
+        }
+    }
+    return null
 }
 
 suspend fun File.getLocalSubtitles(

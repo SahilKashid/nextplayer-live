@@ -51,6 +51,7 @@ import dev.anilbeesetti.nextplayer.feature.player.model.DecoderServiceState
 import dev.anilbeesetti.nextplayer.feature.player.service.decoderServiceState
 import dev.anilbeesetti.nextplayer.feature.player.service.PlayerService
 import dev.anilbeesetti.nextplayer.feature.player.service.addSubtitleTrack
+import dev.anilbeesetti.nextplayer.feature.player.service.refreshLocalSubtitles
 import dev.anilbeesetti.nextplayer.feature.player.service.stopPlayerSession
 import dev.anilbeesetti.nextplayer.feature.player.utils.PlayerApi
 import dev.anilbeesetti.nextplayer.feature.player.utils.PlaylistPlaybackContract
@@ -133,7 +134,12 @@ class PlayerActivity : ComponentActivity() {
                     var hasAllFilesAccess by remember { mutableStateOf(context.hasAllFilesAccess()) }
                     var allFilesPromptDismissed by rememberSaveable { mutableStateOf(false) }
                     LifecycleResumeEffect(Unit) {
-                        hasAllFilesAccess = context.hasAllFilesAccess()
+                        val granted = context.hasAllFilesAccess()
+                        if (granted && !hasAllFilesAccess) {
+                            // All-files flipped true after Settings — rescan sidecars for current item.
+                            player?.refreshLocalSubtitles()
+                        }
+                        hasAllFilesAccess = granted
                         onPauseOrDispose { }
                     }
                     if (!hasAllFilesAccess && !allFilesPromptDismissed && context.canRequestAllFilesAccess()) {

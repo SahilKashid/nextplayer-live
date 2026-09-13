@@ -38,6 +38,13 @@ playback if still missing). TV builds degrade gracefully when the system setting
 unavailable. When directory listing returns null/empty, discovery also **probes** exact and
 common language-tagged candidate paths without listing.
 
+Every local prepare **re-scans** sidecars (filesystem path from the media library /
+`getPath`, never the content `uriString` stored on `VideoState`). After All-files
+access is granted mid-session, the player refreshes the current item. Sidecar
+labels are URI-decoded (`My%20Movie.en.vtt` → `My Movie.en.vtt`). Preferred
+subtitle language defaults to English (`eng`); when any text/sidecar track exists,
+one is always selected (preferred match, else first) — never left on Disable.
+
 ## Highlight sync
 
 The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCues` (same path as the on-video overlay). Text is matched against the loaded `TimedCue` list so the panel stays in lockstep with nextlib's delay-adjusted `NextTextRenderer`. A ~50ms position tick while the panel is open is used only as a fallback between cues. Position fallback applies OffsetRenderer semantics (`position * speed - delay`); EVENT_CUES matching does **not** double-apply delay.

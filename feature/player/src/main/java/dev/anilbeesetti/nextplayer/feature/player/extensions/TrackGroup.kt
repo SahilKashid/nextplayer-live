@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.media3.common.C
 import androidx.media3.common.TrackGroup
 import androidx.media3.common.util.UnstableApi
+import dev.anilbeesetti.nextplayer.core.common.extensions.decodeUriDisplayName
 import java.util.Locale
 
 @UnstableApi
@@ -13,7 +14,7 @@ fun TrackGroup.getName(trackType: @C.TrackType Int, index: Int): String {
     val label = format.label
     return buildString {
         if (label != null) {
-            append(label)
+            append(decodeUriDisplayName(label))
         }
         if (isEmpty()) {
             if (trackType == C.TRACK_TYPE_TEXT) {
