@@ -8,15 +8,49 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-suspend fun File.getSubtitles(): List<File> = withContext(Dispatchers.IO) {
-    val mediaName = this@getSubtitles.nameWithoutExtension
-    val parentDir = this@getSubtitles.parentFile
-    val subtitleExtensions = listOf("srt", "ssa", "ass", "vtt", "ttml")
+/** Text sidecar subtitle extensions discovered next to a video file. */
+val SUBTITLE_FILE_EXTENSIONS = listOf("srt", "ssa", "ass", "vtt", "ttml")
 
-    subtitleExtensions.mapNotNull { extension ->
-        val file = File(parentDir, "$mediaName.$extension")
-        file.takeIf { it.exists() && it.isFile }
-    }
+/**
+ * Finds subtitle sidecar files in the same directory as this media file.
+ *
+ * Matches exact basename (`video.vtt`) and language-tagged variants
+ * (`video.en.vtt`, `video.en.srt`). Exact basename matches are listed first,
+ * then tagged variants, sorted by filename. All matches are returned so the
+ * player can expose them as selectable tracks.
+ */
+suspend fun File.getSubtitles(): List<File> = withContext(Dispatchers.IO) {
+    findSubtitleSidecars(this@getSubtitles)
+}
+
+/**
+ * Pure discovery used by [getSubtitles]; exposed for unit tests.
+ */
+fun findSubtitleSidecars(mediaFile: File): List<File> {
+    val mediaName = mediaFile.nameWithoutExtension
+    val parentDir = mediaFile.parentFile ?: return emptyList()
+    val mediaNameLower = mediaName.lowercase()
+    val files = parentDir.listFiles() ?: return emptyList()
+
+    return files.asSequence()
+        .filter { it.isFile }
+        .filter { it.extension.lowercase() in SUBTITLE_FILE_EXTENSIONS }
+        .filter { candidate -> matchesSubtitleBasename(mediaNameLower, candidate.nameWithoutExtension) }
+        .sortedWith(
+            compareBy<File> { candidate ->
+                if (candidate.nameWithoutExtension.equals(mediaName, ignoreCase = true)) 0 else 1
+            }.thenBy { it.name.lowercase() },
+        )
+        .toList()
+}
+
+/**
+ * True when [subtitleBaseName] is an exact or language-tagged match for [mediaNameLower].
+ * Examples for media `movie`: `movie`, `movie.en`, `movie.en.forced` — not `movies` or `movieextra`.
+ */
+fun matchesSubtitleBasename(mediaNameLower: String, subtitleBaseName: String): Boolean {
+    val base = subtitleBaseName.lowercase()
+    return base == mediaNameLower || base.startsWith("$mediaNameLower.")
 }
 
 suspend fun File.getLocalSubtitles(
@@ -45,8 +79,7 @@ fun String.getThumbnail(): File? {
 }
 
 fun File.isSubtitle(): Boolean {
-    val subtitleExtensions = listOf("srt", "ssa", "ass", "vtt", "ttml")
-    return extension.lowercase() in subtitleExtensions
+    return extension.lowercase() in SUBTITLE_FILE_EXTENSIONS
 }
 
 fun File.deleteFiles() {
