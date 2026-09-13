@@ -10,10 +10,10 @@ class ApplicationPreferencesTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun appearanceDefaultsAreHighContrastDark() {
+    fun appearanceDefaultsAreSystemThemeWithHighContrast() {
         val preferences = ApplicationPreferences()
 
-        assertEquals(ThemeConfig.ON, preferences.themeConfig)
+        assertEquals(ThemeConfig.SYSTEM, preferences.themeConfig)
         assertTrue(preferences.useHighContrastDarkTheme)
     }
 
@@ -21,7 +21,7 @@ class ApplicationPreferencesTest {
     fun missingKeysUseAppearanceDefaults() {
         val decoded = json.decodeFromString<ApplicationPreferences>("{}")
 
-        assertEquals(ThemeConfig.ON, decoded.themeConfig)
+        assertEquals(ThemeConfig.SYSTEM, decoded.themeConfig)
         assertTrue(decoded.useHighContrastDarkTheme)
     }
 }
