@@ -720,6 +720,9 @@ class PlayerService : MediaSessionService() {
                 playerPreferences.requireAudioFocus,
             )
             .setHandleAudioBecomingNoisy(playerPreferences.pauseOnHeadsetDisconnect)
+            // Default ~3s makes seekToPrevious() restart the current item; media session /
+            // notification Previous should switch playlist items like the in-app control.
+            .setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)
             .build()
             .also {
                 it.addListener(playbackStateListener)

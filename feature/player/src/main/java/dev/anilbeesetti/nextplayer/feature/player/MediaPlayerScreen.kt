@@ -805,7 +805,7 @@ private fun handlePlayerKeyEvent(
         Key.MediaFastForward -> { seekBy(seekIncrementMs); controls.showControls(); true }
         Key.MediaRewind -> { seekBy(-seekIncrementMs); controls.showControls(); true }
         Key.MediaNext -> { player.seekToNext(); controls.showControls(); true }
-        Key.MediaPrevious -> { player.seekToPrevious(); controls.showControls(); true }
+        Key.MediaPrevious -> { player.seekToPreviousMediaItem(); controls.showControls(); true }
         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
             when {
                 !controls.controlsVisible -> {
