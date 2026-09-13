@@ -4,7 +4,7 @@
 
 > **Next Player Live** — this repository is the [Next Player Live](https://github.com/SahilKashid/nextplayer-live) fork
 > (`dev.sahilkashid.nextplayer`), installable beside stock Next Player. See [Releases](https://github.com/SahilKashid/nextplayer-live/releases)
-> for APKs (play-while-download + finished-open / Open-with `content://` through **v1.0.2**; live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position in **v1.0.3**; panel persist across pause/lock + no auto-follow while paused in **v1.0.4**; expanding-window progressive cue fill + hardened final-only cue cache in **v1.0.5**). To port Live
+> for APKs (play-while-download + finished-open / Open-with `content://` through **v1.0.2**; live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position in **v1.0.3**; panel persist across pause/lock + no auto-follow while paused in **v1.0.4**; expanding-window progressive cue fill + hardened final-only cue cache in **v1.0.5**; defaults SYSTEM+high-contrast, sidecar all-files discovery/rescan/auto-select + decoded labels in **v1.0.6**). To port Live
 > features onto a newer upstream Next Player version, see
 > [`docs/porting-from-upstream.md`](docs/porting-from-upstream.md) and
 > [`scripts/port-from-upstream.sh`](scripts/port-from-upstream.sh).

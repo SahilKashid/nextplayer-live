@@ -16,6 +16,13 @@ bands with frequent partial emits instead of a Phase-A / Phase-B cliff) and hard
 (final-only puts, stable keys without flaky mtime, larger LRU, fsync+rename, corrupt-file delete
 for reliable reopen hits). Anti-stutter scroll/highlight identity path unchanged.
 
+Shipped in **v1.0.6**: fresh-install defaults (system theme + high-contrast dark, remember
+brightness, double-tap play/pause, long-press 2x, subtitle vertical 20% toward center, preferred
+subtitle language English); sidecar auto-discovery (`.vtt/.srt/.ass/.ssa/.ttml`) with all-files
+access, path-probe fallback, and rescan on every open; auto-select a subtitle when any track
+exists (prefer English — never leave Disable if tracks present); selector labels decode `%20`
+to spaces.
+
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and **WebVTT (`.vtt`)** are parsed by `SubtitleCueParser` (including headerless VTT, NOTE/STYLE/REGION blocks, optional hours, multiline cues, `<v>` voice spans, and settings after `-->`). ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files. MIME is taken from the URI extension when possible (`text/vtt` for `.vtt`), with content sniffing and `Format.codecs` fallbacks when `content://` paths omit the extension.
