@@ -56,6 +56,7 @@ import dev.anilbeesetti.nextplayer.core.ui.R as coreUiR
 import dev.anilbeesetti.nextplayer.feature.player.PlayerActivity
 import dev.anilbeesetti.nextplayer.feature.player.R
 import dev.anilbeesetti.nextplayer.feature.player.extensions.addAdditionalSubtitleConfiguration
+import dev.anilbeesetti.nextplayer.feature.player.extensions.audioDecoderMode
 import dev.anilbeesetti.nextplayer.feature.player.extensions.audioTrackIndex
 import dev.anilbeesetti.nextplayer.feature.player.extensions.copy
 import dev.anilbeesetti.nextplayer.feature.player.extensions.getManuallySelectedTrackIndex
@@ -68,9 +69,10 @@ import dev.anilbeesetti.nextplayer.feature.player.extensions.subtitleSpeed
 import dev.anilbeesetti.nextplayer.feature.player.extensions.subtitleTrackIndex
 import dev.anilbeesetti.nextplayer.feature.player.extensions.switchTrack
 import dev.anilbeesetti.nextplayer.feature.player.extensions.uriToSubtitleConfiguration
+import dev.anilbeesetti.nextplayer.feature.player.extensions.videoDecoderMode
 import dev.anilbeesetti.nextplayer.feature.player.extensions.videoZoom
-import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleAutoSelection
 import dev.anilbeesetti.nextplayer.feature.player.model.DecoderTrackType
+import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleAutoSelection
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderManager
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderMode
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
@@ -205,17 +207,7 @@ class PlayerService : MediaSessionService() {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             super.onMediaItemTransition(mediaItem, reason)
             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) return
-            val player = mediaSession?.player as? ExoPlayer
-            val mediaIdentity = mediaItem?.let {
-                DecoderMediaIdentity(
-                    index = player?.currentMediaItemIndex ?: C.INDEX_UNSET,
-                    mediaId = it.mediaId,
-                    uri = it.localConfiguration?.uri?.toString(),
-                )
-            }
-            if (decoderRecoveryManager.onMediaItemChanged(mediaIdentity) && player != null) {
-                resetDecodersToAuto()
-            }
+            restoreDecoderChoices(mediaItem)
             isMediaItemReady = false
             loadArtworkForCurrentMediaItem()
             mediaItem?.mediaMetadata?.let { metadata ->
@@ -875,6 +867,8 @@ class PlayerService : MediaSessionService() {
                                 subtitleTrackIndex = subtitleTrackIndex,
                                 subtitleDelayMilliseconds = subtitleDelay,
                                 subtitleSpeed = subtitleSpeed,
+                                videoDecoderMode = mediaItem.mediaMetadata.videoDecoderMode,
+                                audioDecoderMode = mediaItem.mediaMetadata.audioDecoderMode,
                             )
                         }.build(),
                     )
@@ -882,8 +876,6 @@ class PlayerService : MediaSessionService() {
             }
         }.awaitAll()
     }
-
-
 
     /**
      * After tracks are ready (or after a local-subtitle refresh), ensure a real text
@@ -1000,12 +992,25 @@ class PlayerService : MediaSessionService() {
             DecoderTrackType.VIDEO -> decoderManager.selectVideoDecoder(mode)
             DecoderTrackType.AUDIO -> decoderManager.selectAudioDecoder(mode)
         }
+        val player = mediaSession?.player
+        val mediaItem = player?.currentMediaItem
+        if (mediaItem != null) {
+            val updatedItem = when (trackType) {
+                DecoderTrackType.VIDEO -> mediaItem.copy(videoDecoderMode = mode)
+                DecoderTrackType.AUDIO -> mediaItem.copy(audioDecoderMode = mode)
+            }
+            player.replaceMediaItem(player.currentMediaItemIndex, updatedItem)
+        }
         publishDecoderState()
     }
 
-    private fun resetDecodersToAuto() {
-        selectDecoder(DecoderTrackType.VIDEO, DecoderMode.AUTO)
-        selectDecoder(DecoderTrackType.AUDIO, DecoderMode.AUTO)
+    private fun restoreDecoderChoices(mediaItem: MediaItem?) {
+        val videoMode = mediaItem?.mediaMetadata?.videoDecoderMode ?: DecoderMode.AUTO
+        val audioMode = mediaItem?.mediaMetadata?.audioDecoderMode ?: DecoderMode.AUTO
+        decoderRecoveryManager.onUserSelection(DecoderTrackType.VIDEO, videoMode)
+        decoderRecoveryManager.onUserSelection(DecoderTrackType.AUDIO, audioMode)
+        selectDecoder(DecoderTrackType.VIDEO, videoMode)
+        selectDecoder(DecoderTrackType.AUDIO, audioMode)
     }
 
     private fun DefaultTrackSelector.unmappedTrackCount(trackType: Int): Int {
