@@ -98,6 +98,7 @@ class VaultViewModel @AssistedInject constructor(
             }
             is VaultAction.CompleteBiometricSetup -> completeBiometricSetup(action.enabled)
             is VaultAction.SetBiometricEnabled -> setBiometricEnabled(action.enabled)
+            is VaultAction.DismissHowToFindInfo -> dismissHowToFindInfo()
             is VaultAction.PlayVideo -> playVideo(action.video)
             is VaultAction.PlaySelected -> playSelected(action.selectionItems)
             is VaultAction.UnhideSelected -> unhideVideos(action.selectionItems)
@@ -161,8 +162,7 @@ class VaultViewModel @AssistedInject constructor(
         if (stateInternal.value.stage != VaultStage.BIOMETRIC_SETUP) return
         viewModelScope.launch {
             vaultPinRepository.setBiometricEnabled(enabled)
-            stateInternal.update { it.copy(biometricEnabled = enabled) }
-            unlockVault()
+            stateInternal.update { it.copy(stage = VaultStage.HOW_TO_FIND_INFO, biometricEnabled = enabled) }
         }
     }
 
@@ -172,6 +172,10 @@ class VaultViewModel @AssistedInject constructor(
             vaultPinRepository.setBiometricEnabled(enabled)
             stateInternal.update { it.copy(biometricEnabled = enabled) }
         }
+    }
+
+    private fun dismissHowToFindInfo() {
+        unlockVault()
     }
 
     private fun unlockVault() {
@@ -238,6 +242,7 @@ enum class VaultStage {
     SET_PIN,
     CONFIRM_PIN,
     BIOMETRIC_SETUP,
+    HOW_TO_FIND_INFO,
     UNLOCKED,
 }
 
@@ -265,6 +270,7 @@ sealed interface VaultAction {
     data object BiometricAuthenticated : VaultAction
     data class CompleteBiometricSetup(val enabled: Boolean) : VaultAction
     data class SetBiometricEnabled(val enabled: Boolean) : VaultAction
+    data object DismissHowToFindInfo : VaultAction
     data class PlayVideo(val video: Video) : VaultAction
     data class PlaySelected(val selectionItems: Set<SelectionItem>) : VaultAction
     data class UnhideSelected(val selectionItems: Set<SelectionItem>) : VaultAction

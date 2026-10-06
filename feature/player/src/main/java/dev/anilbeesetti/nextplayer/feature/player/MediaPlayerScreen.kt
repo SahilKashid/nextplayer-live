@@ -4,6 +4,9 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -56,6 +60,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -85,6 +90,7 @@ import dev.anilbeesetti.nextplayer.feature.player.model.labelRes
 import dev.anilbeesetti.nextplayer.feature.player.state.ControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.state.VerticalGesture
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberBrightnessState
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberLiveSubtitlesState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.model.DecoderServiceState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberDecoderState
@@ -94,6 +100,7 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberMetadataState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberPictureInPictureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberRotationState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberSeekGestureState
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberSubtitleOptionsState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberTapGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVideoZoomAndContentScaleState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightnessGestureState
@@ -103,7 +110,9 @@ import dev.anilbeesetti.nextplayer.feature.player.extensions.nameRes
 import dev.anilbeesetti.nextplayer.feature.player.state.seekAmountFormatted
 import dev.anilbeesetti.nextplayer.feature.player.state.seekToPositionFormated
 import dev.anilbeesetti.nextplayer.feature.player.ui.DoubleTapIndicator
+import dev.anilbeesetti.nextplayer.feature.player.ui.LiveSubtitlesPanel
 import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayShowView
+import dev.anilbeesetti.nextplayer.feature.player.ui.isPortrait
 import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import dev.anilbeesetti.nextplayer.feature.player.ui.SubtitleConfiguration
 import dev.anilbeesetti.nextplayer.feature.player.ui.VerticalProgressView
@@ -206,6 +215,20 @@ fun MediaPlayerScreen(
 
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
+    val subtitleOptionsState = rememberSubtitleOptionsState(player, viewModel::onSubtitleOptionEvent)
+    val liveSubtitlesState = rememberLiveSubtitlesState(
+        player = player,
+        subtitleDelayMs = subtitleOptionsState.delayMilliseconds,
+        subtitleSpeed = subtitleOptionsState.speedMultiplier,
+        initialPanelVisible = playerPreferences.liveSubtitlesPanelOpen,
+        onPanelVisibleChanged = viewModel::setLiveSubtitlesPanelOpen,
+    )
+    val configuration = LocalConfiguration.current
+    val isLandscape = !configuration.isPortrait
+    // Hide only via this predicate when not landscape — keep isPanelVisible so
+    // returning to landscape (or after lock/recreate) restores an open panel.
+    val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
+
     val rootFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
     val seekBarFocusRequester = remember { FocusRequester() }
@@ -249,10 +272,15 @@ fun MediaPlayerScreen(
 
     CompositionLocalProvider(LocalControlsVisibilityState provides controlsVisibilityState) {
         Box {
-            Box(
+            Row(
                 modifier = modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(Color.Black),
+            ) {
+            Box(
+                modifier = Modifier
+                    .weight(if (showLiveSubtitlesPanel) 0.65f else 1f)
+                    .fillMaxHeight()
                     .then(
                         if (isTv) {
                             Modifier
@@ -292,16 +320,18 @@ fun MediaPlayerScreen(
                         textSize = playerPreferences.subtitleTextSize,
                         textBold = playerPreferences.subtitleTextBold,
                         applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                        verticalPosition = playerPreferences.subtitleVerticalPosition,
                     ),
+                    showOverlaySubtitles = playerPreferences.shouldShowOverlaySubtitles(showLiveSubtitlesPanel),
                 )
 
-                AnimatedVisibility(
+                FadeAnimatedVisibility(
                     visible = controlsVisibilityState.controlsVisible && !controlsVisibilityState.controlsLocked,
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
                     Box(
-                        modifier = modifier
+                        modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.3f)),
                     )
@@ -323,7 +353,7 @@ fun MediaPlayerScreen(
                     positionMs = dpadSeekTargetMs,
                 )
 
-                AnimatedVisibility(
+                FadeAnimatedVisibility(
                     modifier = Modifier
                         .padding(top = 24.dp)
                         .align(Alignment.TopCenter),
@@ -370,7 +400,7 @@ fun MediaPlayerScreen(
                 } else {
                     PlayerControlsView(
                         topView = {
-                            AnimatedVisibility(
+                            FadeAnimatedVisibility(
                                 visible = controlsVisibilityState.controlsVisible,
                                 enter = fadeIn(),
                                 exit = fadeOut(),
@@ -398,6 +428,12 @@ fun MediaPlayerScreen(
                                         controlsVisibilityState.hideControls()
                                         overlayView = OverlayView.PLAYLIST
                                     },
+                                    onLiveSubtitlesClick = {
+                                        liveSubtitlesState.togglePanel()
+                                        controlsVisibilityState.showControls()
+                                    },
+                                    isLiveSubtitlesVisible = showLiveSubtitlesPanel,
+                                    showLiveSubtitlesToggle = isLandscape && !isTv,
                                     onBackClick = onBackClick,
                                 )
                             }
@@ -418,7 +454,7 @@ fun MediaPlayerScreen(
                             }
                         },
                         bottomView = {
-                            AnimatedVisibility(
+                            FadeAnimatedVisibility(
                                 visible = controlsVisibilityState.controlsVisible && !controlsVisibilityState.controlsLocked,
                                 enter = fadeIn(),
                                 exit = fadeOut(),
@@ -475,7 +511,7 @@ fun MediaPlayerScreen(
                         .padding(systemBarsPadding.copy(top = 0.dp, bottom = 0.dp))
                         .padding(24.dp),
                 ) {
-                    AnimatedVisibility(
+                    FadeAnimatedVisibility(
                         modifier = Modifier.align(Alignment.CenterStart),
                         visible = volumeAndBrightnessGestureState.activeGesture == VerticalGesture.VOLUME,
                         enter = fadeIn(),
@@ -488,7 +524,7 @@ fun MediaPlayerScreen(
                         )
                     }
 
-                    AnimatedVisibility(
+                    FadeAnimatedVisibility(
                         modifier = Modifier.align(Alignment.CenterEnd),
                         visible = volumeAndBrightnessGestureState.activeGesture == VerticalGesture.BRIGHTNESS,
                         enter = fadeIn(),
@@ -500,6 +536,16 @@ fun MediaPlayerScreen(
                         )
                     }
                 }
+            }
+
+            if (showLiveSubtitlesPanel) {
+                LiveSubtitlesPanel(
+                    state = liveSubtitlesState,
+                    modifier = Modifier
+                        .weight(0.35f)
+                        .fillMaxHeight(),
+                )
+            }
             }
 
             OverlayShowView(
@@ -607,6 +653,23 @@ fun MediaPlayerScreen(
             else -> onBackClick()
         }
     }
+}
+
+@Composable
+private fun FadeAnimatedVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    enter: EnterTransition = fadeIn(),
+    exit: ExitTransition = fadeOut(),
+    content: @Composable AnimatedVisibilityScope.() -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = enter,
+        exit = exit,
+        content = content,
+    )
 }
 
 @Composable
@@ -742,7 +805,7 @@ private fun handlePlayerKeyEvent(
         Key.MediaFastForward -> { seekBy(seekIncrementMs); controls.showControls(); true }
         Key.MediaRewind -> { seekBy(-seekIncrementMs); controls.showControls(); true }
         Key.MediaNext -> { player.seekToNext(); controls.showControls(); true }
-        Key.MediaPrevious -> { player.seekToPrevious(); controls.showControls(); true }
+        Key.MediaPrevious -> { player.seekToPreviousMediaItem(); controls.showControls(); true }
         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
             when {
                 !controls.controlsVisible -> {

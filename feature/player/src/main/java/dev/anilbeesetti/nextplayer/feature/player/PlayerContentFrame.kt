@@ -38,6 +38,7 @@ fun PlayerContentFrame(
     videoZoomAndContentScaleState: VideoZoomAndContentScaleState,
     volumeAndBrightnessGestureState: VolumeAndBrightnessGestureState,
     subtitleConfiguration: SubtitleConfiguration,
+    showOverlaySubtitles: Boolean = true,
 ) {
     val presentationState = rememberPresentationState(player)
     PlayerSurface(
@@ -80,11 +81,13 @@ fun PlayerContentFrame(
         volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
     )
 
-    SubtitleView(
-        player = player,
-        isInPictureInPictureMode = pictureInPictureState.isInPictureInPictureMode,
-        configuration = subtitleConfiguration,
-    )
+    if (showOverlaySubtitles) {
+        SubtitleView(
+            player = player,
+            isInPictureInPictureMode = pictureInPictureState.isInPictureInPictureMode,
+            configuration = subtitleConfiguration,
+        )
+    }
 
     if (presentationState.coverSurface) {
         ShutterView()

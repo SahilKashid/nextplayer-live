@@ -144,7 +144,7 @@ class PictureInPictureState(
                     PIP_ACTION_PLAY -> player.play()
                     PIP_ACTION_PAUSE -> player.pause()
                     PIP_ACTION_NEXT -> player.seekToNext()
-                    PIP_ACTION_PREVIOUS -> player.seekToPrevious()
+                    PIP_ACTION_PREVIOUS -> player.seekToPreviousMediaItem()
                 }
             }
         }

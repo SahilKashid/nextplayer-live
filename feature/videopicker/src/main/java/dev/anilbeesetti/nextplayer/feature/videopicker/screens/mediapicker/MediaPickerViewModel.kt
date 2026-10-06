@@ -463,7 +463,7 @@ class MediaPickerViewModel @AssistedInject constructor(
         if (stateInternal.value.hideFlow != HideFlowState.BiometricSetup) return
         viewModelScope.launch {
             vaultPinRepository.setBiometricEnabled(enabled)
-            stateInternal.update { it.copy(hideFlow = HideFlowState.Idle) }
+            stateInternal.update { it.copy(hideFlow = HideFlowState.HowToFindInfo) }
         }
     }
 
@@ -542,6 +542,7 @@ sealed interface HideFlowState {
     data class ConfirmHide(val items: List<Video>) : HideFlowState
     data class SetupPin(val items: List<Video>) : HideFlowState
     data object BiometricSetup : HideFlowState
+    data object HowToFindInfo : HideFlowState
 
     data object Processing : HideFlowState
 }

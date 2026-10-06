@@ -72,6 +72,12 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun setLiveSubtitlesPanelOpen(open: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(liveSubtitlesPanelOpen = open) }
+        }
+    }
+
     fun onVideoZoomEvent(event: VideoZoomEvent) {
         when (event) {
             is VideoZoomEvent.ContentScaleChanged -> {

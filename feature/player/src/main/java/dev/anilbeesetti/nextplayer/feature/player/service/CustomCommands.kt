@@ -14,6 +14,7 @@ import kotlinx.coroutines.guava.await
 
 enum class CustomCommands(val customAction: String) {
     ADD_SUBTITLE_TRACK(customAction = "ADD_SUBTITLE_TRACK"),
+    REFRESH_LOCAL_SUBTITLES(customAction = "REFRESH_LOCAL_SUBTITLES"),
     SET_SKIP_SILENCE_ENABLED(customAction = "SET_SKIP_SILENCE_ENABLED"),
     GET_SKIP_SILENCE_ENABLED(customAction = "GET_SKIP_SILENCE_ENABLED"),
     SET_IS_SCRUBBING_MODE_ENABLED(customAction = "SET_IS_SCRUBBING_MODE_ENABLED"),
@@ -170,4 +171,8 @@ suspend fun MediaController.tryDecoderFallback(): Boolean {
 internal fun Bundle.decoderMode(key: String): DecoderMode? {
     val value = getString(key) ?: return null
     return DecoderMode.entries.find { it.name == value }
+}
+
+fun MediaController.refreshLocalSubtitles() {
+    sendCustomCommand(CustomCommands.REFRESH_LOCAL_SUBTITLES.sessionCommand, Bundle.EMPTY)
 }

@@ -15,9 +15,9 @@ android {
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        applicationId = "dev.anilbeesetti.nextplayer"
-        versionCode = 74
-        versionName = "0.18.0"
+        applicationId = "dev.sahilkashid.nextplayer"
+        versionCode = 109
+        versionName = "1.0.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -43,13 +43,11 @@ android {
 
         getByName("debug") {
             isDebuggable = true
-            applicationIdSuffix = ".debug"
         }
 
         create("release-with-debug-signing") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".release"
             matchingFallbacks.add("release")
         }
     }
