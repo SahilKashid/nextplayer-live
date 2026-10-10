@@ -9,12 +9,10 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.anilbeesetti.nextplayer.core.common.extensions.getPath
 import dev.anilbeesetti.nextplayer.core.media.network.NetworkUri
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
+import org.koin.core.annotation.Single
 
 /**
  * The player's data source factory.
@@ -40,9 +38,9 @@ import javax.inject.Singleton
  * resolved.
  */
 @UnstableApi
-@Singleton
-class NextDataSourceFactory @Inject constructor(
-    @ApplicationContext private val context: Context,
+@Single
+class NextDataSourceFactory(
+    private val context: Context,
     private val sessions: NetworkSessions,
 ) : DataSource.Factory {
 

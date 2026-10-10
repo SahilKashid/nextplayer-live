@@ -16,18 +16,21 @@ import dev.anilbeesetti.nextplayer.feature.player.LocalControlsVisibilityState
 
 @OptIn(UnstableApi::class)
 @Composable
-internal fun PreviousButton(player: Player, modifier: Modifier = Modifier) {
+internal fun PreviousButton(
+    modifier: Modifier = Modifier,
+    player: Player?,
+) {
     val state = rememberPreviousButtonState(player)
     val controlsVisibilityState = LocalControlsVisibilityState.current
 
     PlayerButton(
         modifier = modifier.size(48.dp),
-        isEnabled = state.isEnabled,
+        enabled = state.isEnabled,
         onClick = {
             // Always go to the previous playlist item when one exists.
             // Player.seekToPrevious() restarts the current item when position >
             // maxSeekToPreviousPosition (~3s by default).
-            player.seekToPreviousMediaItem()
+            player?.seekToPreviousMediaItem()
             controlsVisibilityState?.showControls()
         },
     ) {

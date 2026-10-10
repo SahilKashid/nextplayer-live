@@ -7,8 +7,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlayerPreferencesTest {
+    @Test
+    fun `existing preferences keep tunneled playback disabled`() {
+        val preferences = Json.decodeFromString<PlayerPreferences>("""{"autoplay":false,"preferredAudioLanguage":"en"}""")
 
-    private val json = Json { ignoreUnknownKeys = true }
+        assertFalse(preferences.enableTunneledPlayback)
+        assertFalse(preferences.autoplay)
+        assertEquals("en", preferences.preferredAudioLanguage)
+    }
+
+    @Test
+    fun `tunneled playback survives serialization`() {
+        val preferences = PlayerPreferences(enableTunneledPlayback = true)
+        val restored = Json.decodeFromString<PlayerPreferences>(Json.encodeToString(preferences))
+
+        assertTrue(restored.enableTunneledPlayback)
+        assertEquals(preferences, restored)
+    }
 
     @Test
     fun playerControlAndSubtitleDefaults() {
@@ -28,6 +43,8 @@ class PlayerPreferencesTest {
         assertEquals(PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION, preferences.subtitleVerticalPosition)
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = false))
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = true))
+        assertFalse(preferences.enableTunneledPlayback)
+        assertFalse(preferences.showRemainingTime)
     }
 
     @Test
@@ -40,7 +57,7 @@ class PlayerPreferencesTest {
 
     @Test
     fun missingKeysUseOverlayAndVerticalDefaults() {
-        val decoded = json.decodeFromString<PlayerPreferences>("{}")
+        val decoded = Json.decodeFromString<PlayerPreferences>("{}")
 
         assertTrue(decoded.rememberPlayerBrightness)
         assertEquals(DoubleTapGesture.PLAY_PAUSE, decoded.doubleTapGesture)
@@ -50,6 +67,7 @@ class PlayerPreferencesTest {
         assertEquals("eng", decoded.preferredSubtitleLanguage)
         assertFalse(decoded.liveSubtitlesPanelOpen)
         assertEquals(0.2f, decoded.subtitleVerticalPosition)
+        assertFalse(decoded.enableTunneledPlayback)
     }
 
     @Test
@@ -59,7 +77,7 @@ class PlayerPreferencesTest {
             subtitleVerticalPosition = 0.25f,
         )
 
-        val decoded = json.decodeFromString<PlayerPreferences>(json.encodeToString(original))
+        val decoded = Json.decodeFromString<PlayerPreferences>(Json.encodeToString(original))
 
         assertFalse(decoded.showOverlaySubtitlesWithLivePanel)
         assertEquals(0.25f, decoded.subtitleVerticalPosition, 0.0001f)
@@ -70,7 +88,7 @@ class PlayerPreferencesTest {
         assertFalse(PlayerPreferences().liveSubtitlesPanelOpen)
 
         val original = PlayerPreferences(liveSubtitlesPanelOpen = true)
-        val decoded = json.decodeFromString<PlayerPreferences>(json.encodeToString(original))
+        val decoded = Json.decodeFromString<PlayerPreferences>(Json.encodeToString(original))
 
         assertTrue(decoded.liveSubtitlesPanelOpen)
     }

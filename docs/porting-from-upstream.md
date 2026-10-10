@@ -24,9 +24,9 @@ Related deep-dives (keep in sync when behavior changes):
 Side-by-side install is intentional: Live uses a different `applicationId` so it does **not**
 overwrite the original Next Player package.
 
-Baseline: Live **v1.0.9** is based on upstream **v0.18.0**. Earlier Live releases through **v1.0.8**
-were based around the upstream **~v0.17.5** lineage (the tree just before upstream’s 0.18.0 version
-bump). Origin tag
+Baseline: Live **v1.1.0** is based on upstream **v0.19.0**. Live **v1.0.9** was based on upstream
+**v0.18.0**. Earlier Live releases through **v1.0.8** were based around the upstream **~v0.17.5**
+lineage (the tree just before upstream’s 0.18.0 version bump). Origin tag
 `v1.0.0` is the first Live release; **v1.0.1** adds finished-download settled-complete handoff;
 **v1.0.2** adds the same for **Open with / share-sheet `content://` URIs**;
 **v1.0.3** ships live-subtitles false-unsupported + VTT panel fix + overlay-with-panel + vertical position;
@@ -37,7 +37,10 @@ and decoded labels;
 **v1.0.7** snaps the live panel to the new playhead’s cue zone on media change;
 **v1.0.8** makes Previous switch to the previous playlist item instead of restarting the current video;
 **v1.0.9** re-applies those Live features onto upstream **v0.18.0** (decoder choices survive adding
-local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`) (prefer `v1.0.9` or latest Live tag / `origin/main`).
+local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
+**v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
+audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes) (prefer `v1.1.0` or
+latest Live tag / `origin/main`).
 
 ---
 
@@ -64,7 +67,7 @@ git fetch origin --tags
    - Prefer a release tag: `upstream/vX.Y.Z`
    - Or tip: `upstream/main`
 3. Re-apply **branding** (see [Branding](#branding-must-keep)).
-4. Bring Live-only source trees from origin tag `v1.0.9` (or latest Live tag / `main`), then
+4. Bring Live-only source trees from origin tag `v1.1.0` (or latest Live tag / `main`), then
    **re-wire touchpoints** in shared upstream files.
 5. Prefer history when clean:
    - Cherry-pick / merge Live feature commits if they apply cleanly.
@@ -77,7 +80,7 @@ git fetch origin --tags
 9. Shortcut for steps 1–5 scaffolding: `./scripts/port-from-upstream.sh <upstream-ref> [live-ref]`
 
 Do **not** force-push `main` unless explicitly requested. Prefer a branch like
-`live/port-v0-18-0`, validate, then PR or fast-forward merge.
+`live/port-v0-19-0`, validate, then PR or fast-forward merge.
 
 ---
 
@@ -89,7 +92,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -125,8 +128,11 @@ Also keep `docs/live-subtitles.md` when present.
 
 | File | What to restore |
 |------|-----------------|
-| `feature/player/.../MediaPlayerScreen.kt` | `rememberLiveSubtitlesState`; landscape weight split ~**0.65 / 0.35**; overlay visibility follows `showOverlaySubtitlesWithLivePanel` (default both on); host `LiveSubtitlesPanel`; pass toggle props |
-| `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `showLiveSubtitlesToggle` |
+| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState`; landscape `Row` weight split ~**0.65 / 0.35**; overlay visibility follows `showOverlaySubtitlesWithLivePanel` (default both on); host `LiveSubtitlesPanel`. Pass toggle props through `MediaPlayerControls` → `PlayerControls` |
+| `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `showLiveSubtitlesToggle` (do not duplicate `onBackClick`; 0.19 already defaults it) |
+| `feature/player/.../PlayerViewModel.kt` | `PlayerAction.SetLiveSubtitlesPanelOpen` persists `liveSubtitlesPanelOpen` |
+| `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when overlay should hide |
+| `feature/player/.../ui/SubtitleView.kt` | Keep 0.19 `currentCues?.cues`; apply `SubtitleVerticalPosition` |
 
 ### Hard-won behavior (do not “simplify” away)
 
@@ -179,10 +185,10 @@ core/media/src/main/java/dev/anilbeesetti/nextplayer/core/media/network/datasour
 
 | File | What to restore |
 |------|-----------------|
-| `.../datasource/NextDataSourceFactory.kt` | Route local `file` / resolvable `content` → Growing* **only** while `shouldPlayAsGrowing`; **settled-complete → DefaultDataSource**; keep network / http paths |
+| `.../datasource/NextDataSourceFactory.kt` | Keep Koin `@Single`. Route local `file` / resolvable `content` → Growing* **only** while `shouldPlayAsGrowing`; **settled-complete → DefaultDataSource**; keep network / http paths |
 | `feature/player/.../service/GrowingAwareExtractorsFactory.kt` | Live-only — copy whole file |
 | `feature/player/.../service/GrowingFileLoadErrorHandlingPolicy.kt` | Live-only — copy whole file |
-| `feature/player/.../service/PlayerService.kt` | `DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory)` + `setDataSourceFactory` + `GrowingFileLoadErrorHandlingPolicy` |
+| `feature/player/.../service/PlayerService.kt` | Wrap `DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory)` + `setDataSourceFactory` + `GrowingFileLoadErrorHandlingPolicy` **inside** `ExternalAudioMediaSourceFactory`. Keep external-audio pending selection, `ADD_AUDIO_TRACK`, tunneled playback, and decoder restore. Subtitle remember goes through `applySubtitleSelection` (do not persist Disable `-1` when no text tracks). Sidecar path is a real file path, never `content://` |
 
 **Media3 1.11 note:** extractors go through the **`DefaultMediaSourceFactory` constructor**, not
 `setExtractorsFactory`.
@@ -302,14 +308,14 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.0.9` / latest Live tag / Live main.
+3. Checkout Live-only paths from `v1.1.0` / latest Live tag / Live main.
 4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
-   `ControlsTopView`, strings. On the **v0.18.0** port, upstream also changed `PlayerService`
-   (restore per-item decoder choices instead of resetting to AUTO) and `ControlsTopView`
-   (decoder-button semantics). Keep those upstream edits and re-apply Live on top. Do not
+   `ControlsTopView`, strings, `app/build.gradle.kts`. On **v0.19.0**, upstream replaced Hilt
+   with Koin and split the player screen (`MediaPlayerContent`, `PlayerControls`,
+   `PlayerContentFrame`). Keep Koin, chapters, external audio, NEW badges, watch-history
+   settings, tunneled playback, and PiP/SMB fixes, and re-apply Live on top. Do not
    drop `applicationIdSuffix` removal: Live APKs must stay `dev.sahilkashid.nextplayer`
-   (no `.debug` / `.release` suffix). Keep upstream `gradle/libs.versions.toml` (Media3 1.11.1,
-   nextlib 1.11.1-0.16.0) rather than Live v1.0.8’s older catalog.
+   (no `.debug` / `.release` suffix). Keep upstream `gradle/libs.versions.toml`.
 5. Tests → assemble → smoke verification matrix → release.
 
 If something “looks simpler” but contradicts a **Hard-won** bullet above, keep Live behavior.

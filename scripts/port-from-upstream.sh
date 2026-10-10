@@ -15,8 +15,8 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.0.9 if tagged,
-                   else v1.0.8, else latest Live tag, else origin/main)
+  live-source-ref  Live tree to copy features from (default: v1.1.0 if tagged,
+                   else v1.0.9, else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
 fetches tags, prints branding + copy paths + touchpoints + next commands.
@@ -110,8 +110,11 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.0.9 (Live features on upstream v0.18.0), else v1.0.8, else newest v* tag, else origin/main.
-  if git rev-parse --verify -q "v1.0.9" >/dev/null 2>&1 || \
+  # Prefer v1.1.0 (Live features on upstream v0.19.0), else v1.0.9, else newest v* tag, else origin/main.
+  if git rev-parse --verify -q "v1.1.0" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.1.0" >/dev/null 2>&1; then
+    LIVE_ARG="v1.1.0"
+  elif git rev-parse --verify -q "v1.0.9" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.0.9" >/dev/null 2>&1; then
     LIVE_ARG="v1.0.9"
   elif git rev-parse --verify -q "v1.0.8" >/dev/null 2>&1 || \
@@ -273,10 +276,13 @@ cat <<'TOUCH'
                              defaults SYSTEM+high-contrast, sidecar all-files/rescan/auto-select/%20 labels: v1.0.6;
                              media-change panel snap to playhead zone (listResetKey + nearest-cue): v1.0.7;
                              Previous→previous media item (seekToPreviousMediaItem + maxSeek MAX): v1.0.8;
-                             v1.0.9 keeps the above on upstream v0.18.0 — merge PlayerService decoder
-                             restore + ControlsTopView decoder semantics; keep upstream libs.versions.toml)
-  PlayerService: DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory) + setDataSourceFactory
-                 + GrowingFileLoadErrorHandlingPolicy  (Media3 1.11: extractors via constructor)
+                             v1.0.9 keeps the above on upstream v0.18.0.
+                             v1.1.0 keeps them on upstream v0.19.0: stay on Koin (do not restore Hilt);
+                             wrap GrowingAwareExtractorsFactory inside ExternalAudioMediaSourceFactory;
+                             wire the panel through MediaPlayerContent / PlayerControls / ControlsTopView;
+                             keep chapters, external audio, NEW badges, watch history, tunneled playback)
+  PlayerService: ExternalAudioMediaSourceFactory(DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory)
+                 + setDataSourceFactory + GrowingFileLoadErrorHandlingPolicy)
   strings.xml: live_subtitles* + jump_to_current_cue (+ app_name)
 TOUCH
 

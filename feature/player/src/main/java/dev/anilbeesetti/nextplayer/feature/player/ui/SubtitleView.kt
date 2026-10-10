@@ -47,7 +47,7 @@ fun SubtitleView(
             )
             subtitleView.setCues(
                 SubtitleVerticalPosition.applyToCues(
-                    cues = cuesState.cues,
+                    cues = cuesState.currentCues?.cues.orEmpty(),
                     verticalPosition = configuration.verticalPosition,
                 ),
             )
