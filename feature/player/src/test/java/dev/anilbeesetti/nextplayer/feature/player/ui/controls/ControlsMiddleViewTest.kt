@@ -127,6 +127,7 @@ class ControlsMiddleViewTest {
                         Player.COMMAND_PLAY_PAUSE,
                         Player.COMMAND_SEEK_TO_NEXT,
                         Player.COMMAND_SEEK_TO_PREVIOUS,
+                        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
                     )
                     .build(),
             )

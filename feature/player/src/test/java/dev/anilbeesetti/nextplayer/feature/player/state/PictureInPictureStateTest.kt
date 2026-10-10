@@ -181,6 +181,7 @@ class PictureInPictureStateTest {
                     Player.COMMAND_GET_TIMELINE,
                     Player.COMMAND_SEEK_TO_NEXT,
                     Player.COMMAND_SEEK_TO_PREVIOUS,
+                    Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
                 ).build(),
             )
             .setPlaylist((0..2).map { MediaItemData.Builder(it).setDurationUs(60_000_000).build() })
