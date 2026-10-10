@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PlayerPreferences(
     val resume: Resume = Resume.YES,
-    val rememberPlayerBrightness: Boolean = false,
+    val rememberPlayerBrightness: Boolean = true,
     val playerBrightness: Float = 0.5f,
     val minDurationForFastSeek: Long = 120000L,
     val rememberSelections: Boolean = true,
@@ -26,8 +26,8 @@ data class PlayerPreferences(
     val useSeekControls: Boolean = true,
     val useZoomControls: Boolean = true,
     val enablePanGesture: Boolean = false,
-    val doubleTapGesture: DoubleTapGesture = DoubleTapGesture.BOTH,
-    val useLongPressControls: Boolean = false,
+    val doubleTapGesture: DoubleTapGesture = DoubleTapGesture.PLAY_PAUSE,
+    val useLongPressControls: Boolean = true,
     val longPressControlsSpeed: Float = 2.0f,
     val seekIncrement: Int = DEFAULT_SEEK_INCREMENT,
     val seekSensitivity: Float = DEFAULT_SEEK_SENSITIVITY,
@@ -50,21 +50,32 @@ data class PlayerPreferences(
 
     // Subtitle Preferences
     val useSystemCaptionStyle: Boolean = false,
-    val preferredSubtitleLanguage: String = "",
+    val preferredSubtitleLanguage: String = DEFAULT_PREFERRED_SUBTITLE_LANGUAGE,
     val subtitleTextEncoding: String = "",
     val subtitleTextSize: Int = DEFAULT_SUBTITLE_TEXT_SIZE,
     val subtitleBackground: Boolean = false,
     val subtitleFont: Font = Font.DEFAULT,
     val subtitleTextBold: Boolean = true,
     val applyEmbeddedStyles: Boolean = true,
+    val showOverlaySubtitlesWithLivePanel: Boolean = true,
+    val liveSubtitlesPanelOpen: Boolean = false,
+    val subtitleVerticalPosition: Float = DEFAULT_SUBTITLE_VERTICAL_POSITION,
 ) {
+    fun shouldShowOverlaySubtitles(livePanelVisible: Boolean): Boolean =
+        !livePanelVisible || showOverlaySubtitlesWithLivePanel
 
     companion object {
         const val DEFAULT_SEEK_INCREMENT = 10
         const val DEFAULT_SEEK_SENSITIVITY = 0.50f
         const val DEFAULT_VOLUME_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_BRIGHTNESS_GESTURE_SENSITIVITY = 0.50f
+
+        /** ISO639-2/T code matching LocalesHelper / Settings subtitle language list. */
+        const val DEFAULT_PREFERRED_SUBTITLE_LANGUAGE = "eng"
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
+        const val MIN_SUBTITLE_VERTICAL_POSITION = 0f
+        const val DEFAULT_SUBTITLE_VERTICAL_POSITION = 0.2f
+        const val MAX_SUBTITLE_VERTICAL_POSITION = 0.5f
     }
 }

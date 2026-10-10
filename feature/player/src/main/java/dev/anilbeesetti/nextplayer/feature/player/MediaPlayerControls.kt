@@ -60,6 +60,9 @@ internal fun MediaPlayerControls(
     videoZoomAndContentScaleState: VideoZoomAndContentScaleState,
     isPipSupported: Boolean,
     onPictureInPictureClick: () -> Unit,
+    onLiveSubtitlesClick: () -> Unit = {},
+    isLiveSubtitlesVisible: Boolean = false,
+    showLiveSubtitlesToggle: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val playerPreferences = state.playerPreferences
@@ -167,6 +170,9 @@ internal fun MediaPlayerControls(
                     onPlayInBackgroundClick = { onAction(PlayerAction.PlayInBackground) },
                     onToggleTimeDisplay = { onAction(PlayerAction.ToggleTimeDisplay) },
                     onPictureInPictureClick = onPictureInPictureClick,
+                    onLiveSubtitlesClick = onLiveSubtitlesClick,
+                    isLiveSubtitlesVisible = isLiveSubtitlesVisible,
+                    showLiveSubtitlesToggle = showLiveSubtitlesToggle,
                     middleControlsModifier = Modifier.thenIf(isTv) {
                         focusRequester(middleControlsFocusRequester)
                             .onFocusChanged { isMiddleControlsFocused = it.hasFocus }

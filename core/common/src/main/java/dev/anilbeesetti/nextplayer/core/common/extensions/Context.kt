@@ -172,11 +172,13 @@ private fun Context.getDataColumn(
  * @return filename of the file
  */
 fun Context.getFilenameFromUri(uri: Uri): String {
-    return if (ContentResolver.SCHEME_FILE.equals(uri.scheme, ignoreCase = true)) {
-        File(uri.toString()).name
+    val raw = if (ContentResolver.SCHEME_FILE.equals(uri.scheme, ignoreCase = true)) {
+        // Use decoded path — File(uri.toString()).name keeps %20 from the encoded URI string.
+        uri.path?.let { File(it).name } ?: uri.lastPathSegment.orEmpty()
     } else {
-        getFilenameFromContentUri(uri) ?: uri.lastPathSegment ?: ""
+        getFilenameFromContentUri(uri) ?: uri.lastPathSegment.orEmpty()
     }
+    return decodeUriDisplayName(raw)
 }
 
 /**

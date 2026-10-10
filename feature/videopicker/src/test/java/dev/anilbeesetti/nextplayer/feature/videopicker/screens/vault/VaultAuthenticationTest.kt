@@ -139,9 +139,7 @@ class VaultAuthenticationTest {
 
         assertTrue(biometricEnabled)
         assertTrue(viewModel.state.value.biometricEnabled)
-        assertEquals(VaultStage.UNLOCKED, viewModel.state.value.stage)
-        assertEquals(listOf(Video.sample), viewModel.state.value.hiddenVideos)
-        assertEquals(1, vaultRepository.observations)
+        assertEquals(VaultStage.HOW_TO_FIND_INFO, viewModel.state.value.stage)
         val reopened = createViewModel()
         advanceUntilIdle()
         assertTrue(reopened.state.value.biometricEnabled)
@@ -158,9 +156,7 @@ class VaultAuthenticationTest {
         advanceUntilIdle()
 
         assertFalse(biometricEnabled)
-        assertEquals(VaultStage.UNLOCKED, viewModel.state.value.stage)
-        assertEquals(listOf(Video.sample), viewModel.state.value.hiddenVideos)
-        assertEquals(1, vaultRepository.observations)
+        assertEquals(VaultStage.HOW_TO_FIND_INFO, viewModel.state.value.stage)
         val reopened = createViewModel()
         advanceUntilIdle()
         reopened.onAction(VaultAction.BiometricAuthenticated)

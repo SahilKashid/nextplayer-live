@@ -14,8 +14,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.util.Consumer
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
@@ -24,11 +28,15 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import dev.anilbeesetti.nextplayer.core.common.canRequestAllFilesAccess
+import dev.anilbeesetti.nextplayer.core.common.createManageAllFilesIntent
 import dev.anilbeesetti.nextplayer.core.common.extensions.getInitialDirectoryUri
+import dev.anilbeesetti.nextplayer.core.common.hasAllFilesAccess
 import dev.anilbeesetti.nextplayer.core.common.extensions.getMediaContentUri
 import dev.anilbeesetti.nextplayer.core.common.service.registerForSuspendActivityResult
 import dev.anilbeesetti.nextplayer.core.data.repository.PlaylistRepository
 import dev.anilbeesetti.nextplayer.core.ui.R as coreUiR
+import dev.anilbeesetti.nextplayer.core.ui.composables.AllFilesAccessDialog
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
 import dev.anilbeesetti.nextplayer.feature.player.extensions.OpenDocumentAtInitialUri
 import dev.anilbeesetti.nextplayer.feature.player.extensions.setExtras
@@ -36,6 +44,7 @@ import dev.anilbeesetti.nextplayer.feature.player.extensions.uriToSubtitleConfig
 import dev.anilbeesetti.nextplayer.feature.player.service.addAudioTrack
 import dev.anilbeesetti.nextplayer.feature.player.service.addSubtitleTrack
 import dev.anilbeesetti.nextplayer.feature.player.service.decoderServiceState
+import dev.anilbeesetti.nextplayer.feature.player.service.refreshLocalSubtitles
 import dev.anilbeesetti.nextplayer.feature.player.service.setAudioDecoderMode
 import dev.anilbeesetti.nextplayer.feature.player.service.setVideoDecoderMode
 import dev.anilbeesetti.nextplayer.feature.player.service.stopPlayerSession
@@ -139,6 +148,28 @@ class PlayerActivity : ComponentActivity() {
             }
 
             NextPlayerTheme(darkTheme = true) {
+                val context = LocalContext.current
+                var hasAllFilesAccess by remember { mutableStateOf(context.hasAllFilesAccess()) }
+                var allFilesPromptDismissed by rememberSaveable { mutableStateOf(false) }
+                LifecycleResumeEffect(Unit) {
+                    val granted = context.hasAllFilesAccess()
+                    if (granted && !hasAllFilesAccess) {
+                        player?.refreshLocalSubtitles()
+                    }
+                    hasAllFilesAccess = granted
+                    onPauseOrDispose { }
+                }
+                if (!hasAllFilesAccess && !allFilesPromptDismissed && context.canRequestAllFilesAccess()) {
+                    AllFilesAccessDialog(
+                        onConfirm = {
+                            context.createManageAllFilesIntent()?.let { intent ->
+                                runCatching { context.startActivity(intent) }
+                                    .onFailure { allFilesPromptDismissed = true }
+                            } ?: run { allFilesPromptDismissed = true }
+                        },
+                        onDismiss = { allFilesPromptDismissed = true },
+                    )
+                }
                 MediaPlayerScreen(
                     viewModel = viewModel,
                     player = player,

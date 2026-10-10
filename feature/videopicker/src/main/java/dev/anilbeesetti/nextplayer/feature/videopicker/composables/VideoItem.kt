@@ -108,11 +108,6 @@ fun VideoListItem(
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
 ) {
-    val path = video.path.substringBeforeLast("/")
-    val showPath = preferences.showPathField && path.isNotBlank()
-    val showSize = preferences.showSizeField && video.size > 0 && video.formattedFileSize.isNotBlank()
-    val showResolution = preferences.showResolutionField && video.height > 0
-
     NextSegmentedListItem(
         modifier = modifier,
         selected = selected,
@@ -150,37 +145,31 @@ fun VideoListItem(
                 overflow = TextOverflow.Ellipsis,
             )
         },
-        supportingContent = if (showPath || showSize || showResolution) {
-            {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+        supportingContent = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (preferences.showPathField) {
+                    Text(
+                        text = video.path.substringBeforeLast("/"),
+                        maxLines = 2,
+                        style = MaterialTheme.typography.bodySmall,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    if (showPath) {
-                        Text(
-                            text = path,
-                            maxLines = 2,
-                            style = MaterialTheme.typography.bodySmall,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                    if (preferences.showSizeField) {
+                        InfoChip(text = video.formattedFileSize)
                     }
-                    if (showSize || showResolution) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            verticalArrangement = Arrangement.spacedBy(5.dp),
-                        ) {
-                            if (showSize) {
-                                InfoChip(text = video.formattedFileSize)
-                            }
-                            if (showResolution) {
-                                InfoChip(text = "${video.height}p")
-                            }
-                        }
+                    if (preferences.showResolutionField && video.height > 0) {
+                        InfoChip(text = "${video.height}p")
                     }
                 }
             }
-        } else {
-            null
         },
     )
 }
@@ -297,7 +286,7 @@ private fun ThumbnailView(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (preferences.showDurationField && video.duration > 0 && video.formattedDuration.isNotBlank()) {
+        if (preferences.showDurationField) {
             InfoChip(
                 text = video.formattedDuration,
                 modifier = Modifier

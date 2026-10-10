@@ -127,7 +127,8 @@ internal class PlayerKeyInputState(
             }
 
             Key.MediaPrevious -> {
-                player.seekToPrevious()
+                // seekToPrevious() restarts the current item once playback is past a few seconds.
+                player.seekToPreviousMediaItem()
                 controls.showControls()
                 true
             }

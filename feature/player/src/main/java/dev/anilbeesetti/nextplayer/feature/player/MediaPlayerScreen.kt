@@ -4,13 +4,17 @@ import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
@@ -20,10 +24,13 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
 import dev.anilbeesetti.nextplayer.feature.player.state.ControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.state.PlayerOrientationEffect
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberLiveSubtitlesState
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberSubtitleOptionsState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberBrightnessState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberErrorState
@@ -33,10 +40,12 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberTapGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVideoZoomAndContentScaleState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightnessGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeState
+import dev.anilbeesetti.nextplayer.feature.player.ui.LiveSubtitlesPanel
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerErrorDialogs
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestures
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerVerticalGestureIndicators
 import dev.anilbeesetti.nextplayer.feature.player.ui.SubtitleConfiguration
+import dev.anilbeesetti.nextplayer.feature.player.ui.isPortrait
 import dev.anilbeesetti.nextplayer.feature.player.ui.preview.rememberPreviewPlayer
 import kotlin.time.Duration.Companion.seconds
 
@@ -152,7 +161,29 @@ internal fun MediaPlayerContent(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    val isTv = remember { context.isTelevision }
+    val isLandscape = !LocalConfiguration.current.isPortrait
+    val subtitleOptionsState = rememberSubtitleOptionsState(
+        player = player,
+        onEvent = { onAction(PlayerAction.OnSubtitleOptionEvent(it)) },
+    )
+    val liveSubtitlesState = rememberLiveSubtitlesState(
+        player = player,
+        subtitleDelayMs = subtitleOptionsState.delayMilliseconds,
+        subtitleSpeed = subtitleOptionsState.speedMultiplier,
+        initialPanelVisible = playerPreferences.liveSubtitlesPanelOpen,
+        onPanelVisibleChanged = { onAction(PlayerAction.SetLiveSubtitlesPanelOpen(it)) },
+    )
+    // Hide only via this predicate when not landscape — keep isPanelVisible so
+    // returning to landscape (or after lock/recreate) restores an open panel.
+    val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
+
+    Row(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(
+            Modifier
+                .weight(if (showLiveSubtitlesPanel) 0.65f else 1f)
+                .fillMaxHeight(),
+        ) {
         if (pictureInPictureState != null) {
             PlayerContentFrame(
                 player = player,
@@ -165,7 +196,9 @@ internal fun MediaPlayerContent(
                     textSize = playerPreferences.subtitleTextSize,
                     textBold = playerPreferences.subtitleTextBold,
                     applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                    verticalPosition = playerPreferences.subtitleVerticalPosition,
                 ),
+                showOverlaySubtitles = playerPreferences.shouldShowOverlaySubtitles(showLiveSubtitlesPanel),
             )
             if (volumeAndBrightnessGestureState != null) {
                 PlayerGestures(
@@ -197,6 +230,12 @@ internal fun MediaPlayerContent(
                     }
                 }
             },
+            onLiveSubtitlesClick = {
+                liveSubtitlesState.togglePanel()
+                controlsVisibilityState.showControls()
+            },
+            isLiveSubtitlesVisible = showLiveSubtitlesPanel,
+            showLiveSubtitlesToggle = isLandscape && !isTv,
         )
         if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
             PlayerVerticalGestureIndicators(
@@ -204,6 +243,15 @@ internal fun MediaPlayerContent(
                 volumePercentage = volumeState.volumePercentage,
                 maxVolumePercentage = volumeState.maxVolumePercentage,
                 brightnessPercentage = brightnessState.brightnessPercentage,
+            )
+        }
+        }
+        if (showLiveSubtitlesPanel) {
+            LiveSubtitlesPanel(
+                state = liveSubtitlesState,
+                modifier = Modifier
+                    .weight(0.35f)
+                    .fillMaxHeight(),
             )
         }
     }

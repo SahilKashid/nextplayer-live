@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +50,9 @@ fun ControlsTopView(
     onAudioClick: () -> Unit = {},
     onSubtitleClick: () -> Unit = {},
     onPlaylistClick: () -> Unit = {},
+    onLiveSubtitlesClick: () -> Unit = {},
+    isLiveSubtitlesVisible: Boolean = false,
+    showLiveSubtitlesToggle: Boolean = true,
 ) {
     val firstControlFocusRequester = remember { FocusRequester() }
     val systemBarsPadding = WindowInsets.systemBars.union(WindowInsets.displayCutout).asPaddingValues()
@@ -116,6 +120,25 @@ fun ControlsTopView(
                     painter = painterResource(R.drawable.ic_subtitle_track),
                     contentDescription = null,
                 )
+            }
+            if (showLiveSubtitlesToggle) {
+                PlayerButton(onClick = onLiveSubtitlesClick) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_live_subtitles),
+                        contentDescription = stringResource(
+                            if (isLiveSubtitlesVisible) {
+                                R.string.hide_live_subtitles
+                            } else {
+                                R.string.show_live_subtitles
+                            },
+                        ),
+                        tint = if (isLiveSubtitlesVisible) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            LocalContentColor.current
+                        },
+                    )
+                }
             }
         }
     }

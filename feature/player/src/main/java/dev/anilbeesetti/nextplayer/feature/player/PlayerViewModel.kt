@@ -72,6 +72,7 @@ class PlayerViewModel(
             is PlayerAction.ToggleTimeDisplay -> toggleTimeDisplay()
             is PlayerAction.OnVideoZoomEvent -> onVideoZoomEvent(action.event)
             is PlayerAction.OnSubtitleOptionEvent -> onSubtitleOptionEvent(action.event)
+            is PlayerAction.SetLiveSubtitlesPanelOpen -> setLiveSubtitlesPanelOpen(action.open)
         }
     }
 
@@ -82,6 +83,12 @@ class PlayerViewModel(
     private fun updateVideoZoom(uri: String, zoom: Float) {
         viewModelScope.launch {
             mediaRepository.updateMediumZoom(uri, zoom)
+        }
+    }
+
+    private fun setLiveSubtitlesPanelOpen(open: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(liveSubtitlesPanelOpen = open) }
         }
     }
 
@@ -166,4 +173,5 @@ sealed interface PlayerAction {
     data object ToggleTimeDisplay : PlayerAction
     data class OnVideoZoomEvent(val event: VideoZoomEvent) : PlayerAction
     data class OnSubtitleOptionEvent(val event: SubtitleOptionsEvent) : PlayerAction
+    data class SetLiveSubtitlesPanelOpen(val open: Boolean) : PlayerAction
 }

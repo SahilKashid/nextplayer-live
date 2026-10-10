@@ -74,6 +74,7 @@ import dev.anilbeesetti.nextplayer.feature.player.extensions.videoDecoderMode
 import dev.anilbeesetti.nextplayer.feature.player.extensions.videoZoom
 import dev.anilbeesetti.nextplayer.feature.player.extensions.withExternalAudio
 import dev.anilbeesetti.nextplayer.feature.player.model.DecoderTrackType
+import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleAutoSelection
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderManager
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderMode
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
@@ -280,13 +281,12 @@ class PlayerService : MediaSessionService() {
                         .indexOfFirst { it.mediaTrackGroup.externalAudioIndex == audioIndex }
                     if (audioIndex >= 0 && trackIndex >= 0) player.switchTrack(C.TRACK_TYPE_AUDIO, trackIndex)
                 }
-                if (!playerPreferences.rememberSelections) return
-                mediaSession?.player?.mediaMetadata?.audioTrackIndex?.takeIf { pending == null }?.let {
-                    mediaSession?.player?.switchTrack(C.TRACK_TYPE_AUDIO, it)
+                if (playerPreferences.rememberSelections) {
+                    player.mediaMetadata.audioTrackIndex?.takeIf { pending == null }?.let {
+                        player.switchTrack(C.TRACK_TYPE_AUDIO, it)
+                    }
                 }
-                mediaSession?.player?.mediaMetadata?.subtitleTrackIndex?.let {
-                    mediaSession?.player?.switchTrack(C.TRACK_TYPE_TEXT, it)
-                }
+                applySubtitleSelection(player)
             }
         }
 
@@ -308,11 +308,18 @@ class PlayerService : MediaSessionService() {
             }
 
             if (subtitleTrackIndex != null) {
-                serviceScope.launch {
-                    mediaRepository.updateMediumSubtitleTrack(
-                        uri = currentMediaItem.mediaId,
-                        subtitleTrackIndex = subtitleTrackIndex,
-                    )
+                val textTrackCount = player.currentTracks.groups.count {
+                    it.type == C.TRACK_TYPE_TEXT && it.isSupported
+                }
+                // Do not persist Disable (-1) when no text tracks exist yet — that becomes
+                // a stale "already scanned / disabled" choice once sidecars appear later.
+                if (subtitleTrackIndex >= 0 || textTrackCount > 0) {
+                    serviceScope.launch {
+                        mediaRepository.updateMediumSubtitleTrack(
+                            uri = currentMediaItem.mediaId,
+                            subtitleTrackIndex = subtitleTrackIndex,
+                        )
+                    }
                 }
             }
 
@@ -581,6 +588,11 @@ class PlayerService : MediaSessionService() {
                     return@future SessionResult(SessionResult.RESULT_SUCCESS)
                 }
 
+                CustomCommands.REFRESH_LOCAL_SUBTITLES -> {
+                    refreshLocalSubtitlesForCurrentItem()
+                    return@future SessionResult(SessionResult.RESULT_SUCCESS)
+                }
+
                 CustomCommands.SET_SKIP_SILENCE_ENABLED -> {
                     val enabled = args.getBoolean(CustomCommands.SKIP_SILENCE_ENABLED_KEY)
                     mediaSession?.player?.playerSpecificSkipSilenceEnabled = enabled
@@ -724,7 +736,12 @@ class PlayerService : MediaSessionService() {
             .setTrackSelector(trackSelector)
             .setMediaSourceFactory(
                 ExternalAudioMediaSourceFactory(
-                    DefaultMediaSourceFactory(applicationContext).setDataSourceFactory(dataSourceFactory),
+                    DefaultMediaSourceFactory(
+                        applicationContext,
+                        GrowingAwareExtractorsFactory(applicationContext),
+                    )
+                        .setDataSourceFactory(dataSourceFactory)
+                        .setLoadErrorHandlingPolicy(GrowingFileLoadErrorHandlingPolicy(applicationContext)),
                 ),
             )
             .setAudioAttributes(
@@ -735,6 +752,9 @@ class PlayerService : MediaSessionService() {
                 playerPreferences.requireAudioFocus,
             )
             .setHandleAudioBecomingNoisy(playerPreferences.pauseOnHeadsetDisconnect)
+            // Default ~3s makes seekToPrevious() restart the current item; media session /
+            // notification Previous should switch playlist items like the in-app control.
+            .setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)
             .build()
             .also {
                 it.addListener(playbackStateListener)
@@ -831,6 +851,9 @@ class PlayerService : MediaSessionService() {
                 val video = if (isNetwork) null else mediaRepository.getVideoByUri(uri = mediaItem.mediaId)
                 val videoState = mediaRepository.getVideoState(uri = mediaItem.mediaId)
 
+                // Always re-discover sidecars on every prepare. videoState.path is the
+                // media uriString (often content://), not a filesystem path — never use it
+                // for File-based scans. Empty externalSubs must not mean "already scanned."
                 val externalSubs = videoState?.externalSubs ?: emptyList()
                 val savedAudio = videoState?.externalAudio.orEmpty()
                 val externalAudio = withContext(Dispatchers.IO) {
@@ -839,24 +862,36 @@ class PlayerService : MediaSessionService() {
                             .getOrDefault(false)
                     }
                 }
-                val localSubs = if (!isNetwork) {
-                    (videoState?.path ?: getPath(uri))?.let {
-                        File(it).getLocalSubtitles(
-                            context = this@PlayerService,
-                            excludeSubsList = externalSubs,
-                        )
-                    } ?: emptyList()
+                val mediaFilePath = when {
+                    isNetwork -> null
+                    else -> {
+                        val fromVideo = video?.path?.takeIf { path ->
+                            path.isNotBlank() &&
+                                !path.startsWith("content:", ignoreCase = true) &&
+                                File(path).isFile
+                        }
+                        fromVideo ?: getPath(uri)
+                    }
+                }
+                val localSubs = if (mediaFilePath != null) {
+                    File(mediaFilePath).getLocalSubtitles(
+                        context = this@PlayerService,
+                        excludeSubsList = externalSubs,
+                    )
                 } else {
                     emptyList()
                 }
 
                 val existingSubConfigurations = mediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
-                val subConfigurations = (localSubs + externalSubs).map { subtitleUri ->
+                val discoveredSubConfigurations = (localSubs + externalSubs).map { subtitleUri ->
                     uriToSubtitleConfiguration(
                         uri = subtitleUri,
                         subtitleEncoding = playerPreferences.subtitleTextEncoding,
                     )
                 }
+                val existingIds = existingSubConfigurations.map { it.id }.toSet()
+                val subConfigurations = existingSubConfigurations +
+                    discoveredSubConfigurations.filter { it.id !in existingIds }
 
                 // Local items get a placeholder now and their real artwork in the background;
                 // network items have no thumbnail to extract, so keep any supplied artwork.
@@ -871,12 +906,16 @@ class PlayerService : MediaSessionService() {
                 val videoScale = mediaItem.mediaMetadata.videoZoom ?: videoState?.videoScale
                 val playbackSpeed = mediaItem.mediaMetadata.playbackSpeed ?: videoState?.playbackSpeed
                 val audioTrackIndex = mediaItem.mediaMetadata.audioTrackIndex ?: videoState?.audioTrackIndex
-                val subtitleTrackIndex = mediaItem.mediaMetadata.subtitleTrackIndex ?: videoState?.subtitleTrackIndex
+                val rawSubtitleTrackIndex =
+                    mediaItem.mediaMetadata.subtitleTrackIndex ?: videoState?.subtitleTrackIndex
+                // Hard rule: never carry Disable (-1) into prepare. If any text/sidecar
+                // tracks appear, applySubtitleSelection will pick one (preferred / first).
+                val subtitleTrackIndex = rawSubtitleTrackIndex?.takeIf { it >= 0 }
                 val subtitleDelay = mediaItem.mediaMetadata.subtitleDelayMilliseconds ?: videoState?.subtitleDelayMilliseconds
                 val subtitleSpeed = mediaItem.mediaMetadata.subtitleSpeed ?: videoState?.subtitleSpeed
 
                 mediaItem.buildUpon().apply {
-                    setSubtitleConfigurations(existingSubConfigurations + subConfigurations)
+                    setSubtitleConfigurations(subConfigurations)
                     setMediaMetadata(
                         MediaMetadata.Builder().apply {
                             setTitle(title)
@@ -897,6 +936,67 @@ class PlayerService : MediaSessionService() {
                 }.build().withExternalAudio(externalAudio)
             }
         }.awaitAll()
+    }
+
+    /**
+     * After tracks are ready (or after a local-subtitle refresh), ensure a real text
+     * track is selected whenever any exist. Never leave Disable selected if sidecars /
+     * text tracks are available.
+     */
+    private fun applySubtitleSelection(player: Player) {
+        val textTracks = player.currentTracks.groups.filter {
+            it.type == C.TRACK_TYPE_TEXT && it.isSupported
+        }
+        if (textTracks.isEmpty()) return
+
+        val alreadySelected = textTracks.any { it.isSelected }
+        val savedIndex = player.mediaMetadata.subtitleTrackIndex
+        // If a valid remembered track is already selected, keep it.
+        if (alreadySelected && savedIndex != null && savedIndex >= 0) {
+            val selectedIndex = textTracks.indexOfFirst { it.isSelected }
+            if (selectedIndex == savedIndex) return
+        }
+
+        val trackLanguages = textTracks.map { group ->
+            group.mediaTrackGroup.getFormat(0).language
+        }
+        val index = SubtitleAutoSelection.resolveTrackIndex(
+            savedIndex = savedIndex,
+            trackCount = textTracks.size,
+            trackLanguages = trackLanguages,
+            preferredLanguage = playerPreferences.preferredSubtitleLanguage,
+        ) ?: return
+
+        // If something is already selected and it matches the resolved index, done.
+        if (alreadySelected && textTracks.indexOfFirst { it.isSelected } == index) return
+
+        player.switchTrack(C.TRACK_TYPE_TEXT, index)
+        // onTrackSelectionParametersChanged persists the new index on the media item + DB.
+    }
+
+    /**
+     * Re-run sidecar discovery for the current local item and merge new subtitle
+     * configs, then let track-ready selection auto-pick. Used after All-files
+     * access is granted mid-session.
+     */
+    private suspend fun refreshLocalSubtitlesForCurrentItem() {
+        val player = mediaSession?.player ?: return
+        val current = withContext(Dispatchers.Main) { player.currentMediaItem } ?: return
+        if (current.isNetworkMediaItem()) return
+
+        val updated = updatedMediaItemsWithMetadata(listOf(current)).firstOrNull() ?: return
+
+        withContext(Dispatchers.Main) {
+            val index = player.currentMediaItemIndex
+            if (index == C.INDEX_UNSET) return@withContext
+            val position = player.currentPosition
+            val playWhenReady = player.playWhenReady
+            isMediaItemReady = false
+            player.replaceMediaItem(index, updated)
+            player.seekTo(index, position)
+            player.prepare()
+            player.playWhenReady = playWhenReady
+        }
     }
 
     private fun publishDecoderState() {

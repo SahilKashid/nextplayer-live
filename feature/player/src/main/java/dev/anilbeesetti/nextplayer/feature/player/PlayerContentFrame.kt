@@ -31,6 +31,7 @@ fun PlayerContentFrame(
     pictureInPictureState: PictureInPictureState,
     videoZoomAndContentScaleState: VideoZoomAndContentScaleState,
     subtitleConfiguration: SubtitleConfiguration,
+    showOverlaySubtitles: Boolean = true,
 ) {
     val presentationState = rememberPresentationState(player)
     Box(modifier.fillMaxSize()) {
@@ -65,11 +66,13 @@ fun PlayerContentFrame(
                 },
         )
 
-        SubtitleView(
-            player = player,
-            isInPictureInPictureMode = pictureInPictureState.isInPictureInPictureMode,
-            configuration = subtitleConfiguration,
-        )
+        if (showOverlaySubtitles) {
+            SubtitleView(
+                player = player,
+                isInPictureInPictureMode = pictureInPictureState.isInPictureInPictureMode,
+                configuration = subtitleConfiguration,
+            )
+        }
 
         if (presentationState.coverSurface) {
             ShutterView()

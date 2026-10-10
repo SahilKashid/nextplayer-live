@@ -49,6 +49,9 @@ fun PlayerControls(
     onPlayInBackgroundClick: () -> Unit,
     onToggleTimeDisplay: () -> Unit,
     onPictureInPictureClick: () -> Unit,
+    onLiveSubtitlesClick: () -> Unit = {},
+    isLiveSubtitlesVisible: Boolean = false,
+    showLiveSubtitlesToggle: Boolean = false,
     modifier: Modifier = Modifier,
     middleControlsModifier: Modifier = Modifier,
 ) {
@@ -69,6 +72,9 @@ fun PlayerControls(
                     onAudioClick = { onShowOverlay(OverlayView.AUDIO_SELECTOR) },
                     onSubtitleClick = { onShowOverlay(OverlayView.SUBTITLE_SELECTOR) },
                     onPlaylistClick = { onShowOverlay(OverlayView.PLAYLIST) },
+                    onLiveSubtitlesClick = onLiveSubtitlesClick,
+                    isLiveSubtitlesVisible = isLiveSubtitlesVisible,
+                    showLiveSubtitlesToggle = showLiveSubtitlesToggle,
                     onBackClick = onBackClick,
                 )
             }
