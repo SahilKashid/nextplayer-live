@@ -30,7 +30,7 @@ internal fun PreviousButton(
             // Always go to the previous playlist item when one exists.
             // Player.seekToPrevious() restarts the current item when position >
             // maxSeekToPreviousPosition (~3s by default).
-            player.seekToPreviousMediaItem()
+            player?.seekToPreviousMediaItem()
             controlsVisibilityState?.showControls()
         },
     ) {
