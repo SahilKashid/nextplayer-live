@@ -32,6 +32,8 @@ fun PlayerContentFrame(
     videoZoomAndContentScaleState: VideoZoomAndContentScaleState,
     subtitleConfiguration: SubtitleConfiguration,
     showOverlaySubtitles: Boolean = true,
+    onVideoClockActive: Boolean = false,
+    onVideoClockText: String = "",
 ) {
     val presentationState = rememberPresentationState(player)
     Box(modifier.fillMaxSize()) {
@@ -71,6 +73,8 @@ fun PlayerContentFrame(
                 player = player,
                 isInPictureInPictureMode = pictureInPictureState.isInPictureInPictureMode,
                 configuration = subtitleConfiguration,
+                positionClockActive = onVideoClockActive,
+                positionClockText = onVideoClockText,
             )
         }
 

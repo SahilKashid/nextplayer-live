@@ -28,6 +28,21 @@ internal object LiveSubtitlesTrackChange {
      *
      * Empty [cues] returns `-1` (callers should guard).
      */
+    /**
+     * Text that should be on the video at [playheadMs].
+     *
+     * Only cues that contain the playhead. The panel may scroll toward the next
+     * line early; this string does not. Empty during a gap, so a late player
+     * cue group is not left on screen.
+     */
+    fun onVideoClockText(cues: List<TimedCue>, playheadMs: Long): String {
+        if (cues.isEmpty()) return ""
+        return cues
+            .asSequence()
+            .filter { playheadMs >= it.startMs && playheadMs < it.endMs }
+            .joinToString(separator = "\n") { it.text }
+    }
+
     fun nearestCueIndexByPlayhead(cues: List<TimedCue>, playheadMs: Long): Int {
         if (cues.isEmpty()) return -1
         val containing = cues.indexOfLast { playheadMs >= it.startMs && playheadMs < it.endMs }

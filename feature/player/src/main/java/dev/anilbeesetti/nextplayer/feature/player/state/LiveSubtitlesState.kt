@@ -136,6 +136,23 @@ class LiveSubtitlesState(
 
     private var loadJob: Job? = null
     private var lastTrackSignature: String? = null
+
+    /**
+     * True when the loaded timeline came from a sidecar file (SubtitleConfiguration),
+     * not an in-container text track. On-video text then follows [onVideoClockText].
+     */
+    private var trackIsSidecar: Boolean = false
+
+    /**
+     * Sidecar overlay clock. [onVideoClockActive] false means keep the player cue
+     * group (embedded tracks, or before the sidecar timeline is loaded).
+     */
+    var onVideoClockActive: Boolean by mutableStateOf(false)
+        private set
+
+    var onVideoClockText: String by mutableStateOf("")
+        private set
+
     /** Realtime millis until which scroll/highlight lead is disabled (after seek). */
     private var leadDisabledUntilElapsedMs: Long = 0L
 
@@ -189,6 +206,29 @@ class LiveSubtitlesState(
 
     fun jumpToCurrent() {
         followController.jumpToCurrent()
+    }
+
+    /**
+     * Sidecar on-video line for the delay-adjusted playhead.
+     *
+     * The player cue group for a side-loaded SRT is published through the text
+     * renderer and the session, and 1.1.1 draws [SubtitleView] under a graphics
+     * layer that does not present those invalidates on their own. This clock
+     * uses the parsed sidecar timeline and [Player.getCurrentPosition], same
+     * adjustment as nextlib (`position * speed - delay`). It does not use the
+     * panel scroll lead.
+     */
+    fun refreshOnVideoClock() {
+        if (!trackIsSidecar || cues.isEmpty()) {
+            publishOnVideoClock(active = false, text = "")
+            return
+        }
+        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val effective = (player.currentPosition.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
+        publishOnVideoClock(
+            active = true,
+            text = LiveSubtitlesTrackChange.onVideoClockText(cues, effective),
+        )
     }
 
     fun seekToCue(cue: TimedCue) {
@@ -300,11 +340,11 @@ class LiveSubtitlesState(
 
     /**
      * Lead **scroll only** toward the next cue shortly before it becomes current.
-     * Bold and color stay on [highlightedCueKey] (the cue that contains the
-     * playhead). Putting that early lead on the bold row showed the next line
-     * up to [ScrollLeadMs] before its start, so on-video text looked late.
+     * Drives both scroll centering and bold/color via [scrollTargetKey].
      * Adaptive lead + hysteresis avoid chatter after rewind; identity keys
-     * keep remux index remaps from restarting the scroll.
+     * keep remux index remaps from flashing highlight.
+     *
+     * On-video sidecar text does not use this lead. It uses [onVideoClockText].
      */
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex
@@ -439,8 +479,11 @@ class LiveSubtitlesState(
                 scrollTargetIndex = -1
                 highlightedCueKey = null
                 scrollTargetKey = null
+                clearOnVideoClock()
                 return@launch
             }
+
+            val isSidecar = SubtitleCueLoader.resolveSelectedSubtitle(player)?.externalUri != null
 
             // Only spin when we have nothing to show yet. Cache hits return immediately
             // from memory/disk inside the loader so reopen / track reselect stays snappy.
@@ -473,7 +516,9 @@ class LiveSubtitlesState(
                             if (lastTrackSignature != loadGeneration) return@launch
                             if (toApply.isEmpty()) return@launch
                             if (cues.isNotEmpty() && toApply.size < cues.size) return@launch
+                            trackIsSidecar = isSidecar
                             applyCuesPreservingActiveIdentity(toApply)
+                            refreshOnVideoClock()
                             isUnsupportedTrack = false
                         }
                     }
@@ -483,7 +528,9 @@ class LiveSubtitlesState(
                 if (lastTrackSignature != loadGeneration) return@withContext
                 coalesceJob?.cancel()
                 pendingPartial = null
+                trackIsSidecar = isSidecar && result.cues.isNotEmpty()
                 applyCuesPreservingActiveIdentity(result.cues)
+                refreshOnVideoClock()
                 // Only true image tracks (PGS / VobSub / DVB). Empty text loads must
                 // show live_subtitles_empty — never the unsupported bitmap string.
                 isUnsupportedTrack = result.isUnsupportedBitmapTrack
@@ -509,6 +556,17 @@ class LiveSubtitlesState(
         isUnsupportedTrack = snap.isUnsupportedTrack
         isLoading = snap.isLoading
         listResetKey = snap.listResetKey
+        clearOnVideoClock()
+    }
+
+    private fun clearOnVideoClock() {
+        trackIsSidecar = false
+        publishOnVideoClock(active = false, text = "")
+    }
+
+    private fun publishOnVideoClock(active: Boolean, text: String) {
+        if (onVideoClockActive != active) onVideoClockActive = active
+        if (onVideoClockText != text) onVideoClockText = text
     }
 
     /**

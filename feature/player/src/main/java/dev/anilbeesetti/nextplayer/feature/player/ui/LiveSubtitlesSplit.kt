@@ -24,6 +24,11 @@ private const val PlayerSlot = "player"
  * and the player is the rest, placed on the physical left or right. Both are measured
  * to those rectangles, so the panel cannot wrap to a button and the player cannot
  * draw over it.
+ *
+ * The player slot is not [clipToBounds]. That modifier is a graphics layer, and the
+ * on-video [SubtitleView] is an Android view inside it. The layer keeps the previous
+ * recording until the player slot is recorded again, so cue invalidates showed up
+ * late. Measuring the player to its rectangle is what keeps it off the panel.
  */
 @Composable
 internal fun LiveSubtitlesSplit(
@@ -39,7 +44,6 @@ internal fun LiveSubtitlesSplit(
             Box(
                 Modifier
                     .layoutId(PlayerSlot)
-                    .clipToBounds()
                     .testTag(LiveSubtitlesPlayerTag),
             ) {
                 player()

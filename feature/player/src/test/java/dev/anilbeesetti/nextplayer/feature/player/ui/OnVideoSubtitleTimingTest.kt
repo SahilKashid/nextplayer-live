@@ -29,6 +29,7 @@ import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.text.CueDecoder
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
+import androidx.media3.extractor.text.SubtitleExtractor
 import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleCueParser
 import io.github.anilbeesetti.nextlib.media3ext.renderer.NextTextRenderer
 import java.io.File
@@ -63,6 +64,17 @@ class OnVideoSubtitleTimingTest {
 
         val rendered = transcodedCueStarts(mkv)
         assertEquals(expected, rendered)
+    }
+
+    @Test
+    fun sidecarSrtSampleTimesMatchTheCueFile() {
+        val context = RuntimeEnvironment.getApplication()
+        val dir = File(context.cacheDir, "subtitle-sync-sidecar").apply { mkdirs() }
+        val srt = copyResource("subtitle-sync/cues.srt", File(dir, "cues.srt"))
+        val expected = SubtitleCueParser.parseSrt(srt.readText()).map { it.startMs to it.text }
+        val format = Format.Builder().setSampleMimeType(MimeTypes.APPLICATION_SUBRIP).build()
+        val extractor = SubtitleExtractor(DefaultSubtitleParserFactory().create(format), format)
+        assertEquals(expected, cuesFromExtractor(srt, extractor))
     }
 
     @Test
@@ -123,6 +135,43 @@ class OnVideoSubtitleTimingTest {
                 "'$text' at ${seenAt}ms, cue start ${startMs}ms (delta ${lateBy}ms) $firstSeen",
                 lateBy in 0..10,
             )
+        }
+    }
+
+    private fun cuesFromExtractor(file: File, extractor: Extractor): List<Pair<Long, String>> {
+        val decoder = CueDecoder()
+        val output = CollectingTextOutput()
+        val context = RuntimeEnvironment.getApplication()
+        val dataSource = DefaultDataSource.Factory(context).createDataSource()
+        dataSource.open(DataSpec(Uri.fromFile(file)))
+        var input = DefaultExtractorInput(dataSource, 0L, C.LENGTH_UNSET.toLong())
+        extractor.init(output)
+        val holder = PositionHolder()
+        try {
+            while (true) {
+                when (extractor.read(input, holder)) {
+                    Extractor.RESULT_END_OF_INPUT -> break
+                    Extractor.RESULT_SEEK -> {
+                        dataSource.close()
+                        dataSource.open(
+                            DataSpec(Uri.fromFile(file), holder.position, C.LENGTH_UNSET.toLong()),
+                        )
+                        input = DefaultExtractorInput(
+                            dataSource,
+                            holder.position,
+                            C.LENGTH_UNSET.toLong(),
+                        )
+                        extractor.seek(holder.position, 0L)
+                    }
+                }
+            }
+        } finally {
+            dataSource.close()
+        }
+        return output.samples.mapNotNull { sample ->
+            val decoded = decoder.decode(sample.timeUs, sample.data, 0, sample.data.size)
+            val text = cueText(decoded.cues)
+            if (text.isEmpty()) null else Util.usToMs(decoded.startTimeUs) to text
         }
     }
 

@@ -41,8 +41,8 @@ local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 **v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
 audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes);
 **v1.1.1** cycles the landscape panel off → right → left → off, closes it from the rotate
-button, keeps on-video subtitles independent of the panel, and applies on-video cues in
-the player `onCues` callback (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`).
+button, keeps on-video subtitles independent of the panel, and paints sidecar on-video
+text from the parsed file and the playhead (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`).
 
 ---
 
@@ -141,30 +141,28 @@ Also keep `docs/live-subtitles.md` when present.
 | `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay |
 | `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when `showOverlaySubtitles` is false |
 | `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles` |
-| `feature/player/.../ui/SubtitleView.kt` | Keep 0.19 `currentCues?.cues`; apply `SubtitleVerticalPosition` |
+| `feature/player/.../ui/SubtitleView.kt` | Embedded cues from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`), not `rememberCuesState`. Sidecar cues from `onVideoClockText`. Apply `SubtitleVerticalPosition`. Do not put the player slot in `clipToBounds` |
 
 ### Hard-won behavior (do not “simplify” away)
 
 - **Threading:** `MediaController` / player APIs **only on Main**; demux and file I/O on
   `Dispatchers.IO`.
 - **Highlight:** primary from `EVENT_CUES` / `currentCues`; ~**50ms** fallback tick while panel
-  open; bold/color follow the active cue (`highlightedCueKey`), not the scroll lead.
-  **Early-lead (~380ms adaptive)** is scroll-only via `scrollTargetKey` so the upcoming row
-  is centered when it starts; sticky-forward lead; **stable cue identity keys**; **snap colors**
-  (no flicker animations on rapid cue changes). Do not bold the lead row — that shows the next
-  line before its start and makes on-video text look late.
+  open; **early-lead (~380ms adaptive)** for both scroll **and** highlight via `scrollTargetKey`;
+  sticky-forward lead; **stable cue identity keys**; **snap colors** (no flicker animations on
+  rapid cue changes). Sidecar on-video text does not use this lead (`onVideoClockText`).
 - **Load path:** expanding-window progressive embedded demux (seed near playhead, grow earlier/later) + hardened final-only disk/memory cue cache (stable keys, no flaky mtime) (v1.0.5).
 - **UX:** no top “Live subtitles” header; **center** the active cue; image subs (PGS / VobSub /
   DVB) unsupported → empty unsupported state. Empty **text** tracks must **not** show the
   image-based unsupported string (v1.0.3).
 - **Empty cache:** never cache empty cue lists; ASS/SSA may need a raw-sample retry demux (v1.0.3).
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
-- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only). Apply overlay cues from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`); do not route them through `rememberCuesState`.
+- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only). Embedded overlay cues come from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`); do not route them through `rememberCuesState`. Sidecar overlay text is the parsed file against the delay-adjusted playhead (`onVideoClockText`), not `currentCues`.
 - **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
 - **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
 - **Rotate closes the panel (v1.1.1):** `RotateButton` `onBeforeRotate` calls `closePanel()` before changing orientation. Automatic / video-size orientation does not.
-- **Shared dock layout (v1.1.1):** `LiveSubtitlesSplit` places the 35% panel on the physical left or right and measures the video to the remainder so the two panes do not overlap. Window insets are unchanged.
+- **Shared dock layout (v1.1.1):** `LiveSubtitlesSplit` places the 35% panel on the physical left or right and measures the video to the remainder so the two panes do not overlap. The player slot must not use `clipToBounds`: that modifier is a graphics layer, and `SubtitleView` invalidates do not record it. Window insets are unchanged.
 - **Pause auto-follow:** cue scroll auto-follow resumes only while playing; jump-to-current always works (v1.0.4).
 - **Expanding-window fill:** seed near playhead then grow earlier/later bands with frequent partials (v1.0.5).
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).

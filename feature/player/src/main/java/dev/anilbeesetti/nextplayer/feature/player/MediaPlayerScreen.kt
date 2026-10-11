@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -47,6 +48,7 @@ import dev.anilbeesetti.nextplayer.feature.player.ui.SubtitleConfiguration
 import dev.anilbeesetti.nextplayer.feature.player.ui.isPortrait
 import dev.anilbeesetti.nextplayer.feature.player.ui.preview.rememberPreviewPlayer
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.isActive
 
 val LocalControlsVisibilityState = compositionLocalOf<ControlsVisibilityState?> { null }
 val LocalUseMaterialYouControls = compositionLocalOf { false }
@@ -180,6 +182,16 @@ internal fun MediaPlayerContent(
     // returning to landscape (or after lock/recreate) restores an open panel.
     val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
     val showLiveSubtitlesOnLeft = showLiveSubtitlesPanel && liveSubtitlesState.isPanelOnLeft
+    val showOnVideoSubtitles = playerPreferences.shouldShowOnVideoSubtitles()
+    // Sidecar lines follow the playhead every frame. Reading the clock state below
+    // records the subtitle view on the frame the line changes.
+    LaunchedEffect(liveSubtitlesState, showOnVideoSubtitles) {
+        if (!showOnVideoSubtitles) return@LaunchedEffect
+        while (isActive) {
+            liveSubtitlesState.refreshOnVideoClock()
+            withFrameMillis { }
+        }
+    }
 
     LiveSubtitlesSplit(
         panelVisible = showLiveSubtitlesPanel,
@@ -206,7 +218,9 @@ internal fun MediaPlayerContent(
                             applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
                             verticalPosition = playerPreferences.subtitleVerticalPosition,
                         ),
-                        showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
+                        showOverlaySubtitles = showOnVideoSubtitles,
+                        onVideoClockActive = liveSubtitlesState.onVideoClockActive,
+                        onVideoClockText = liveSubtitlesState.onVideoClockText,
                     )
                     if (volumeAndBrightnessGestureState != null) {
                         PlayerGestures(

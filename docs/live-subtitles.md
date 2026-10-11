@@ -33,10 +33,8 @@ of the panel (`showOnVideoSubtitles`). Picker **Off** hides the on-video view an
 the selected text track enabled so the panel can still list its cues. Left and right
 docks share one layout (`LiveSubtitlesSplit`): the panel is 35% of the width on the
 chosen physical side, and the video, on-video subtitles, and controls use the rest.
-On-video cues are applied in the player `onCues` callback
-(`DirectOnVideoSubtitleOutput`). They are not copied through Compose snapshot state,
-which posted the subtitle view update onto the next main-thread message and left the
-overlay a beat behind the audio. The live panel still follows `EVENT_CUES` directly.
+Sidecar on-video text follows the parsed file and the delay-adjusted playhead
+(`onVideoClockText`), not the player cue group. See **On-video sidecar clock**.
 
 ## Sources
 
@@ -71,7 +69,7 @@ one is always selected (preferred match, else first) — never left on Disable.
 
 The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCues` (same path as the on-video overlay). Text is matched against the loaded `TimedCue` list so the panel stays in lockstep with nextlib's delay-adjusted `NextTextRenderer`. A ~50ms position tick while the panel is open is used only as a fallback between cues. Position fallback applies OffsetRenderer semantics (`position * speed - delay`); EVENT_CUES matching does **not** double-apply delay.
 
-Bold and color use that active cue (`highlightedCueKey`). Scroll may move toward the next row up to ~380ms early so the list is centered when the cue starts; that lead must not change which row is bold. Bolding the lead row shows the next line before its `startMs`, while on-video text waits for the cue start, so the overlay looks a few hundred milliseconds late.
+Scroll and the panel's bold row follow `scrollTargetKey`, which may move to the next cue up to ~380ms early so the list is centered when that cue starts. That lead is panel-only. Sidecar on-video text uses `onVideoClockText` (the cue that contains the playhead) and does not follow the lead.
 
 ## Cache
 
@@ -126,7 +124,15 @@ The live panel and the on-video `SubtitleView` are separate:
 
 `PlayerPreferences.showOnVideoSubtitles` (default **true**) is what `PlayerContentFrame` uses for `showOverlaySubtitles`. It does not look at whether the panel is open. `showOverlaySubtitlesWithLivePanel` remains in the model so older preference JSON still decodes; playback ignores it.
 
-The overlay view gets its cues from `Player.Listener.onCues` in the same callback the player uses for `currentCues` (v1.1.1). That is the same moment the renderer publishes them. Do not route those cues through `rememberCuesState` or another snapshot that waits for a later Compose frame.
+## On-video sidecar clock
+
+v1.1.0 and stock draw on-video cues from the player listener with no graphics-layer clip around the player, and that matched the audio. v1.1.0 has no `clipToBounds` anywhere. 1.1.1's `LiveSubtitlesSplit` wrapped the player — including `SubtitleView`, an `AndroidView` — in `Modifier.clipToBounds()` on every playback, panel open or closed. That modifier is `graphicsLayer(clip = true)`. The layer keeps its last recording until Compose records the player slot again. `SubtitleView.invalidate()` from `setCues` does not record it, so the overlay waited for the next player-slot recomposition (controls / progress), a few hundred milliseconds. The live panel is a sibling outside that layer and reads `player.currentPosition`, so it stayed on the audio clock.
+
+Sidecar attachment did not change between v1.1.0 (`db040014`) and 1.1.1. `PlayerService` still builds a `MediaItem.SubtitleConfiguration` per `.srt` beside the video. Media3 merges that into a `MergingMediaSource` and parses it with `SubtitleExtractor` during extraction. Those sample times are the cue `startTimeUs` values from the file (see `sidecarSrtSampleTimesMatchTheCueFile`). Picker **Off** still does not call `switchTrack(-1)` or `prepare()`; leaving the text track selected does not shift cue timestamps. It only keeps the timeline available for the panel and for this clock.
+
+The player slot is not clipped. A sidecar timeline (`trackIsSidecar`, an external `SubtitleConfiguration` URI) paints `onVideoClockText` for the delay-adjusted playhead (`position * speed - delay`, same as nextlib). That string is a cue that contains the playhead, or empty in a gap. `SubtitleView` reads it, so the line is recorded on the frame it changes. Embedded tracks still use `DirectOnVideoSubtitleOutput` / `currentCues`. The panel scroll lead is unchanged.
+
+The overlay view for an embedded track gets its cues from `Player.Listener.onCues` in the same callback the player uses for `currentCues`. Do not route those cues through `rememberCuesState`.
 
 The subtitle track picker is the control. Choosing a track sets `showOnVideoSubtitles` true and `switchTrack(index)`. **Off** sets `showOnVideoSubtitles` false and does **not** call `switchTrack(-1)`. The text track stays selected, so `SubtitleCueLoader.resolveSelectedSubtitle` and `EVENT_CUES` / `currentCues` keep feeding the panel while the overlay view is not composed. The same flag is the **Settings → Subtitle → Show on-screen subtitles** switch.
 

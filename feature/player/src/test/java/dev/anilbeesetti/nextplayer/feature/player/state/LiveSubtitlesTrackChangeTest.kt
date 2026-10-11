@@ -106,4 +106,26 @@ class LiveSubtitlesTrackChangeTest {
             LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(cues, 1_000L),
         )
     }
+
+    @Test
+    fun onVideoClockText_staysOnTheCueThatContainsThePlayhead() {
+        val timeline = listOf(
+            TimedCue(startMs = 0L, endMs = 2_000L, text = "now"),
+            TimedCue(startMs = 2_000L, endMs = 4_000L, text = "next"),
+        )
+        // 300ms before the next cue: inside the panel's 380ms scroll lead, still "now".
+        assertEquals("now", LiveSubtitlesTrackChange.onVideoClockText(timeline, 1_700L))
+        assertEquals("next", LiveSubtitlesTrackChange.onVideoClockText(timeline, 2_000L))
+        assertEquals("", LiveSubtitlesTrackChange.onVideoClockText(timeline, 4_000L))
+        assertEquals(
+            "now\nnext",
+            LiveSubtitlesTrackChange.onVideoClockText(
+                listOf(
+                    TimedCue(startMs = 0L, endMs = 3_000L, text = "now"),
+                    TimedCue(startMs = 1_000L, endMs = 2_000L, text = "next"),
+                ),
+                1_500L,
+            ),
+        )
+    }
 }

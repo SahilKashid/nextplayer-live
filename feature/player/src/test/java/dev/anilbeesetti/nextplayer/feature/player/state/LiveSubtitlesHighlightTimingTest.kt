@@ -41,6 +41,36 @@ class LiveSubtitlesHighlightTimingTest {
         }
     }
 
+    @Test
+    fun sidecarClockUsesThePlayheadNotTheScrollLead() {
+        val player = PositionPlayer(positionMs = 1_700L)
+        try {
+            val state = LiveSubtitlesState(
+                player = player,
+                context = RuntimeEnvironment.getApplication(),
+                scope = CoroutineScope(Dispatchers.Unconfined),
+            )
+            setCues(
+                state,
+                listOf(
+                    TimedCue(startMs = 0L, endMs = 1_000L, text = "early"),
+                    TimedCue(startMs = 1_000L, endMs = 2_000L, text = "now"),
+                    TimedCue(startMs = 2_000L, endMs = 4_000L, text = "next"),
+                ),
+            )
+            setSidecar(state, sidecar = true)
+            state.updateCurrentCueIndexFromPosition(1_700L)
+            state.refreshOnVideoClock()
+
+            assertEquals(1_700L, player.currentPosition)
+            assertEquals("2000|4000|next", state.scrollTargetKey)
+            assertEquals(true, state.onVideoClockActive)
+            assertEquals("now", state.onVideoClockText)
+        } finally {
+            player.release()
+        }
+    }
+
     private fun setCues(state: LiveSubtitlesState, cues: List<TimedCue>) {
         val setter = LiveSubtitlesState::class.java.declaredMethods
             .first { it.name == "setCues" }
@@ -48,9 +78,26 @@ class LiveSubtitlesHighlightTimingTest {
         setter.invoke(state, cues)
     }
 
+    private fun setSidecar(state: LiveSubtitlesState, sidecar: Boolean) {
+        val field = LiveSubtitlesState::class.java.getDeclaredField("trackIsSidecar")
+        field.isAccessible = true
+        field.setBoolean(state, sidecar)
+    }
+
     private class TestPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
         private val currentState = State.Builder().build()
 
         override fun getState(): State = currentState
+    }
+
+    private class PositionPlayer(positionMs: Long) : SimpleBasePlayer(Looper.getMainLooper()) {
+        private val currentState = State.Builder().setContentPositionMs(positionMs).build()
+
+        override fun getState(): State = currentState
+
+        init {
+            // getCurrentPosition reads the internal state, not getState(), until this copies it.
+            invalidateState()
+        }
     }
 }

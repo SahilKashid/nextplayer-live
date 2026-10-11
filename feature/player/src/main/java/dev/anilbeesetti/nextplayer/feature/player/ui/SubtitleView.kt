@@ -28,15 +28,21 @@ fun SubtitleView(
     player: Player,
     isInPictureInPictureMode: Boolean,
     configuration: SubtitleConfiguration,
+    positionClockActive: Boolean = false,
+    positionClockText: String = "",
 ) {
-    // Apply cues from the player listener. Compose snapshot state would post the
-    // view update to the next main-thread message, so on-video text lagged the audio.
+    // Embedded tracks still follow the player listener. Sidecar SRT uses the
+    // position clock: the parsed file against the playhead, read here so this
+    // composable records on the frame the line changes.
     val cueOutput = remember { DirectOnVideoSubtitleOutput() }
     cueOutput.verticalPosition = configuration.verticalPosition
+    cueOutput.ignorePlayerCues = positionClockActive
 
     DisposableEffect(player, cueOutput) {
         player.addListener(cueOutput)
-        cueOutput.setCues(player.currentCues.cues)
+        if (!cueOutput.ignorePlayerCues) {
+            cueOutput.setCues(player.currentCues.cues)
+        }
         onDispose { player.removeListener(cueOutput) }
     }
 
@@ -50,7 +56,13 @@ fun SubtitleView(
                     configuration = configuration,
                     isInPictureInPictureMode = isInPictureInPictureMode,
                 )
-                cueOutput.setCues(player.currentCues.cues)
+                cueOutput.setCues(
+                    if (cueOutput.ignorePlayerCues) {
+                        positionClockCues(positionClockText)
+                    } else {
+                        player.currentCues.cues
+                    },
+                )
             }
         },
         onRelease = { released ->
@@ -58,14 +70,24 @@ fun SubtitleView(
         },
         update = { subtitleView ->
             cueOutput.view = subtitleView
+            cueOutput.ignorePlayerCues = positionClockActive
             applySubtitleViewConfiguration(
                 subtitleView = subtitleView,
                 configuration = configuration,
                 isInPictureInPictureMode = isInPictureInPictureMode,
             )
-            cueOutput.setCues(player.currentCues.cues)
+            if (positionClockActive) {
+                cueOutput.setCues(positionClockCues(positionClockText))
+            } else {
+                cueOutput.setCues(player.currentCues.cues)
+            }
         },
     )
+}
+
+private fun positionClockCues(text: String): List<Cue> {
+    if (text.isEmpty()) return emptyList()
+    return listOf(Cue.Builder().setText(text).build())
 }
 
 /**
@@ -77,13 +99,18 @@ internal class DirectOnVideoSubtitleOutput : Player.Listener {
     var view: SubtitleView? = null
     var verticalPosition: Float = 0f
 
+    /** Sidecar overlay is driven by the playhead clock, not this callback. */
+    var ignorePlayerCues: Boolean = false
+
     override fun onCues(cueGroup: CueGroup) {
+        if (ignorePlayerCues) return
         setCues(cueGroup.cues)
     }
 
     @Suppress("DEPRECATION")
     @Deprecated("Player also delivers CueGroup. Kept so a list-only callback is not dropped.")
     override fun onCues(cues: List<Cue>) {
+        if (ignorePlayerCues) return
         setCues(cues)
     }
 
