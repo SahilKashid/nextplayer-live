@@ -141,7 +141,7 @@ Also keep `docs/live-subtitles.md` when present.
 | `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay |
 | `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when `showOverlaySubtitles` is false |
 | `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles` |
-| `feature/player/.../ui/SubtitleView.kt` | Embedded cues from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`), not `rememberCuesState`. Sidecar cues from `onVideoClockText`. Apply `SubtitleVerticalPosition`. Do not put the player slot in `clipToBounds` |
+| `feature/player/.../ui/SubtitleView.kt` | Stock path: `rememberCuesState` applied in the `AndroidView` `update` block. Sidecar cues from `onVideoClockText` in that same block. Apply `SubtitleVerticalPosition`. Do not put the player slot in `clipToBounds` |
 
 ### Hard-won behavior (do not “simplify” away)
 
@@ -157,7 +157,7 @@ Also keep `docs/live-subtitles.md` when present.
   image-based unsupported string (v1.0.3).
 - **Empty cache:** never cache empty cue lists; ASS/SSA may need a raw-sample retry demux (v1.0.3).
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
-- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only). Embedded overlay cues come from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`); do not route them through `rememberCuesState`. Sidecar overlay text is the parsed file against the delay-adjusted playhead (`onVideoClockText`), not `currentCues`.
+- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only). Embedded overlay cues come from `rememberCuesState` in the `SubtitleView` `update` block, the same as stock. Sidecar overlay text is the parsed file against the delay-adjusted playhead (`onVideoClockText`), applied in that same block.
 - **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
 - **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
