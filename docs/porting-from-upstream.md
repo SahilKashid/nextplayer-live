@@ -94,7 +94,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
