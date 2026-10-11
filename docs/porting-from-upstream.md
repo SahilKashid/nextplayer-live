@@ -107,6 +107,7 @@ sequence). Never publish Live under upstream’s `applicationId`.
 
 ```
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesPanel.kt
+feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesSplit.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesState.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacement.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesFollowController.kt
@@ -132,7 +133,7 @@ Also keep `docs/live-subtitles.md` when present.
 
 | File | What to restore |
 |------|-----------------|
-| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); landscape `Row` — panel **before** the video when on the left, **after** when on the right, weights ~**0.65 / 0.35**; `showOverlaySubtitles = shouldShowOnVideoSubtitles()` (not the old overlay-with-panel helper); `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. Pass side + rotate props through `MediaPlayerControls` → `PlayerControls` → `ControlsBottomView` |
+| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); `LiveSubtitlesSplit` (panel fraction **0.35**, video the rest, physical left or right). Provide `LocalPlayerChromePadding` for the video slot only while the panel is open, and pass the panel's edge padding into `LiveSubtitlesPanel`. `showOverlaySubtitles = shouldShowOnVideoSubtitles()` (not the old overlay-with-panel helper); `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. Pass side + rotate props through `MediaPlayerControls` → `PlayerControls` → `ControlsBottomView` |
 | `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `isLiveSubtitlesOnLeft` / `showLiveSubtitlesToggle`. Mirror `ic_live_subtitles` when on the left. Content description follows the cycle state (do not duplicate `onBackClick`; 0.19 already defaults it) |
 | `feature/player/.../buttons/RotateButton.kt` | `onBeforeRotate()` then `rotationState.rotate()`. Only this button closes the panel; `PlayerOrientationEffect` must not |
 | `feature/player/.../ui/SubtitleSelectorView.kt` | Track row: set `showOnVideoSubtitles` true and `switchTrack(index)`. **Off**: set the flag false and do **not** `switchTrack(-1)` |
@@ -161,6 +162,7 @@ Also keep `docs/live-subtitles.md` when present.
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
 - **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
 - **Rotate closes the panel (v1.1.1):** `RotateButton` `onBeforeRotate` calls `closePanel()` before changing orientation. Automatic / video-size orientation does not.
+- **Shared dock layout (v1.1.1):** `LiveSubtitlesSplit` places the 35% panel on the physical left or right and measures the video to the remainder. Horizontal insets stay on the screen edge they belong to; top and bottom insets apply to both panes. Controls use `LocalPlayerChromePadding` while the panel is open.
 - **Pause auto-follow:** cue scroll auto-follow resumes only while playing; jump-to-current always works (v1.0.4).
 - **Expanding-window fill:** seed near playhead then grow earlier/later bands with frequent partials (v1.0.5).
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).
@@ -306,7 +308,7 @@ Suggested run:
 | After download completes, open file | Plays immediately (not blank loading screen); DefaultDataSource path |
 | Mid-download MKV open | Starts without waiting for full file |
 | Mid-download scrub | Seeks to indexed downloaded clusters |
-| Live subtitles panel | Landscape split; cycle right then left then off; rotate button closes the panel; on-video subtitles follow `showOnVideoSubtitles` and stay independent of the panel |
+| Live subtitles panel | Shared left/right split (`LiveSubtitlesSplit`, 35% panel); cycle right then left then off; rotate button closes the panel; on-video subtitles follow `showOnVideoSubtitles` and stay independent of the panel |
 | Open with / share sheet | Finished local video via ACTION_VIEW / `content://` plays (not blank loader) |
 | Side-by-side install | Original Next Player package **not** overwritten (`dev.sahilkashid.nextplayer`) |
 

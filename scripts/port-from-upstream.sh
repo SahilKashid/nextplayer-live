@@ -161,6 +161,7 @@ fi
 LIVE_ONLY_PATHS=(
   # Feature A — Live subtitles
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesPanel.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesSplit.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesState.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacement.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesFollowController.kt"
@@ -196,6 +197,7 @@ LIVE_ONLY_PATHS=(
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/EmbeddedSubtitleCueExtractorTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueParserTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacementTest.kt"
+  "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesSplitTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesStatePlacementTest.kt"
 )
 

@@ -52,9 +52,12 @@ fun BoxScope.OverlayView(
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
     val layoutDirection = LocalLayoutDirection.current
-    val endPadding = WindowInsets.safeDrawing
-        .asPaddingValues()
-        .calculateEndPadding(layoutDirection)
+    val chromePadding = LocalPlayerChromePadding.current
+    val endPadding = if (chromePadding != null) {
+        chromePadding.calculateEndPadding(layoutDirection)
+    } else {
+        WindowInsets.safeDrawing.asPaddingValues().calculateEndPadding(layoutDirection)
+    }
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(show) {

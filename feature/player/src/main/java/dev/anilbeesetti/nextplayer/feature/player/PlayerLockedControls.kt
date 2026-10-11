@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.feature.player.buttons.PlayerButton
+import dev.anilbeesetti.nextplayer.feature.player.ui.LocalPlayerChromePadding
 
 @Composable
 fun PlayerLockedControls(
@@ -20,10 +21,17 @@ fun PlayerLockedControls(
     modifier: Modifier = Modifier,
     unlockButtonModifier: Modifier = Modifier,
 ) {
+    val chromePadding = LocalPlayerChromePadding.current
     Column(
         modifier = modifier
             .fillMaxSize()
-            .safeDrawingPadding()
+            .then(
+                if (chromePadding != null) {
+                    Modifier.padding(chromePadding)
+                } else {
+                    Modifier.safeDrawingPadding()
+                },
+            )
             .padding(top = 24.dp),
     ) {
         PlayerButton(

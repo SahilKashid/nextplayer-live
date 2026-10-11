@@ -147,12 +147,18 @@ internal fun BoxScope.PlayerVerticalGestureIndicators(
     maxVolumePercentage: Int,
     brightnessPercentage: Int,
 ) {
-    val systemBarsPadding = WindowInsets.systemBars.asPaddingValues()
+    val chromePadding = LocalPlayerChromePadding.current
+    val horizontalInset = if (chromePadding != null) {
+        Modifier.padding(chromePadding.copy(top = 0.dp, bottom = 0.dp))
+    } else {
+        Modifier
+            .displayCutoutPadding()
+            .padding(WindowInsets.systemBars.asPaddingValues().copy(top = 0.dp, bottom = 0.dp))
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .displayCutoutPadding()
-            .padding(systemBarsPadding.copy(top = 0.dp, bottom = 0.dp))
+            .then(horizontalInset)
             .padding(24.dp),
     ) {
         AnimatedVisibility(

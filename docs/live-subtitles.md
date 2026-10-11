@@ -30,7 +30,11 @@ active on that frame — no stuck previous-video scroll offset.
 Shipped in **v1.1.1**: the landscape button cycles off → right → left → off; the rotate
 button closes the panel before changing orientation; on-video subtitles stay independent
 of the panel (`showOnVideoSubtitles`). Picker **Off** hides the on-video view and leaves
-the selected text track enabled so the panel can still list its cues.
+the selected text track enabled so the panel can still list its cues. Left and right
+docks share one layout (`LiveSubtitlesSplit`): the panel is 35% of the width on the
+chosen physical side, and the video, on-video subtitles, and controls use the rest.
+Status, cutout, and navigation insets on an edge belong to the pane that touches that
+edge; top and bottom insets apply to both panes.
 
 ## Sources
 
@@ -93,9 +97,11 @@ An empty cue list for a **text** track (SRT/ASS/SSA/**VTT**, including when demu
 
 The landscape live-subtitles button (`ControlsTopView`, hidden in portrait and on TV) cycles three states:
 
-1. **Right** — panel on, docked on the right (video weight ~0.65, panel ~0.35).
-2. **Left** — same split, panel composed before the video.
+1. **Right** — panel on, docked on the physical right. The panel is 35% of the width and the video is the rest.
+2. **Left** — the same split, panel on the physical left. Video, on-video subtitles, and the controls overlay occupy the space to the right of the panel.
 3. **Off** — panel hidden, video uses the full width.
+
+Both docks are `LiveSubtitlesSplit` with the side as a parameter. Children are measured to those rectangles, so the panel cannot shrink to a button width and the video cannot draw over it. A left or right inset (display cutout, or a side system bar) is applied only to the pane that touches that screen edge. Top and bottom insets (status bar, navigation bar) apply to both panes. The panel background fills its slot; cue text and the close button are padded inside it. While the panel is open, controls read `LocalPlayerChromePadding` for that video slot instead of the full window insets, so chrome is not shifted by an inset the panel already owns. With the panel closed, controls keep the full window insets.
 
 The next tap after off always starts on the right. `LiveSubtitlesPanelPlacement` is the cycle. The button icon is mirrored when the panel is on the left, and its content description is `show_live_subtitles`, `live_subtitles_on_right`, or `live_subtitles_on_left`.
 
