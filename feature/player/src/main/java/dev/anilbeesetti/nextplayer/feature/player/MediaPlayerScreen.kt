@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -15,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -42,15 +40,12 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightn
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeState
 import dev.anilbeesetti.nextplayer.feature.player.ui.LiveSubtitlesPanel
 import dev.anilbeesetti.nextplayer.feature.player.ui.LiveSubtitlesSplit
-import dev.anilbeesetti.nextplayer.feature.player.ui.LocalPlayerChromePadding
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerErrorDialogs
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestures
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerVerticalGestureIndicators
 import dev.anilbeesetti.nextplayer.feature.player.ui.SubtitleConfiguration
 import dev.anilbeesetti.nextplayer.feature.player.ui.isPortrait
 import dev.anilbeesetti.nextplayer.feature.player.ui.preview.rememberPreviewPlayer
-import dev.anilbeesetti.nextplayer.feature.player.ui.rememberLiveSubtitlesSplitPadding
-import dev.anilbeesetti.nextplayer.feature.player.ui.toPaddingValues
 import kotlin.time.Duration.Companion.seconds
 
 val LocalControlsVisibilityState = compositionLocalOf<ControlsVisibilityState?> { null }
@@ -185,11 +180,6 @@ internal fun MediaPlayerContent(
     // returning to landscape (or after lock/recreate) restores an open panel.
     val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
     val showLiveSubtitlesOnLeft = showLiveSubtitlesPanel && liveSubtitlesState.isPanelOnLeft
-    val splitPadding = rememberLiveSubtitlesSplitPadding(
-        panelVisible = showLiveSubtitlesPanel,
-        panelOnLeft = showLiveSubtitlesOnLeft,
-    )
-    val density = LocalDensity.current
 
     LiveSubtitlesSplit(
         panelVisible = showLiveSubtitlesPanel,
@@ -198,87 +188,73 @@ internal fun MediaPlayerContent(
             .fillMaxSize()
             .background(Color.Black),
         panel = {
-            LiveSubtitlesPanel(
-                state = liveSubtitlesState,
-                contentPadding = splitPadding.panel.toPaddingValues(density),
-            )
+            LiveSubtitlesPanel(state = liveSubtitlesState)
         },
         player = {
-            val playerContent: @Composable () -> Unit = {
-                Box(Modifier.fillMaxSize()) {
-                    if (pictureInPictureState != null) {
-                        PlayerContentFrame(
-                            player = player,
-                            pictureInPictureState = pictureInPictureState,
-                            videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                            subtitleConfiguration = SubtitleConfiguration(
-                                useSystemCaptionStyle = playerPreferences.useSystemCaptionStyle,
-                                showBackground = playerPreferences.subtitleBackground,
-                                font = playerPreferences.subtitleFont,
-                                textSize = playerPreferences.subtitleTextSize,
-                                textBold = playerPreferences.subtitleTextBold,
-                                applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
-                                verticalPosition = playerPreferences.subtitleVerticalPosition,
-                            ),
-                            showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
-                        )
-                        if (volumeAndBrightnessGestureState != null) {
-                            PlayerGestures(
-                                controlsVisibilityState = controlsVisibilityState,
-                                tapGestureState = tapGestureState,
-                                pictureInPictureState = pictureInPictureState,
-                                seekGestureState = seekGestureState,
-                                videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                                volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
-                            )
-                        }
-                    }
-                    MediaPlayerControls(
+            Box(Modifier.fillMaxSize()) {
+                if (pictureInPictureState != null) {
+                    PlayerContentFrame(
                         player = player,
-                        state = state,
-                        onAction = onAction,
-                        controlsVisibilityState = controlsVisibilityState,
-                        tapGestureState = tapGestureState,
-                        seekGestureState = seekGestureState,
+                        pictureInPictureState = pictureInPictureState,
                         videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                        isPipSupported = pictureInPictureState?.isPipSupported == true,
-                        onPictureInPictureClick = {
-                            pictureInPictureState?.let {
-                                if (!it.hasPipPermission) {
-                                    Toast.makeText(context, R.string.enable_pip_from_settings, Toast.LENGTH_SHORT).show()
-                                    it.openPictureInPictureSettings()
-                                } else {
-                                    it.enterPictureInPictureMode()
-                                }
-                            }
-                        },
-                        onLiveSubtitlesClick = {
-                            liveSubtitlesState.cyclePanel()
-                            controlsVisibilityState.showControls()
-                        },
-                        isLiveSubtitlesVisible = showLiveSubtitlesPanel,
-                        isLiveSubtitlesOnLeft = showLiveSubtitlesOnLeft,
-                        showLiveSubtitlesToggle = isLandscape && !isTv,
-                        onBeforeRotate = { liveSubtitlesState.closePanel() },
+                        subtitleConfiguration = SubtitleConfiguration(
+                            useSystemCaptionStyle = playerPreferences.useSystemCaptionStyle,
+                            showBackground = playerPreferences.subtitleBackground,
+                            font = playerPreferences.subtitleFont,
+                            textSize = playerPreferences.subtitleTextSize,
+                            textBold = playerPreferences.subtitleTextBold,
+                            applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                            verticalPosition = playerPreferences.subtitleVerticalPosition,
+                        ),
+                        showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
                     )
-                    if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
-                        PlayerVerticalGestureIndicators(
-                            activeGesture = volumeAndBrightnessGestureState.activeGesture,
-                            volumePercentage = volumeState.volumePercentage,
-                            maxVolumePercentage = volumeState.maxVolumePercentage,
-                            brightnessPercentage = brightnessState.brightnessPercentage,
+                    if (volumeAndBrightnessGestureState != null) {
+                        PlayerGestures(
+                            controlsVisibilityState = controlsVisibilityState,
+                            tapGestureState = tapGestureState,
+                            pictureInPictureState = pictureInPictureState,
+                            seekGestureState = seekGestureState,
+                            videoZoomAndContentScaleState = videoZoomAndContentScaleState,
+                            volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
                         )
                     }
                 }
-            }
-            if (showLiveSubtitlesPanel) {
-                CompositionLocalProvider(
-                    LocalPlayerChromePadding provides splitPadding.content.toPaddingValues(density),
-                ) {
-                    playerContent()
+                MediaPlayerControls(
+                    player = player,
+                    state = state,
+                    onAction = onAction,
+                    controlsVisibilityState = controlsVisibilityState,
+                    tapGestureState = tapGestureState,
+                    seekGestureState = seekGestureState,
+                    videoZoomAndContentScaleState = videoZoomAndContentScaleState,
+                    isPipSupported = pictureInPictureState?.isPipSupported == true,
+                    onPictureInPictureClick = {
+                        pictureInPictureState?.let {
+                            if (!it.hasPipPermission) {
+                                Toast.makeText(context, R.string.enable_pip_from_settings, Toast.LENGTH_SHORT).show()
+                                it.openPictureInPictureSettings()
+                            } else {
+                                it.enterPictureInPictureMode()
+                            }
+                        }
+                    },
+                    onLiveSubtitlesClick = {
+                        liveSubtitlesState.cyclePanel()
+                        controlsVisibilityState.showControls()
+                    },
+                    isLiveSubtitlesVisible = showLiveSubtitlesPanel,
+                    isLiveSubtitlesOnLeft = showLiveSubtitlesOnLeft,
+                    showLiveSubtitlesToggle = isLandscape && !isTv,
+                    onBeforeRotate = { liveSubtitlesState.closePanel() },
+                )
+                if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
+                    PlayerVerticalGestureIndicators(
+                        activeGesture = volumeAndBrightnessGestureState.activeGesture,
+                        volumePercentage = volumeState.volumePercentage,
+                        maxVolumePercentage = volumeState.maxVolumePercentage,
+                        brightnessPercentage = brightnessState.brightnessPercentage,
+                    )
                 }
-            } else {
-                playerContent()
             }
         },
     )

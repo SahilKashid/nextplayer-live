@@ -33,8 +33,6 @@ of the panel (`showOnVideoSubtitles`). Picker **Off** hides the on-video view an
 the selected text track enabled so the panel can still list its cues. Left and right
 docks share one layout (`LiveSubtitlesSplit`): the panel is 35% of the width on the
 chosen physical side, and the video, on-video subtitles, and controls use the rest.
-Status, cutout, and navigation insets on an edge belong to the pane that touches that
-edge; top and bottom insets apply to both panes.
 
 ## Sources
 
@@ -101,7 +99,7 @@ The landscape live-subtitles button (`ControlsTopView`, hidden in portrait and o
 2. **Left** — the same split, panel on the physical left. Video, on-video subtitles, and the controls overlay occupy the space to the right of the panel.
 3. **Off** — panel hidden, video uses the full width.
 
-Both docks are `LiveSubtitlesSplit` with the side as a parameter. Children are measured to those rectangles, so the panel cannot shrink to a button width and the video cannot draw over it. A left or right inset (display cutout, or a side system bar) is applied only to the pane that touches that screen edge. Top and bottom insets (status bar, navigation bar) apply to both panes. The panel background fills its slot; cue text and the close button are padded inside it. While the panel is open, controls read `LocalPlayerChromePadding` for that video slot instead of the full window insets, so chrome is not shifted by an inset the panel already owns. With the panel closed, controls keep the full window insets.
+Both docks are `LiveSubtitlesSplit` with the side as a parameter. The panel and the player are measured to those rectangles and placed on the physical left or right, so the panel stays the same width on either side and the video and controls start at the panel's inner edge instead of drawing over it.
 
 The next tap after off always starts on the right. `LiveSubtitlesPanelPlacement` is the cycle. The button icon is mirrored when the panel is on the left, and its content description is `show_live_subtitles`, `live_subtitles_on_right`, or `live_subtitles_on_left`.
 

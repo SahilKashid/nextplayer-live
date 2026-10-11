@@ -67,7 +67,6 @@ private const val RapidCueGapMs = 500L
 fun LiveSubtitlesPanel(
     state: LiveSubtitlesState,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(),
 ) {
     // Fresh LazyListState per media/track signature so next/prev does not keep
     // the previous video's firstVisibleItemIndex. Progressive fills keep the
@@ -92,11 +91,7 @@ fun LiveSubtitlesPanel(
         color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
         tonalElevation = 3.dp,
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
-        ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val halfViewportPx = constraints.maxHeight / 2
             val halfViewportDp = with(density) { halfViewportPx.toDp() }
 
