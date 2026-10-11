@@ -172,13 +172,25 @@ internal fun MediaPlayerContent(
         subtitleDelayMs = subtitleOptionsState.delayMilliseconds,
         subtitleSpeed = subtitleOptionsState.speedMultiplier,
         initialPanelVisible = playerPreferences.liveSubtitlesPanelOpen,
-        onPanelVisibleChanged = { onAction(PlayerAction.SetLiveSubtitlesPanelOpen(it)) },
+        initialPanelOnLeft = playerPreferences.liveSubtitlesPanelOnLeft,
+        onPanelPlacementChanged = { open, onLeft ->
+            onAction(PlayerAction.SetLiveSubtitlesPanelOpen(open, onLeft))
+        },
     )
     // Hide only via this predicate when not landscape — keep isPanelVisible so
     // returning to landscape (or after lock/recreate) restores an open panel.
     val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
+    val showLiveSubtitlesOnLeft = showLiveSubtitlesPanel && liveSubtitlesState.isPanelOnLeft
 
     Row(Modifier.fillMaxSize().background(Color.Black)) {
+        if (showLiveSubtitlesOnLeft) {
+            LiveSubtitlesPanel(
+                state = liveSubtitlesState,
+                modifier = Modifier
+                    .weight(0.35f)
+                    .fillMaxHeight(),
+            )
+        }
         Box(
             Modifier
                 .weight(if (showLiveSubtitlesPanel) 0.65f else 1f)
@@ -198,7 +210,7 @@ internal fun MediaPlayerContent(
                     applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
                     verticalPosition = playerPreferences.subtitleVerticalPosition,
                 ),
-                showOverlaySubtitles = playerPreferences.shouldShowOverlaySubtitles(showLiveSubtitlesPanel),
+                showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
             )
             if (volumeAndBrightnessGestureState != null) {
                 PlayerGestures(
@@ -231,11 +243,13 @@ internal fun MediaPlayerContent(
                 }
             },
             onLiveSubtitlesClick = {
-                liveSubtitlesState.togglePanel()
+                liveSubtitlesState.cyclePanel()
                 controlsVisibilityState.showControls()
             },
             isLiveSubtitlesVisible = showLiveSubtitlesPanel,
+            isLiveSubtitlesOnLeft = showLiveSubtitlesOnLeft,
             showLiveSubtitlesToggle = isLandscape && !isTv,
+            onBeforeRotate = { liveSubtitlesState.closePanel() },
         )
         if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
             PlayerVerticalGestureIndicators(
@@ -246,7 +260,7 @@ internal fun MediaPlayerContent(
             )
         }
         }
-        if (showLiveSubtitlesPanel) {
+        if (showLiveSubtitlesPanel && !showLiveSubtitlesOnLeft) {
             LiveSubtitlesPanel(
                 state = liveSubtitlesState,
                 modifier = Modifier

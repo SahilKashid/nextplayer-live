@@ -15,8 +15,8 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.1.0 if tagged,
-                   else v1.0.9, else latest Live tag, else origin/main)
+  live-source-ref  Live tree to copy features from (default: v1.1.1 if tagged,
+                   else v1.1.0, else v1.0.9, else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
 fetches tags, prints branding + copy paths + touchpoints + next commands.
@@ -110,8 +110,11 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.1.0 (Live features on upstream v0.19.0), else v1.0.9, else newest v* tag, else origin/main.
-  if git rev-parse --verify -q "v1.1.0" >/dev/null 2>&1 || \
+  # Prefer v1.1.1, else v1.1.0 (Live on upstream v0.19.0), else v1.0.9, else newest v* tag, else origin/main.
+  if git rev-parse --verify -q "v1.1.1" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.1.1" >/dev/null 2>&1; then
+    LIVE_ARG="v1.1.1"
+  elif git rev-parse --verify -q "v1.1.0" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.1.0" >/dev/null 2>&1; then
     LIVE_ARG="v1.1.0"
   elif git rev-parse --verify -q "v1.0.9" >/dev/null 2>&1 || \
@@ -159,6 +162,8 @@ LIVE_ONLY_PATHS=(
   # Feature A — Live subtitles
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesPanel.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesState.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacement.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesFollowController.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCache.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueLoader.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueParser.kt"
@@ -190,6 +195,8 @@ LIVE_ONLY_PATHS=(
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCacheTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/EmbeddedSubtitleCueExtractorTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueParserTest.kt"
+  "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacementTest.kt"
+  "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesStatePlacementTest.kt"
 )
 
 TOUCHPOINTS=(
@@ -199,6 +206,10 @@ TOUCHPOINTS=(
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/service/PlayerService.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/MediaPlayerScreen.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/controls/ControlsTopView.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/buttons/RotateButton.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/SubtitleSelectorView.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/PlayerViewModel.kt"
+  "core/model/src/main/java/dev/anilbeesetti/nextplayer/core/model/PlayerPreferences.kt"
   "README.md"
 )
 
@@ -264,8 +275,11 @@ for p in "${TOUCHPOINTS[@]}"; do
   echo "  - $p"
 done
 cat <<'TOUCH'
-  MediaPlayerScreen: rememberLiveSubtitlesState, ~0.65/0.35 landscape, overlay with panel (showOverlaySubtitlesWithLivePanel, default on)
-  ControlsTopView: onLiveSubtitlesClick / isLiveSubtitlesVisible / showLiveSubtitlesToggle
+  MediaPlayerScreen: rememberLiveSubtitlesState, ~0.65/0.35 landscape, panel left or right, cyclePanel, closePanel before rotate
+  ControlsTopView: onLiveSubtitlesClick / isLiveSubtitlesVisible / isLiveSubtitlesOnLeft / showLiveSubtitlesToggle
+  RotateButton: onBeforeRotate then rotate (does not run for PlayerOrientationEffect)
+  SubtitleSelectorView: Off sets showOnVideoSubtitles false and does not switchTrack(-1)
+  PlayerPreferences: liveSubtitlesPanelOnLeft, showOnVideoSubtitles (showOverlaySubtitlesWithLivePanel is legacy JSON only)
   NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
@@ -278,6 +292,8 @@ cat <<'TOUCH'
                              Previous→previous media item (seekToPreviousMediaItem + maxSeek MAX): v1.0.8;
                              v1.0.9 keeps the above on upstream v0.18.0.
                              v1.1.0 keeps them on upstream v0.19.0: stay on Koin (do not restore Hilt);
+                             v1.1.1: panel cycle off→right→left→off; rotate button closes the panel;
+                             on-video subtitles independent via showOnVideoSubtitles.
                              wrap GrowingAwareExtractorsFactory inside ExternalAudioMediaSourceFactory;
                              wire the panel through MediaPlayerContent / PlayerControls / ControlsTopView;
                              keep chapters, external audio, NEW badges, watch history, tunneled playback)

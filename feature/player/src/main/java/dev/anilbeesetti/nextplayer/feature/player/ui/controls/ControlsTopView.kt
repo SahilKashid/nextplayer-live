@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -52,6 +53,7 @@ fun ControlsTopView(
     onPlaylistClick: () -> Unit = {},
     onLiveSubtitlesClick: () -> Unit = {},
     isLiveSubtitlesVisible: Boolean = false,
+    isLiveSubtitlesOnLeft: Boolean = false,
     showLiveSubtitlesToggle: Boolean = true,
 ) {
     val firstControlFocusRequester = remember { FocusRequester() }
@@ -126,12 +128,13 @@ fun ControlsTopView(
                     Icon(
                         painter = painterResource(R.drawable.ic_live_subtitles),
                         contentDescription = stringResource(
-                            if (isLiveSubtitlesVisible) {
-                                R.string.hide_live_subtitles
-                            } else {
-                                R.string.show_live_subtitles
+                            when {
+                                !isLiveSubtitlesVisible -> R.string.show_live_subtitles
+                                isLiveSubtitlesOnLeft -> R.string.live_subtitles_on_left
+                                else -> R.string.live_subtitles_on_right
                             },
                         ),
+                        modifier = Modifier.scale(scaleX = if (isLiveSubtitlesOnLeft) -1f else 1f, scaleY = 1f),
                         tint = if (isLiveSubtitlesVisible) {
                             MaterialTheme.colorScheme.primary
                         } else {

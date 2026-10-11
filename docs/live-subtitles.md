@@ -27,6 +27,11 @@ Shipped in **v1.0.7**: on next/prev media, the live panel snaps immediately to t
 playhead’s cue zone (`listResetKey` + `nearestCueIndexByPlayhead`) even if no cue is
 active on that frame — no stuck previous-video scroll offset.
 
+Shipped in **v1.1.1**: the landscape button cycles off → right → left → off; the rotate
+button closes the panel before changing orientation; on-video subtitles stay independent
+of the panel (`showOnVideoSubtitles`). Picker **Off** hides the on-video view and leaves
+the selected text track enabled so the panel can still list its cues.
+
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and **WebVTT (`.vtt`)** are parsed by `SubtitleCueParser` (including headerless VTT, NOTE/STYLE/REGION blocks, optional hours, multiline cues, `<v>` voice spans, and settings after `-->`). ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files. MIME is taken from the URI extension when possible (`text/vtt` for `.vtt`), with content sniffing and `Format.codecs` fallbacks when `content://` paths omit the extension.
@@ -84,11 +89,36 @@ Image-based subtitles (**PGS**, **VobSub**, **DVB**) cannot be turned into a tex
 
 An empty cue list for a **text** track (SRT/ASS/SSA/**VTT**, including when demux finds nothing yet) shows the generic empty message (`live_subtitles_empty`), not the image-based unsupported string. OCR for PGS/VobSub/DVB is out of scope.
 
-## Overlay with the live panel
+## Button cycle and side
 
-The landscape panel no longer forces the on-video `SubtitleView` overlay off.
+The landscape live-subtitles button (`ControlsTopView`, hidden in portrait and on TV) cycles three states:
 
-`PlayerPreferences.showOverlaySubtitlesWithLivePanel` (default **true**) controls whether the normal overlay stays visible while the panel is open. When the panel is closed, the overlay is always shown. Toggle this in **Settings → Subtitle → Show on-screen subtitles with live panel**.
+1. **Right** — panel on, docked on the right (video weight ~0.65, panel ~0.35).
+2. **Left** — same split, panel composed before the video.
+3. **Off** — panel hidden, video uses the full width.
+
+The next tap after off always starts on the right. `LiveSubtitlesPanelPlacement` is the cycle. The button icon is mirrored when the panel is on the left, and its content description is `show_live_subtitles`, `live_subtitles_on_right`, or `live_subtitles_on_left`.
+
+`PlayerPreferences.liveSubtitlesPanelOpen` still remembers whether the panel was left open (pause / lock / recreate). `liveSubtitlesPanelOnLeft` is restored only while that flag is true. Closing the panel (cycle, panel close control, or rotate) stores both flags false, so a new cycle starts on the right.
+
+Portrait / non-landscape still hides the panel only via `showLiveSubtitlesPanel = isPanelVisible && isLandscape && !isTv`. That predicate does **not** clear `isPanelVisible`, so a configuration change back to landscape restores an open panel and its side. The player's **rotate button** is different: it calls `LiveSubtitlesState.closePanel()` before `RotationState.rotate()`.
+
+## On-video subtitles stay independent
+
+The live panel and the on-video `SubtitleView` are separate:
+
+| Live panel | On-video subtitles | Result |
+|------------|--------------------|--------|
+| on | on | Side list and overlay |
+| on | off | Side list only; overlay hidden |
+| off | on | Overlay only |
+| off | off | Neither |
+
+`PlayerPreferences.showOnVideoSubtitles` (default **true**) is what `PlayerContentFrame` uses for `showOverlaySubtitles`. It does not look at whether the panel is open. `showOverlaySubtitlesWithLivePanel` remains in the model so older preference JSON still decodes; playback ignores it.
+
+The subtitle track picker is the control. Choosing a track sets `showOnVideoSubtitles` true and `switchTrack(index)`. **Off** sets `showOnVideoSubtitles` false and does **not** call `switchTrack(-1)`. The text track stays selected, so `SubtitleCueLoader.resolveSelectedSubtitle` and `EVENT_CUES` / `currentCues` keep feeding the panel while the overlay view is not composed. The same flag is the **Settings → Subtitle → Show on-screen subtitles** switch.
+
+`applySubtitleSelection` still selects a real text track when any exist (never leave Disable). That keeps panel cues available after Off.
 
 ## Overlay vertical position
 
@@ -103,9 +133,9 @@ Intentionally high VTT lines (for example `line:10%`) and bitmap cues are left a
 
 ## Panel open persistence
 
-`PlayerPreferences.liveSubtitlesPanelOpen` (default **false**) remembers whether the user left the live panel open. The player toggle and panel close control write this pref; on activity recreate (pause / screen lock) the panel restores when landscape again.
+`PlayerPreferences.liveSubtitlesPanelOpen` (default **false**) remembers whether the user left the live panel open. The cycle, the panel close control, and the rotate button write this pref together with `liveSubtitlesPanelOnLeft`. On activity recreate (pause / screen lock) an open panel restores on the same side when landscape again.
 
-Portrait / non-landscape only hides the panel via the `showLiveSubtitlesPanel = isPanelVisible && isLandscape && !isTv` predicate — it does **not** clear `isPanelVisible`, so rotating back to landscape brings the panel back if it was open.
+A device or system orientation change that is not the rotate button only hides the panel via the landscape predicate — it does **not** clear `isPanelVisible`. The rotate button does clear it. See **Button cycle and side**.
 
 ## Media item / track change (next/prev)
 

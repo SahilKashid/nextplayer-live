@@ -215,8 +215,8 @@ private fun SubtitlePreferencesScreenContent(
                     title = stringResource(id = R.string.subtitle_overlay_with_live_panel),
                     description = stringResource(id = R.string.subtitle_overlay_with_live_panel_desc),
                     icon = NextIcons.Caption,
-                    isChecked = state.preferences.showOverlaySubtitlesWithLivePanel,
-                    onClick = { onAction(SubtitlePreferencesUiEvent.ToggleShowOverlaySubtitlesWithLivePanel) },
+                    isChecked = state.preferences.showOnVideoSubtitles,
+                    onClick = { onAction(SubtitlePreferencesUiEvent.ToggleShowOnVideoSubtitles) },
                     isFirstItem = true,
                     isLastItem = true,
                 )

@@ -554,11 +554,13 @@
     <string name="live_subtitles">Live subtitles</string>
     <string name="show_live_subtitles">Show live subtitles</string>
     <string name="hide_live_subtitles">Hide live subtitles</string>
+    <string name="live_subtitles_on_right">Live subtitles on the right</string>
+    <string name="live_subtitles_on_left">Live subtitles on the left</string>
     <string name="jump_to_current_cue">Jump to current cue</string>
     <string name="live_subtitles_empty">No subtitle track selected, or this track has no cues to list.</string>
     <string name="live_subtitles_unsupported">Live subtitles are not available for this track. Image-based subtitles (PGS, VobSub, DVB) cannot be listed as text.</string>
-    <string name="subtitle_overlay_with_live_panel">Show on-screen subtitles with live panel</string>
-    <string name="subtitle_overlay_with_live_panel_desc">Keep the normal video overlay visible when the live subtitles side panel is open</string>
+    <string name="subtitle_overlay_with_live_panel">Show on-screen subtitles</string>
+    <string name="subtitle_overlay_with_live_panel_desc">Show subtitles on the video. This stays independent of the live subtitles panel.</string>
     <string name="subtitle_vertical_position">Subtitle vertical position</string>
     <string name="subtitle_vertical_position_bottom">Bottom</string>
     <string name="subtitle_vertical_position_value">%1$d%% toward center</string>

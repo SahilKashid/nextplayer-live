@@ -55,7 +55,7 @@ class SubtitlePreferencesViewModel(
             is SubtitlePreferencesUiEvent.UpdateSubtitleEncoding -> updateSubtitleEncoding(action.value)
             is SubtitlePreferencesUiEvent.ToggleUseSystemCaptionStyle -> toggleUseSystemCaptionStyle()
             is SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition -> updateSubtitleVerticalPosition(action.value)
-            is SubtitlePreferencesUiEvent.ToggleShowOverlaySubtitlesWithLivePanel -> toggleShowOverlaySubtitlesWithLivePanel()
+            is SubtitlePreferencesUiEvent.ToggleShowOnVideoSubtitles -> toggleShowOnVideoSubtitles()
         }
     }
 
@@ -138,10 +138,10 @@ class SubtitlePreferencesViewModel(
         }
     }
 
-    private fun toggleShowOverlaySubtitlesWithLivePanel() {
+    private fun toggleShowOnVideoSubtitles() {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
-                it.copy(showOverlaySubtitlesWithLivePanel = !it.showOverlaySubtitlesWithLivePanel)
+                it.copy(showOnVideoSubtitles = !it.showOnVideoSubtitles)
             }
         }
     }
@@ -172,5 +172,5 @@ sealed interface SubtitlePreferencesUiEvent {
     data class UpdateSubtitleEncoding(val value: String) : SubtitlePreferencesUiEvent
     data object ToggleUseSystemCaptionStyle : SubtitlePreferencesUiEvent
     data class UpdateSubtitleVerticalPosition(val value: Float) : SubtitlePreferencesUiEvent
-    data object ToggleShowOverlaySubtitlesWithLivePanel : SubtitlePreferencesUiEvent
+    data object ToggleShowOnVideoSubtitles : SubtitlePreferencesUiEvent
 }

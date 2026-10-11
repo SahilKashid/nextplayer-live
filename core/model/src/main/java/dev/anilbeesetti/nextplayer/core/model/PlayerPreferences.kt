@@ -57,12 +57,30 @@ data class PlayerPreferences(
     val subtitleFont: Font = Font.DEFAULT,
     val subtitleTextBold: Boolean = true,
     val applyEmbeddedStyles: Boolean = true,
+    /**
+     * Kept so older preference JSON still decodes. The player no longer uses this to hide
+     * the overlay; on-video subtitles follow [showOnVideoSubtitles].
+     */
     val showOverlaySubtitlesWithLivePanel: Boolean = true,
     val liveSubtitlesPanelOpen: Boolean = false,
+    /** Restored only while [liveSubtitlesPanelOpen] is true. A new cycle always starts on the right. */
+    val liveSubtitlesPanelOnLeft: Boolean = false,
+    /**
+     * On-video subtitle rendering. Independent of the live panel: the player keeps a text
+     * track selected so the panel can still list cues when this is false.
+     */
+    val showOnVideoSubtitles: Boolean = true,
     val subtitleVerticalPosition: Float = DEFAULT_SUBTITLE_VERTICAL_POSITION,
 ) {
+    /**
+     * Legacy helper for [showOverlaySubtitlesWithLivePanel]. Playback uses
+     * [shouldShowOnVideoSubtitles], which ignores the live panel.
+     */
     fun shouldShowOverlaySubtitles(livePanelVisible: Boolean): Boolean =
         !livePanelVisible || showOverlaySubtitlesWithLivePanel
+
+    /** On-video subtitle view. Ignores whether the live panel is open. */
+    fun shouldShowOnVideoSubtitles(): Boolean = showOnVideoSubtitles
 
     companion object {
         const val DEFAULT_SEEK_INCREMENT = 10

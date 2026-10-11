@@ -55,6 +55,8 @@ fun BoxScope.SubtitleSelectorView(
     modifier: Modifier = Modifier,
     show: Boolean,
     player: Player,
+    showOnVideoSubtitles: Boolean = true,
+    onShowOnVideoSubtitlesChange: (Boolean) -> Unit = {},
     onSelectSubtitleClick: () -> Unit,
     onEvent: (SubtitleOptionsEvent) -> Unit = {},
     onDismiss: () -> Unit,
@@ -76,19 +78,23 @@ fun BoxScope.SubtitleSelectorView(
         ) {
             subtitleTracksState.tracks.forEachIndexed { index, track ->
                 RadioButtonRow(
-                    selected = track.isSelected,
+                    selected = showOnVideoSubtitles && track.isSelected,
                     text = track.mediaTrackGroup.getName(C.TRACK_TYPE_TEXT, index),
                     onClick = {
+                        // Keep a text track selected so the live panel can still load cues.
+                        onShowOnVideoSubtitlesChange(true)
                         subtitleTracksState.switchTrack(index)
                         onDismiss()
                     },
                 )
             }
             RadioButtonRow(
-                selected = subtitleTracksState.tracks.none { it.isSelected },
+                selected = !showOnVideoSubtitles,
                 text = stringResource(R.string.disable),
                 onClick = {
-                    subtitleTracksState.switchTrack(-1)
+                    // Hide the on-video subtitle view only. Do not disable the text track:
+                    // the live panel reads that track's cues independently.
+                    onShowOnVideoSubtitlesChange(false)
                     onDismiss()
                 },
             )

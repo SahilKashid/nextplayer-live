@@ -72,7 +72,8 @@ class PlayerViewModel(
             is PlayerAction.ToggleTimeDisplay -> toggleTimeDisplay()
             is PlayerAction.OnVideoZoomEvent -> onVideoZoomEvent(action.event)
             is PlayerAction.OnSubtitleOptionEvent -> onSubtitleOptionEvent(action.event)
-            is PlayerAction.SetLiveSubtitlesPanelOpen -> setLiveSubtitlesPanelOpen(action.open)
+            is PlayerAction.SetLiveSubtitlesPanelOpen -> setLiveSubtitlesPanelOpen(action.open, action.onLeft)
+            is PlayerAction.SetShowOnVideoSubtitles -> setShowOnVideoSubtitles(action.show)
         }
     }
 
@@ -86,9 +87,20 @@ class PlayerViewModel(
         }
     }
 
-    private fun setLiveSubtitlesPanelOpen(open: Boolean) {
+    private fun setLiveSubtitlesPanelOpen(open: Boolean, onLeft: Boolean) {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences { it.copy(liveSubtitlesPanelOpen = open) }
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(
+                    liveSubtitlesPanelOpen = open,
+                    liveSubtitlesPanelOnLeft = onLeft,
+                )
+            }
+        }
+    }
+
+    private fun setShowOnVideoSubtitles(show: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(showOnVideoSubtitles = show) }
         }
     }
 
@@ -173,5 +185,6 @@ sealed interface PlayerAction {
     data object ToggleTimeDisplay : PlayerAction
     data class OnVideoZoomEvent(val event: VideoZoomEvent) : PlayerAction
     data class OnSubtitleOptionEvent(val event: SubtitleOptionsEvent) : PlayerAction
-    data class SetLiveSubtitlesPanelOpen(val open: Boolean) : PlayerAction
+    data class SetLiveSubtitlesPanelOpen(val open: Boolean, val onLeft: Boolean = false) : PlayerAction
+    data class SetShowOnVideoSubtitles(val show: Boolean) : PlayerAction
 }
