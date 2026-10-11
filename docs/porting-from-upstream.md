@@ -41,8 +41,8 @@ local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 **v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
 audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes);
 **v1.1.1** cycles the landscape panel off → right → left → off, closes it from the rotate
-button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` once tagged,
-else latest Live tag / `origin/main`).
+button, keeps on-video subtitles independent of the panel, and applies on-video cues in
+the player `onCues` callback (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`).
 
 ---
 
@@ -94,7 +94,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -157,7 +157,7 @@ Also keep `docs/live-subtitles.md` when present.
   image-based unsupported string (v1.0.3).
 - **Empty cache:** never cache empty cue lists; ASS/SSA may need a raw-sample retry demux (v1.0.3).
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
-- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only).
+- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only). Apply overlay cues from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`); do not route them through `rememberCuesState`.
 - **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
 - **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
