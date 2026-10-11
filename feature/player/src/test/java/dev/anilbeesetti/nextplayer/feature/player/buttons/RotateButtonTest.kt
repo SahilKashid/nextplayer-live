@@ -76,7 +76,7 @@ class RotateButtonTest {
             }
             composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.screen_rotation)).performClick()
             composeRule.runOnIdle {
-                assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, orientationWhenPanelClosed)
+                assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT, orientationWhenPanelClosed)
                 assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, composeRule.activity.requestedOrientation)
                 visible.value = false
             }
