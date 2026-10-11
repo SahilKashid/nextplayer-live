@@ -43,6 +43,9 @@ class PlayerPreferencesTest {
         assertEquals(PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION, preferences.subtitleVerticalPosition)
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = false))
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = true))
+        assertFalse(preferences.liveSubtitlesPanelOnLeft)
+        assertTrue(preferences.showOnVideoSubtitles)
+        assertTrue(preferences.shouldShowOnVideoSubtitles())
         assertFalse(preferences.enableTunneledPlayback)
         assertFalse(preferences.showRemainingTime)
     }
@@ -66,6 +69,9 @@ class PlayerPreferencesTest {
         assertTrue(decoded.showOverlaySubtitlesWithLivePanel)
         assertEquals("eng", decoded.preferredSubtitleLanguage)
         assertFalse(decoded.liveSubtitlesPanelOpen)
+        assertFalse(decoded.liveSubtitlesPanelOnLeft)
+        assertTrue(decoded.showOnVideoSubtitles)
+        assertTrue(decoded.shouldShowOnVideoSubtitles())
         assertEquals(0.2f, decoded.subtitleVerticalPosition)
         assertFalse(decoded.enableTunneledPlayback)
     }
@@ -87,9 +93,23 @@ class PlayerPreferencesTest {
     fun liveSubtitlesPanelOpenRoundTrip() {
         assertFalse(PlayerPreferences().liveSubtitlesPanelOpen)
 
-        val original = PlayerPreferences(liveSubtitlesPanelOpen = true)
+        val original = PlayerPreferences(liveSubtitlesPanelOpen = true, liveSubtitlesPanelOnLeft = true)
         val decoded = Json.decodeFromString<PlayerPreferences>(Json.encodeToString(original))
 
+        assertTrue(decoded.liveSubtitlesPanelOpen)
+        assertTrue(decoded.liveSubtitlesPanelOnLeft)
+    }
+
+    @Test
+    fun onVideoSubtitlesStayIndependentOfTheLivePanel() {
+        val hidden = PlayerPreferences(showOnVideoSubtitles = false, liveSubtitlesPanelOpen = true)
+        val shown = PlayerPreferences(showOnVideoSubtitles = true, liveSubtitlesPanelOpen = false)
+
+        assertFalse(hidden.shouldShowOnVideoSubtitles())
+        assertTrue(shown.shouldShowOnVideoSubtitles())
+
+        val decoded = Json.decodeFromString<PlayerPreferences>(Json.encodeToString(hidden))
+        assertFalse(decoded.showOnVideoSubtitles)
         assertTrue(decoded.liveSubtitlesPanelOpen)
     }
 }

@@ -82,6 +82,7 @@ fun ControlsBottomView(
     onPictureInPictureClick: () -> Unit,
     onPlaybackSpeedClick: () -> Unit,
     onPlayInBackgroundClick: () -> Unit,
+    onBeforeRotate: () -> Unit = {},
     onSeek: (Long) -> Unit,
     onSeekEnd: () -> Unit,
 ) {
@@ -177,7 +178,7 @@ fun ControlsBottomView(
                 )
 
                 if (!isTv) {
-                    RotateButton()
+                    RotateButton(onBeforeRotate = onBeforeRotate)
                 }
             }
         }

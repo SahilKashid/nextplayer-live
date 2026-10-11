@@ -45,18 +45,20 @@ fun rememberLiveSubtitlesState(
     subtitleDelayMs: Long = 0L,
     subtitleSpeed: Float = 1f,
     initialPanelVisible: Boolean = false,
-    onPanelVisibleChanged: (Boolean) -> Unit = {},
+    initialPanelOnLeft: Boolean = false,
+    onPanelPlacementChanged: (open: Boolean, onLeft: Boolean) -> Unit = { _, _ -> },
 ): LiveSubtitlesState {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val panelVisibleChanged = rememberUpdatedState(onPanelVisibleChanged)
+    val panelPlacementChanged = rememberUpdatedState(onPanelPlacementChanged)
     val state = remember(player) {
         LiveSubtitlesState(
             player = player,
             context = context,
             scope = scope,
             initialPanelVisible = initialPanelVisible,
-            onPanelVisibleChanged = { visible -> panelVisibleChanged.value(visible) },
+            initialPanelOnLeft = initialPanelOnLeft,
+            onPanelPlacementChanged = { open, onLeft -> panelPlacementChanged.value(open, onLeft) },
         )
     }
     LaunchedEffect(player) { state.observe() }
@@ -77,7 +79,8 @@ class LiveSubtitlesState(
     private val context: Context,
     private val scope: CoroutineScope,
     initialPanelVisible: Boolean = false,
-    private val onPanelVisibleChanged: (Boolean) -> Unit = {},
+    initialPanelOnLeft: Boolean = false,
+    private val onPanelPlacementChanged: (open: Boolean, onLeft: Boolean) -> Unit = { _, _ -> },
 ) {
     var cues: List<TimedCue> by mutableStateOf(emptyList())
         private set
@@ -104,6 +107,10 @@ class LiveSubtitlesState(
         private set
 
     var isPanelVisible: Boolean by mutableStateOf(initialPanelVisible)
+        private set
+
+    /** True when the open panel is docked on the left. Ignored while the panel is closed. */
+    var isPanelOnLeft: Boolean by mutableStateOf(initialPanelOnLeft && initialPanelVisible)
         private set
 
     var isFollowing: Boolean by mutableStateOf(true)
@@ -138,20 +145,38 @@ class LiveSubtitlesState(
         onFollowingChanged = { following -> isFollowing = following },
     )
 
-    fun togglePanel() {
-        updatePanelVisible(!isPanelVisible)
+    /** Off → right → left → off. */
+    fun cyclePanel() {
+        applyPlacement(LiveSubtitlesPanelPlacement.from(isPanelVisible, isPanelOnLeft).cycle())
+    }
+
+    /** Rotate dismisses the panel before the orientation change. */
+    fun closePanel() {
+        applyPlacement(LiveSubtitlesPanelPlacement.OFF)
     }
 
     fun updatePanelVisible(visible: Boolean) {
-        if (isPanelVisible == visible) {
+        val placement = if (visible) {
+            LiveSubtitlesPanelPlacement.from(open = true, onLeft = isPanelOnLeft)
+        } else {
+            LiveSubtitlesPanelPlacement.OFF
+        }
+        applyPlacement(placement)
+    }
+
+    private fun applyPlacement(placement: LiveSubtitlesPanelPlacement) {
+        val visible = placement.isOpen
+        val onLeft = placement.onLeft
+        if (isPanelVisible == visible && isPanelOnLeft == onLeft) {
             if (visible) {
                 followController.resetFollowing()
                 updateCurrentCueIndexFromPlayer()
             }
             return
         }
+        isPanelOnLeft = onLeft
         isPanelVisible = visible
-        onPanelVisibleChanged(visible)
+        onPanelPlacementChanged(visible, onLeft)
         if (visible) {
             followController.resetFollowing()
             updateCurrentCueIndexFromPlayer()

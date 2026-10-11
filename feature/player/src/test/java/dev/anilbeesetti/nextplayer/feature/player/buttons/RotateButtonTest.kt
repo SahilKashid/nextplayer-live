@@ -61,14 +61,22 @@ class RotateButtonTest {
             composeRule.runOnIdle {
                 composeRule.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
+            var orientationWhenPanelClosed = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             composeRule.setContent {
                 PlayerOrientationEffect(player, ScreenOrientation.PORTRAIT)
                 NextPlayerTheme {
-                    if (visible.value) RotateButton()
+                    if (visible.value) {
+                        RotateButton(
+                            onBeforeRotate = {
+                                orientationWhenPanelClosed = composeRule.activity.requestedOrientation
+                            },
+                        )
+                    }
                 }
             }
             composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.screen_rotation)).performClick()
             composeRule.runOnIdle {
+                assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT, orientationWhenPanelClosed)
                 assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, composeRule.activity.requestedOrientation)
                 visible.value = false
             }

@@ -51,7 +51,9 @@ fun PlayerControls(
     onPictureInPictureClick: () -> Unit,
     onLiveSubtitlesClick: () -> Unit = {},
     isLiveSubtitlesVisible: Boolean = false,
+    isLiveSubtitlesOnLeft: Boolean = false,
     showLiveSubtitlesToggle: Boolean = false,
+    onBeforeRotate: () -> Unit = {},
     modifier: Modifier = Modifier,
     middleControlsModifier: Modifier = Modifier,
 ) {
@@ -74,6 +76,7 @@ fun PlayerControls(
                     onPlaylistClick = { onShowOverlay(OverlayView.PLAYLIST) },
                     onLiveSubtitlesClick = onLiveSubtitlesClick,
                     isLiveSubtitlesVisible = isLiveSubtitlesVisible,
+                    isLiveSubtitlesOnLeft = isLiveSubtitlesOnLeft,
                     showLiveSubtitlesToggle = showLiveSubtitlesToggle,
                     onBackClick = onBackClick,
                 )
@@ -111,6 +114,7 @@ fun PlayerControls(
                     },
                     onVideoContentScaleLongClick = { onShowOverlay(OverlayView.VIDEO_CONTENT_SCALE) },
                     onPictureInPictureClick = onPictureInPictureClick,
+                    onBeforeRotate = onBeforeRotate,
                 )
             }
         }

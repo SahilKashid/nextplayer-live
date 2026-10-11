@@ -12,12 +12,18 @@ import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberRotationState
 
 @Composable
-fun RotateButton(modifier: Modifier = Modifier) {
+fun RotateButton(
+    modifier: Modifier = Modifier,
+    onBeforeRotate: () -> Unit = {},
+) {
     val rotationState = rememberRotationState()
     PlayerButton(
         modifier = modifier,
         enabled = rotationState != null,
-        onClick = { rotationState?.rotate() },
+        onClick = {
+            onBeforeRotate()
+            rotationState?.rotate()
+        },
         containerColor = PlayerButtonBlackAlpha,
         contentPadding = PaddingValues(8.dp),
     ) {

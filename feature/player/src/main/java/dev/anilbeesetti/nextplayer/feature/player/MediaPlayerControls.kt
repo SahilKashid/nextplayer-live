@@ -62,7 +62,9 @@ internal fun MediaPlayerControls(
     onPictureInPictureClick: () -> Unit,
     onLiveSubtitlesClick: () -> Unit = {},
     isLiveSubtitlesVisible: Boolean = false,
+    isLiveSubtitlesOnLeft: Boolean = false,
     showLiveSubtitlesToggle: Boolean = false,
+    onBeforeRotate: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val playerPreferences = state.playerPreferences
@@ -172,7 +174,9 @@ internal fun MediaPlayerControls(
                     onPictureInPictureClick = onPictureInPictureClick,
                     onLiveSubtitlesClick = onLiveSubtitlesClick,
                     isLiveSubtitlesVisible = isLiveSubtitlesVisible,
+                    isLiveSubtitlesOnLeft = isLiveSubtitlesOnLeft,
                     showLiveSubtitlesToggle = showLiveSubtitlesToggle,
+                    onBeforeRotate = onBeforeRotate,
                     middleControlsModifier = Modifier.thenIf(isTv) {
                         focusRequester(middleControlsFocusRequester)
                             .onFocusChanged { isMiddleControlsFocused = it.hasFocus }
@@ -201,6 +205,8 @@ internal fun MediaPlayerControls(
                 onSelectSubtitleClick = { onAction(PlayerAction.SelectSubtitle) },
                 onSelectAudioClick = { onAction(PlayerAction.SelectAudio) },
                 onSubtitleOptionEvent = { onAction(PlayerAction.OnSubtitleOptionEvent(it)) },
+                showOnVideoSubtitles = playerPreferences.showOnVideoSubtitles,
+                onShowOnVideoSubtitlesChange = { onAction(PlayerAction.SetShowOnVideoSubtitles(it)) },
                 onVideoContentScaleChanged = videoZoomAndContentScaleState::onVideoContentScaleChanged,
             )
         }

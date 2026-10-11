@@ -39,8 +39,10 @@ and decoded labels;
 **v1.0.9** re-applies those Live features onto upstream **v0.18.0** (decoder choices survive adding
 local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 **v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
-audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes) (prefer `v1.1.0` or
-latest Live tag / `origin/main`).
+audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes);
+**v1.1.1** cycles the landscape panel off → right → left → off, closes it from the rotate
+button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` once tagged,
+else latest Live tag / `origin/main`).
 
 ---
 
@@ -92,7 +94,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -106,6 +108,7 @@ sequence). Never publish Live under upstream’s `applicationId`.
 ```
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesPanel.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesState.kt
+feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacement.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesFollowController.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCache.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueLoader.kt
@@ -118,6 +121,7 @@ core/ui/src/main/res/drawable/ic_live_subtitles.xml
 
 - `live_subtitles`
 - `show_live_subtitles` / `hide_live_subtitles`
+- `live_subtitles_on_right` / `live_subtitles_on_left`
 - `jump_to_current_cue`
 - `live_subtitles_empty`
 - `live_subtitles_unsupported`
@@ -128,10 +132,14 @@ Also keep `docs/live-subtitles.md` when present.
 
 | File | What to restore |
 |------|-----------------|
-| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState`; landscape `Row` weight split ~**0.65 / 0.35**; overlay visibility follows `showOverlaySubtitlesWithLivePanel` (default both on); host `LiveSubtitlesPanel`. Pass toggle props through `MediaPlayerControls` → `PlayerControls` |
-| `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `showLiveSubtitlesToggle` (do not duplicate `onBackClick`; 0.19 already defaults it) |
-| `feature/player/.../PlayerViewModel.kt` | `PlayerAction.SetLiveSubtitlesPanelOpen` persists `liveSubtitlesPanelOpen` |
-| `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when overlay should hide |
+| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); landscape `Row` — panel **before** the video when on the left, **after** when on the right, weights ~**0.65 / 0.35**; `showOverlaySubtitles = shouldShowOnVideoSubtitles()` (not the old overlay-with-panel helper); `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. Pass side + rotate props through `MediaPlayerControls` → `PlayerControls` → `ControlsBottomView` |
+| `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `isLiveSubtitlesOnLeft` / `showLiveSubtitlesToggle`. Mirror `ic_live_subtitles` when on the left. Content description follows the cycle state (do not duplicate `onBackClick`; 0.19 already defaults it) |
+| `feature/player/.../buttons/RotateButton.kt` | `onBeforeRotate()` then `rotationState.rotate()`. Only this button closes the panel; `PlayerOrientationEffect` must not |
+| `feature/player/.../ui/SubtitleSelectorView.kt` | Track row: set `showOnVideoSubtitles` true and `switchTrack(index)`. **Off**: set the flag false and do **not** `switchTrack(-1)` |
+| `feature/player/.../PlayerViewModel.kt` | `SetLiveSubtitlesPanelOpen(open, onLeft)` persists both flags. `SetShowOnVideoSubtitles` persists `showOnVideoSubtitles` |
+| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay |
+| `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when `showOverlaySubtitles` is false |
+| `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles` |
 | `feature/player/.../ui/SubtitleView.kt` | Keep 0.19 `currentCues?.cues`; apply `SubtitleVerticalPosition` |
 
 ### Hard-won behavior (do not “simplify” away)
@@ -148,9 +156,11 @@ Also keep `docs/live-subtitles.md` when present.
   image-based unsupported string (v1.0.3).
 - **Empty cache:** never cache empty cue lists; ASS/SSA may need a raw-sample retry demux (v1.0.3).
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
-- **Overlay + panel:** `showOverlaySubtitlesWithLivePanel` default **on** (v1.0.3).
+- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only).
 - **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
+- **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
+- **Rotate closes the panel (v1.1.1):** `RotateButton` `onBeforeRotate` calls `closePanel()` before changing orientation. Automatic / video-size orientation does not.
 - **Pause auto-follow:** cue scroll auto-follow resumes only while playing; jump-to-current always works (v1.0.4).
 - **Expanding-window fill:** seed near playhead then grow earlier/later bands with frequent partials (v1.0.5).
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).
@@ -296,7 +306,7 @@ Suggested run:
 | After download completes, open file | Plays immediately (not blank loading screen); DefaultDataSource path |
 | Mid-download MKV open | Starts without waiting for full file |
 | Mid-download scrub | Seeks to indexed downloaded clusters |
-| Live subtitles panel | Landscape split; highlight/scroll sync; overlay stays on by default (`showOverlaySubtitlesWithLivePanel`) |
+| Live subtitles panel | Landscape split; cycle right then left then off; rotate button closes the panel; on-video subtitles follow `showOnVideoSubtitles` and stay independent of the panel |
 | Open with / share sheet | Finished local video via ACTION_VIEW / `content://` plays (not blank loader) |
 | Side-by-side install | Original Next Player package **not** overwritten (`dev.sahilkashid.nextplayer`) |
 
@@ -308,9 +318,11 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.1.0` / latest Live tag / Live main.
+3. Checkout Live-only paths from `v1.1.1` / latest Live tag / Live main (includes
+   `LiveSubtitlesPanelPlacement` and `LiveSubtitlesFollowController`).
 4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
-   `ControlsTopView`, strings, `app/build.gradle.kts`. On **v0.19.0**, upstream replaced Hilt
+   `ControlsTopView`, `RotateButton`, `SubtitleSelectorView`, `PlayerViewModel`,
+   `PlayerPreferences`, strings, `app/build.gradle.kts`. On **v0.19.0**, upstream replaced Hilt
    with Koin and split the player screen (`MediaPlayerContent`, `PlayerControls`,
    `PlayerContentFrame`). Keep Koin, chapters, external audio, NEW badges, watch-history
    settings, tunneled playback, and PiP/SMB fixes, and re-apply Live on top. Do not
