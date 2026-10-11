@@ -300,9 +300,11 @@ class LiveSubtitlesState(
 
     /**
      * Lead **scroll only** toward the next cue shortly before it becomes current.
-     * Drives both scroll centering and bold/color via [scrollTargetKey].
+     * Bold and color stay on [highlightedCueKey] (the cue that contains the
+     * playhead). Putting that early lead on the bold row showed the next line
+     * up to [ScrollLeadMs] before its start, so on-video text looked late.
      * Adaptive lead + hysteresis avoid chatter after rewind; identity keys
-     * keep remux index remaps from flashing highlight.
+     * keep remux index remaps from restarting the scroll.
      */
     fun updateScrollTarget(positionMs: Long = player.currentPosition) {
         val current = currentCueIndex

@@ -148,9 +148,11 @@ Also keep `docs/live-subtitles.md` when present.
 - **Threading:** `MediaController` / player APIs **only on Main**; demux and file I/O on
   `Dispatchers.IO`.
 - **Highlight:** primary from `EVENT_CUES` / `currentCues`; ~**50ms** fallback tick while panel
-  open; **early-lead (~380ms adaptive)** for both scroll **and** highlight via `scrollTargetKey`;
-  sticky-forward lead; **stable cue identity keys**; **snap colors** (no flicker animations on
-  rapid cue changes).
+  open; bold/color follow the active cue (`highlightedCueKey`), not the scroll lead.
+  **Early-lead (~380ms adaptive)** is scroll-only via `scrollTargetKey` so the upcoming row
+  is centered when it starts; sticky-forward lead; **stable cue identity keys**; **snap colors**
+  (no flicker animations on rapid cue changes). Do not bold the lead row — that shows the next
+  line before its start and makes on-video text look late.
 - **Load path:** expanding-window progressive embedded demux (seed near playhead, grow earlier/later) + hardened final-only disk/memory cue cache (stable keys, no flaky mtime) (v1.0.5).
 - **UX:** no top “Live subtitles” header; **center** the active cue; image subs (PGS / VobSub /
   DVB) unsupported → empty unsupported state. Empty **text** tracks must **not** show the

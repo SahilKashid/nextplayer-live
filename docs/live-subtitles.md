@@ -71,6 +71,8 @@ one is always selected (preferred match, else first) — never left on Disable.
 
 The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCues` (same path as the on-video overlay). Text is matched against the loaded `TimedCue` list so the panel stays in lockstep with nextlib's delay-adjusted `NextTextRenderer`. A ~50ms position tick while the panel is open is used only as a fallback between cues. Position fallback applies OffsetRenderer semantics (`position * speed - delay`); EVENT_CUES matching does **not** double-apply delay.
 
+Bold and color use that active cue (`highlightedCueKey`). Scroll may move toward the next row up to ~380ms early so the list is centered when the cue starts; that lead must not change which row is bold. Bolding the lead row shows the next line before its `startMs`, while on-video text waits for the cue start, so the overlay looks a few hundred milliseconds late.
+
 ## Cache
 
 Cue timelines are cached in a session LRU (~32 entries) and on disk under `context.subtitleCacheDir` as compact `live_cues_*.bin` files (legacy JSON is migrated on read). Memory hits paint immediately; disk hits avoid a full demux spinner on reopen of the same video+track.

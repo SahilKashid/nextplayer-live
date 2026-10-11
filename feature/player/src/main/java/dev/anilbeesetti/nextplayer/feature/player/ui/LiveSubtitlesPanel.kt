@@ -59,9 +59,10 @@ private const val RapidCueGapMs = 500L
 /**
  * Landscape live-subtitles panel.
  *
- * Scroll and bold/color both follow [LiveSubtitlesState.scrollTargetKey] (early lead).
- * Keys are cue identities (not list indexes), so remux remaps and lead hysteresis
- * stay flicker-free for highlight the same way they do for scroll.
+ * Scroll follows [LiveSubtitlesState.scrollTargetKey], which may move up to a few
+ * hundred milliseconds before the next cue so the row is centered when it starts.
+ * Bold and color follow [LiveSubtitlesState.highlightedCueKey], the cue that
+ * actually contains the playhead — the same moment on-video text appears.
  */
 @Composable
 fun LiveSubtitlesPanel(
@@ -73,8 +74,9 @@ fun LiveSubtitlesPanel(
     // same listResetKey and therefore the same scroll state.
     val listState = remember(state.listResetKey) { LazyListState() }
     val density = LocalDensity.current
-    // Same early-lead identity scroll uses — stable across remux index shifts.
-    val highlightedKey = state.scrollTargetKey
+    // Active cue, not the scroll lead. The lead centers the upcoming row early;
+    // bolding that row made on-video text look late by the lead (up to 380ms).
+    val highlightedKey = state.highlightedCueKey
     val userScrollConnection = remember(state) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
