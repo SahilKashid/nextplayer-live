@@ -4,8 +4,6 @@ import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +39,7 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberVideoZoomAndCont
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightnessGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeState
 import dev.anilbeesetti.nextplayer.feature.player.ui.LiveSubtitlesPanel
+import dev.anilbeesetti.nextplayer.feature.player.ui.LiveSubtitlesSplit
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerErrorDialogs
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestures
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerVerticalGestureIndicators
@@ -182,93 +181,83 @@ internal fun MediaPlayerContent(
     val showLiveSubtitlesPanel = liveSubtitlesState.isPanelVisible && isLandscape && !isTv
     val showLiveSubtitlesOnLeft = showLiveSubtitlesPanel && liveSubtitlesState.isPanelOnLeft
 
-    Row(Modifier.fillMaxSize().background(Color.Black)) {
-        if (showLiveSubtitlesOnLeft) {
-            LiveSubtitlesPanel(
-                state = liveSubtitlesState,
-                modifier = Modifier
-                    .weight(0.35f)
-                    .fillMaxHeight(),
-            )
-        }
-        Box(
-            Modifier
-                .weight(if (showLiveSubtitlesPanel) 0.65f else 1f)
-                .fillMaxHeight(),
-        ) {
-        if (pictureInPictureState != null) {
-            PlayerContentFrame(
-                player = player,
-                pictureInPictureState = pictureInPictureState,
-                videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                subtitleConfiguration = SubtitleConfiguration(
-                    useSystemCaptionStyle = playerPreferences.useSystemCaptionStyle,
-                    showBackground = playerPreferences.subtitleBackground,
-                    font = playerPreferences.subtitleFont,
-                    textSize = playerPreferences.subtitleTextSize,
-                    textBold = playerPreferences.subtitleTextBold,
-                    applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
-                    verticalPosition = playerPreferences.subtitleVerticalPosition,
-                ),
-                showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
-            )
-            if (volumeAndBrightnessGestureState != null) {
-                PlayerGestures(
-                    controlsVisibilityState = controlsVisibilityState,
-                    tapGestureState = tapGestureState,
-                    pictureInPictureState = pictureInPictureState,
-                    seekGestureState = seekGestureState,
-                    videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                    volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
-                )
-            }
-        }
-        MediaPlayerControls(
-            player = player,
-            state = state,
-            onAction = onAction,
-            controlsVisibilityState = controlsVisibilityState,
-            tapGestureState = tapGestureState,
-            seekGestureState = seekGestureState,
-            videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-            isPipSupported = pictureInPictureState?.isPipSupported == true,
-            onPictureInPictureClick = {
-                pictureInPictureState?.let {
-                    if (!it.hasPipPermission) {
-                        Toast.makeText(context, R.string.enable_pip_from_settings, Toast.LENGTH_SHORT).show()
-                        it.openPictureInPictureSettings()
-                    } else {
-                        it.enterPictureInPictureMode()
+    LiveSubtitlesSplit(
+        panelVisible = showLiveSubtitlesPanel,
+        panelOnLeft = showLiveSubtitlesOnLeft,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        panel = {
+            LiveSubtitlesPanel(state = liveSubtitlesState)
+        },
+        player = {
+            Box(Modifier.fillMaxSize()) {
+                if (pictureInPictureState != null) {
+                    PlayerContentFrame(
+                        player = player,
+                        pictureInPictureState = pictureInPictureState,
+                        videoZoomAndContentScaleState = videoZoomAndContentScaleState,
+                        subtitleConfiguration = SubtitleConfiguration(
+                            useSystemCaptionStyle = playerPreferences.useSystemCaptionStyle,
+                            showBackground = playerPreferences.subtitleBackground,
+                            font = playerPreferences.subtitleFont,
+                            textSize = playerPreferences.subtitleTextSize,
+                            textBold = playerPreferences.subtitleTextBold,
+                            applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                            verticalPosition = playerPreferences.subtitleVerticalPosition,
+                        ),
+                        showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
+                    )
+                    if (volumeAndBrightnessGestureState != null) {
+                        PlayerGestures(
+                            controlsVisibilityState = controlsVisibilityState,
+                            tapGestureState = tapGestureState,
+                            pictureInPictureState = pictureInPictureState,
+                            seekGestureState = seekGestureState,
+                            videoZoomAndContentScaleState = videoZoomAndContentScaleState,
+                            volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
+                        )
                     }
                 }
-            },
-            onLiveSubtitlesClick = {
-                liveSubtitlesState.cyclePanel()
-                controlsVisibilityState.showControls()
-            },
-            isLiveSubtitlesVisible = showLiveSubtitlesPanel,
-            isLiveSubtitlesOnLeft = showLiveSubtitlesOnLeft,
-            showLiveSubtitlesToggle = isLandscape && !isTv,
-            onBeforeRotate = { liveSubtitlesState.closePanel() },
-        )
-        if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
-            PlayerVerticalGestureIndicators(
-                activeGesture = volumeAndBrightnessGestureState.activeGesture,
-                volumePercentage = volumeState.volumePercentage,
-                maxVolumePercentage = volumeState.maxVolumePercentage,
-                brightnessPercentage = brightnessState.brightnessPercentage,
-            )
-        }
-        }
-        if (showLiveSubtitlesPanel && !showLiveSubtitlesOnLeft) {
-            LiveSubtitlesPanel(
-                state = liveSubtitlesState,
-                modifier = Modifier
-                    .weight(0.35f)
-                    .fillMaxHeight(),
-            )
-        }
-    }
+                MediaPlayerControls(
+                    player = player,
+                    state = state,
+                    onAction = onAction,
+                    controlsVisibilityState = controlsVisibilityState,
+                    tapGestureState = tapGestureState,
+                    seekGestureState = seekGestureState,
+                    videoZoomAndContentScaleState = videoZoomAndContentScaleState,
+                    isPipSupported = pictureInPictureState?.isPipSupported == true,
+                    onPictureInPictureClick = {
+                        pictureInPictureState?.let {
+                            if (!it.hasPipPermission) {
+                                Toast.makeText(context, R.string.enable_pip_from_settings, Toast.LENGTH_SHORT).show()
+                                it.openPictureInPictureSettings()
+                            } else {
+                                it.enterPictureInPictureMode()
+                            }
+                        }
+                    },
+                    onLiveSubtitlesClick = {
+                        liveSubtitlesState.cyclePanel()
+                        controlsVisibilityState.showControls()
+                    },
+                    isLiveSubtitlesVisible = showLiveSubtitlesPanel,
+                    isLiveSubtitlesOnLeft = showLiveSubtitlesOnLeft,
+                    showLiveSubtitlesToggle = isLandscape && !isTv,
+                    onBeforeRotate = { liveSubtitlesState.closePanel() },
+                )
+                if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
+                    PlayerVerticalGestureIndicators(
+                        activeGesture = volumeAndBrightnessGestureState.activeGesture,
+                        volumePercentage = volumeState.volumePercentage,
+                        maxVolumePercentage = volumeState.maxVolumePercentage,
+                        brightnessPercentage = brightnessState.brightnessPercentage,
+                    )
+                }
+            }
+        },
+    )
 
     PlayerErrorDialogs(
         decoderRecoveryState = state.decoderServiceState.recoveryState,

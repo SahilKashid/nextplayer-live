@@ -30,7 +30,9 @@ active on that frame — no stuck previous-video scroll offset.
 Shipped in **v1.1.1**: the landscape button cycles off → right → left → off; the rotate
 button closes the panel before changing orientation; on-video subtitles stay independent
 of the panel (`showOnVideoSubtitles`). Picker **Off** hides the on-video view and leaves
-the selected text track enabled so the panel can still list its cues.
+the selected text track enabled so the panel can still list its cues. Left and right
+docks share one layout (`LiveSubtitlesSplit`): the panel is 35% of the width on the
+chosen physical side, and the video, on-video subtitles, and controls use the rest.
 
 ## Sources
 
@@ -93,9 +95,11 @@ An empty cue list for a **text** track (SRT/ASS/SSA/**VTT**, including when demu
 
 The landscape live-subtitles button (`ControlsTopView`, hidden in portrait and on TV) cycles three states:
 
-1. **Right** — panel on, docked on the right (video weight ~0.65, panel ~0.35).
-2. **Left** — same split, panel composed before the video.
+1. **Right** — panel on, docked on the physical right. The panel is 35% of the width and the video is the rest.
+2. **Left** — the same split, panel on the physical left. Video, on-video subtitles, and the controls overlay occupy the space to the right of the panel.
 3. **Off** — panel hidden, video uses the full width.
+
+Both docks are `LiveSubtitlesSplit` with the side as a parameter. The panel and the player are measured to those rectangles and placed on the physical left or right, so the panel stays the same width on either side and the video and controls start at the panel's inner edge instead of drawing over it.
 
 The next tap after off always starts on the right. `LiveSubtitlesPanelPlacement` is the cycle. The button icon is mirrored when the panel is on the left, and its content description is `show_live_subtitles`, `live_subtitles_on_right`, or `live_subtitles_on_left`.
 
