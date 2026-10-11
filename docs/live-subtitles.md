@@ -33,6 +33,10 @@ of the panel (`showOnVideoSubtitles`). Picker **Off** hides the on-video view an
 the selected text track enabled so the panel can still list its cues. Left and right
 docks share one layout (`LiveSubtitlesSplit`): the panel is 35% of the width on the
 chosen physical side, and the video, on-video subtitles, and controls use the rest.
+On-video cues are applied in the player `onCues` callback
+(`DirectOnVideoSubtitleOutput`). They are not copied through Compose snapshot state,
+which posted the subtitle view update onto the next main-thread message and left the
+overlay a beat behind the audio. The live panel still follows `EVENT_CUES` directly.
 
 ## Sources
 
@@ -119,6 +123,8 @@ The live panel and the on-video `SubtitleView` are separate:
 | off | off | Neither |
 
 `PlayerPreferences.showOnVideoSubtitles` (default **true**) is what `PlayerContentFrame` uses for `showOverlaySubtitles`. It does not look at whether the panel is open. `showOverlaySubtitlesWithLivePanel` remains in the model so older preference JSON still decodes; playback ignores it.
+
+The overlay view gets its cues from `Player.Listener.onCues` in the same callback the player uses for `currentCues` (v1.1.1). That is the same moment the renderer publishes them. Do not route those cues through `rememberCuesState` or another snapshot that waits for a later Compose frame.
 
 The subtitle track picker is the control. Choosing a track sets `showOnVideoSubtitles` true and `switchTrack(index)`. **Off** sets `showOnVideoSubtitles` false and does **not** call `switchTrack(-1)`. The text track stays selected, so `SubtitleCueLoader.resolveSelectedSubtitle` and `EVENT_CUES` / `currentCues` keep feeding the panel while the overlay view is not composed. The same flag is the **Settings → Subtitle → Show on-screen subtitles** switch.
 

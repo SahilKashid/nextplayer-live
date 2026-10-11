@@ -41,8 +41,8 @@ local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 **v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
 audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes);
 **v1.1.1** cycles the landscape panel off → right → left → off, closes it from the rotate
-button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` once tagged,
-else latest Live tag / `origin/main`).
+button, keeps on-video subtitles independent of the panel, and applies on-video cues in
+the player `onCues` callback (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`).
 
 ---
 
@@ -157,7 +157,7 @@ Also keep `docs/live-subtitles.md` when present.
   image-based unsupported string (v1.0.3).
 - **Empty cache:** never cache empty cue lists; ASS/SSA may need a raw-sample retry demux (v1.0.3).
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
-- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only).
+- **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only). Apply overlay cues from `Player.Listener.onCues` (`DirectOnVideoSubtitleOutput`); do not route them through `rememberCuesState`.
 - **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
 - **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
