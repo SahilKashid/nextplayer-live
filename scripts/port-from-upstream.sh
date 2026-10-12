@@ -211,6 +211,10 @@ TOUCHPOINTS=(
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/buttons/RotateButton.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/SubtitleSelectorView.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/PlayerViewModel.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/VideoZoomAndContentScaleState.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/PlayerGestures.kt"
+  "feature/settings/src/main/java/dev/anilbeesetti/nextplayer/settings/screens/player/PlayerPreferencesScreen.kt"
+  "feature/settings/src/main/java/dev/anilbeesetti/nextplayer/settings/screens/player/PlayerPreferencesViewModel.kt"
   "core/model/src/main/java/dev/anilbeesetti/nextplayer/core/model/PlayerPreferences.kt"
   "README.md"
 )
@@ -281,7 +285,8 @@ cat <<'TOUCH'
   ControlsTopView: onLiveSubtitlesClick / isLiveSubtitlesVisible / isLiveSubtitlesOnLeft / showLiveSubtitlesToggle
   RotateButton: onBeforeRotate then rotate (does not run for PlayerOrientationEffect)
   SubtitleSelectorView: Off sets showOnVideoSubtitles false and does not switchTrack(-1)
-  PlayerPreferences: liveSubtitlesPanelOnLeft, showOnVideoSubtitles (showOverlaySubtitlesWithLivePanel is legacy JSON only)
+  PlayerPreferences: liveSubtitlesPanelOnLeft, showOnVideoSubtitles (showOverlaySubtitlesWithLivePanel is legacy JSON only);
+                    rememberPlayerZoom, playerZoom, playerZoomPanX, playerZoomPanY (v1.1.2; leave stock playerVideoZoom)
   NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
@@ -296,12 +301,16 @@ cat <<'TOUCH'
                              v1.1.0 keeps them on upstream v0.19.0: stay on Koin (do not restore Hilt);
                              v1.1.1: panel cycle off→right→left→off; rotate button closes the panel;
                              on-video subtitles independent via showOnVideoSubtitles.
+                             v1.1.2: remember pinch zoom globally (rememberPlayerZoom, default on),
+                             same pattern as remember brightness. Resize mode stays playerVideoZoom.
+                             Pan is a fraction of the player slot beside the live-subtitles panel.
                              wrap GrowingAwareExtractorsFactory inside ExternalAudioMediaSourceFactory;
                              wire the panel through MediaPlayerContent / PlayerControls / ControlsTopView;
                              keep chapters, external audio, NEW badges, watch history, tunneled playback)
   PlayerService: ExternalAudioMediaSourceFactory(DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory)
                  + setDataSourceFactory + GrowingFileLoadErrorHandlingPolicy)
-  strings.xml: live_subtitles* + jump_to_current_cue (+ app_name)
+  strings.xml: live_subtitles* + jump_to_current_cue + remember_zoom_level (+ app_name)
+  Player preferences screen: Remember zoom switch immediately after Remember brightness
 TOUCH
 
 echo ""

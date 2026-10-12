@@ -41,7 +41,8 @@ local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 **v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
 audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes);
 **v1.1.1** cycles the landscape panel off → right → left → off, closes it from the rotate
-button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`).
+button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`);
+**v1.1.2** remembers pinch zoom globally, the same way brightness is remembered.
 
 ---
 
@@ -93,7 +94,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -136,8 +137,8 @@ Also keep `docs/live-subtitles.md` when present.
 | `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `isLiveSubtitlesOnLeft` / `showLiveSubtitlesToggle`. Mirror `ic_live_subtitles` when on the left. Content description follows the cycle state (do not duplicate `onBackClick`; 0.19 already defaults it) |
 | `feature/player/.../buttons/RotateButton.kt` | `onBeforeRotate()` then `rotationState.rotate()`. Only this button closes the panel; `PlayerOrientationEffect` must not |
 | `feature/player/.../ui/SubtitleSelectorView.kt` | Track row: set `showOnVideoSubtitles` true and `switchTrack(index)`. **Off**: set the flag false and do **not** `switchTrack(-1)` |
-| `feature/player/.../PlayerViewModel.kt` | `SetLiveSubtitlesPanelOpen(open, onLeft)` persists both flags. `SetShowOnVideoSubtitles` persists `showOnVideoSubtitles` |
-| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay |
+| `feature/player/.../PlayerViewModel.kt` | `SetLiveSubtitlesPanelOpen(open, onLeft)` persists both flags. `SetShowOnVideoSubtitles` persists `showOnVideoSubtitles`. `VideoZoomEvent.ZoomChanged` still writes per-video `videoScale`; when `rememberPlayerZoom` is on it also writes the global pinch scale and pan fractions |
+| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay. `rememberPlayerZoom` / `playerZoom` / `playerZoomPanX` / `playerZoomPanY` (default remember **on**, zoom **1**, pan **0**). Leave stock `playerVideoZoom` (resize mode) always saved |
 | `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when `showOverlaySubtitles` is false |
 | `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles` |
 | `feature/player/.../ui/SubtitleView.kt` | Keep 0.19 `currentCues?.cues`; apply `SubtitleVerticalPosition` |
@@ -166,6 +167,7 @@ Also keep `docs/live-subtitles.md` when present.
 - **Expanding-window fill:** seed near playhead then grow earlier/later bands with frequent partials (v1.0.5).
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).
 - **Defaults:** theme SYSTEM + high-contrast dark; remember brightness; double-tap play/pause; long-press 2x; subtitle vertical 20%; preferred subtitle language English (v1.0.6).
+- **Remember zoom (v1.1.2):** `rememberPlayerZoom` defaults **on**, next to remember brightness. Saved value is global (`playerZoom` default **1**, `playerZoomPanX` / `playerZoomPanY` default **0**), restored on `ON_START`, and written when the pinch changes. Resize mode stays stock `playerVideoZoom` and is always saved. Per-video `videoScale` stays for when the toggle is off. Pan is a fraction of the player-slot range, applied on `PlayerSurface` inside the live-subtitles player slot, not on the split layout. Touchpoints: `PlayerPreferences`, `MediaPlayerScreen`, `PlayerViewModel`, `VideoZoomAndContentScaleState`, `PlayerGestures`, `PlayerPreferencesScreen` / `PlayerPreferencesViewModel`, `strings.xml` (`remember_zoom_level`).
 - **Sidecar discovery:** all-files access + path probe for `.vtt/.srt/.ass/.ssa/.ttml`; rescan every open; auto-select when tracks exist (prefer eng); never leave Disable; decode `%20` in labels (v1.0.6).
 - **Media-change snap:** on next/prev, drop previous-video list offset (`listResetKey`) and re-anchor to playhead nearest-cue immediately, even with empty currentCues (v1.0.7).
 
@@ -319,10 +321,11 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.1.1` / latest Live tag / Live main (includes
+3. Checkout Live-only paths from `v1.1.2` / latest Live tag / Live main (includes
    `LiveSubtitlesPanelPlacement` and `LiveSubtitlesFollowController`).
 4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
    `ControlsTopView`, `RotateButton`, `SubtitleSelectorView`, `PlayerViewModel`,
+   `VideoZoomAndContentScaleState`, `PlayerGestures`, player settings screen,
    `PlayerPreferences`, strings, `app/build.gradle.kts`. On **v0.19.0**, upstream replaced Hilt
    with Koin and split the player screen (`MediaPlayerContent`, `PlayerControls`,
    `PlayerContentFrame`). Keep Koin, chapters, external audio, NEW badges, watch-history

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import dev.anilbeesetti.nextplayer.feature.player.extensions.detectCustomHorizontalDragGestures
@@ -28,6 +29,11 @@ fun PlayerGestures(
     volumeAndBrightnessGestureState: VolumeAndBrightnessGestureState,
 ) {
     BoxWithConstraints {
+        val playerAreaWidth = constraints.maxWidth
+        val playerAreaHeight = constraints.maxHeight
+        LaunchedEffect(playerAreaWidth, playerAreaHeight) {
+            videoZoomAndContentScaleState.onPlayerAreaConstraints(playerAreaWidth, playerAreaHeight)
+        }
         Box(
             modifier = modifier
                 .fillMaxSize()

@@ -7,6 +7,11 @@ data class PlayerPreferences(
     val resume: Resume = Resume.YES,
     val rememberPlayerBrightness: Boolean = true,
     val playerBrightness: Float = 0.5f,
+    /** Global pinch scale and pan, same scope as [playerBrightness]. Resize mode stays [playerVideoZoom]. */
+    val rememberPlayerZoom: Boolean = true,
+    val playerZoom: Float = 1f,
+    val playerZoomPanX: Float = 0f,
+    val playerZoomPanY: Float = 0f,
     val minDurationForFastSeek: Long = 120000L,
     val rememberSelections: Boolean = true,
     val playerScreenOrientation: ScreenOrientation = ScreenOrientation.VIDEO_ORIENTATION,

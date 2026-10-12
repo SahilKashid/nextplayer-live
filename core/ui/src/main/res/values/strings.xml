@@ -49,6 +49,8 @@
     <string name="pip_settings_description">Automatically switch to miniature player when tapping Home Button</string>
     <string name="remember_brightness_level">Remember brightness level</string>
     <string name="remember_brightness_level_description">Remember brightness level between playback sessions</string>
+    <string name="remember_zoom_level">Remember zoom level</string>
+    <string name="remember_zoom_level_description">Remember zoom level between playback sessions</string>
     <string name="remember_selections">Remember selections</string>
     <string name="remember_selections_description">Remember selections for each file like audio track, subtitle track, etc.</string>
     <string name="resume">Resume</string>
