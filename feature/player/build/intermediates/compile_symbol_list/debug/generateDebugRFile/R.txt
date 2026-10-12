@@ -1,3 +1,0 @@
-int drawable artwork_default 0x0
-int raw aboutlibraries 0x0
-int style NextPlayer 0x0

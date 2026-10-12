@@ -1,4 +1,0 @@
-dev.anilbeesetti.nextplayer.feature.player
-drawable artwork_default
-raw aboutlibraries
-style NextPlayer

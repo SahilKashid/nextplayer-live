@@ -1,5 +1,0 @@
-R_DEF: Internal format may change without notice
-local
-drawable artwork_default
-raw aboutlibraries
-style NextPlayer
