@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-12T11:23:37.448Z" hostname="cursor" time="0.055">
+  <properties/>
+  <testcase name="onVideoSubtitlesStayIndependentOfTheLivePanel" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.043"/>
+  <testcase name="existing preferences keep tunneled playback disabled" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.001"/>
+  <testcase name="liveSubtitlesPanelOpenRoundTrip" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.004"/>
+  <testcase name="overlayHiddenOnlyWhenPanelOpenAndPreferenceOff" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.0"/>
+  <testcase name="serializationRoundTripPreservesOverlayAndVerticalPosition" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.001"/>
+  <testcase name="playerControlAndSubtitleDefaults" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.0"/>
+  <testcase name="missingKeysUseOverlayAndVerticalDefaults" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.0"/>
+  <testcase name="tunneled playback survives serialization" classname="dev.anilbeesetti.nextplayer.core.model.PlayerPreferencesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

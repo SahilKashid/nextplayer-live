@@ -1,0 +1,4 @@
+dev.anilbeesetti.nextplayer.feature.player.test.player-mergeDebugUnitTestResources-0 /workspace/feature/player/build/intermediates/incremental/debugUnitTest/mergeDebugUnitTestResources/merged.dir
+dev.anilbeesetti.nextplayer.feature.player.test.player-mergeDebugUnitTestResources-1 /workspace/feature/player/build/intermediates/incremental/debugUnitTest/mergeDebugUnitTestResources/stripped.dir
+dev.anilbeesetti.nextplayer.feature.player.test.player-debugUnitTest-2 /workspace/feature/player/build/intermediates/merged_res/debugUnitTest/mergeDebugUnitTestResources
+gradleHome-0 /home/ubuntu/.gradle

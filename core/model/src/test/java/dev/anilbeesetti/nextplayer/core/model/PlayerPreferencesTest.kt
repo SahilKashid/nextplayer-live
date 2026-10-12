@@ -30,6 +30,11 @@ class PlayerPreferencesTest {
         val preferences = PlayerPreferences()
 
         assertTrue(preferences.rememberPlayerBrightness)
+        assertTrue(preferences.rememberPlayerZoom)
+        assertEquals(1f, preferences.playerZoom, 0.0001f)
+        assertEquals(0f, preferences.playerZoomPanX, 0.0001f)
+        assertEquals(0f, preferences.playerZoomPanY, 0.0001f)
+        assertEquals(VideoContentScale.BEST_FIT, preferences.playerVideoZoom)
         assertEquals(DoubleTapGesture.PLAY_PAUSE, preferences.doubleTapGesture)
         assertTrue(preferences.useLongPressControls)
         assertEquals(2.0f, preferences.longPressControlsSpeed, 0.0001f)
@@ -63,6 +68,10 @@ class PlayerPreferencesTest {
         val decoded = Json.decodeFromString<PlayerPreferences>("{}")
 
         assertTrue(decoded.rememberPlayerBrightness)
+        assertTrue(decoded.rememberPlayerZoom)
+        assertEquals(1f, decoded.playerZoom, 0.0001f)
+        assertEquals(0f, decoded.playerZoomPanX, 0.0001f)
+        assertEquals(0f, decoded.playerZoomPanY, 0.0001f)
         assertEquals(DoubleTapGesture.PLAY_PAUSE, decoded.doubleTapGesture)
         assertTrue(decoded.useLongPressControls)
         assertEquals(2.0f, decoded.longPressControlsSpeed, 0.0001f)

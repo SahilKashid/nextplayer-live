@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.anilbeesetti.nextplayer.settings.screens.player.PlayerPreferencesViewModelTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-10T12:40:22.032Z" hostname="cursor" time="0.168">
+  <properties/>
+  <testcase name="screenRestoresSavedTunneledPlaybackPreference" classname="dev.anilbeesetti.nextplayer.settings.screens.player.PlayerPreferencesViewModelTest" time="0.146"/>
+  <testcase name="toggleTunneledPlaybackUpdatesRepositoryAndScreenState" classname="dev.anilbeesetti.nextplayer.settings.screens.player.PlayerPreferencesViewModelTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

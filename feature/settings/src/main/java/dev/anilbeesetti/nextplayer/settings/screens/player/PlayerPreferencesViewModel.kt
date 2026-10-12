@@ -53,6 +53,7 @@ class PlayerPreferencesViewModel(
             is PlayerPreferencesUiEvent.ToggleAutoPip -> toggleAutoPip()
             is PlayerPreferencesUiEvent.ToggleAutoBackgroundPlay -> toggleAutoBackgroundPlay()
             is PlayerPreferencesUiEvent.ToggleRememberBrightnessLevel -> toggleRememberBrightnessLevel()
+            is PlayerPreferencesUiEvent.ToggleRememberZoomLevel -> toggleRememberZoomLevel()
             is PlayerPreferencesUiEvent.ToggleRememberSelections -> toggleRememberSelections()
             is PlayerPreferencesUiEvent.UpdatePreferredPlayerOrientation -> updatePreferredPlayerOrientation(action.value)
             is PlayerPreferencesUiEvent.UpdatePreferredControlButtonsPosition -> updatePreferredControlButtonsPosition(action.value)
@@ -114,6 +115,14 @@ class PlayerPreferencesViewModel(
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
                 it.copy(rememberPlayerBrightness = !it.rememberPlayerBrightness)
+            }
+        }
+    }
+
+    private fun toggleRememberZoomLevel() {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(rememberPlayerZoom = !it.rememberPlayerZoom)
             }
         }
     }
@@ -189,6 +198,7 @@ sealed interface PlayerPreferencesUiEvent {
     data object ToggleAutoPip : PlayerPreferencesUiEvent
     data object ToggleAutoBackgroundPlay : PlayerPreferencesUiEvent
     data object ToggleRememberBrightnessLevel : PlayerPreferencesUiEvent
+    data object ToggleRememberZoomLevel : PlayerPreferencesUiEvent
     data object ToggleRememberSelections : PlayerPreferencesUiEvent
     data class UpdatePreferredPlayerOrientation(val value: ScreenOrientation) : PlayerPreferencesUiEvent
     data class UpdatePreferredControlButtonsPosition(val value: ControlButtonsPosition) : PlayerPreferencesUiEvent

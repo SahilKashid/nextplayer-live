@@ -110,6 +110,14 @@ class PlayerViewModel(
         }
     }
 
+    private fun updateRememberedZoom(zoom: Float, panX: Float, panY: Float) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(playerZoom = zoom, playerZoomPanX = panX, playerZoomPanY = panY)
+            }
+        }
+    }
+
     private fun updateVideoContentScale(contentScale: VideoContentScale) {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences { it.copy(playerVideoZoom = contentScale) }
@@ -135,6 +143,9 @@ class PlayerViewModel(
             }
             is VideoZoomEvent.ZoomChanged -> {
                 updateVideoZoom(event.mediaItem.mediaId, event.zoom)
+                if (state.value.playerPreferences.rememberPlayerZoom) {
+                    updateRememberedZoom(event.zoom, event.panX, event.panY)
+                }
             }
         }
     }

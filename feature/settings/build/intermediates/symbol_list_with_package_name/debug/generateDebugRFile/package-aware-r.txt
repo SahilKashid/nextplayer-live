@@ -1,0 +1,2 @@
+dev.anilbeesetti.nextplayer.feature.settings
+raw aboutlibraries

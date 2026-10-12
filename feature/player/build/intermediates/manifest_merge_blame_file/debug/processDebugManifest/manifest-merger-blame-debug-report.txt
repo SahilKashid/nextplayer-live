@@ -1,0 +1,2186 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="dev.anilbeesetti.nextplayer.feature.player" >
+5
+6    <uses-sdk android:minSdkVersion="24" />
+6-->INJECTED
+6-->INJECTED
+7
+8    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+8-->/workspace/feature/player/src/main/AndroidManifest.xml:5:5-77
+8-->/workspace/feature/player/src/main/AndroidManifest.xml:5:22-74
+9    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+9-->/workspace/feature/player/src/main/AndroidManifest.xml:6:5-92
+9-->/workspace/feature/player/src/main/AndroidManifest.xml:6:22-89
+10
+11    <application android:usesCleartextTraffic="true" >
+11-->/workspace/feature/player/src/main/AndroidManifest.xml:8:5-757:19
+11-->/workspace/feature/player/src/main/AndroidManifest.xml:8:18-53
+12        <activity
+12-->/workspace/feature/player/src/main/AndroidManifest.xml:9:9-747:20
+13            android:name="dev.anilbeesetti.nextplayer.feature.player.PlayerActivity"
+13-->/workspace/feature/player/src/main/AndroidManifest.xml:10:13-43
+14            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode|keyboard|keyboardHidden|navigation"
+14-->/workspace/feature/player/src/main/AndroidManifest.xml:11:13-133
+15            android:exported="true"
+15-->/workspace/feature/player/src/main/AndroidManifest.xml:12:13-36
+16            android:launchMode="singleTask"
+16-->/workspace/feature/player/src/main/AndroidManifest.xml:13:13-44
+17            android:resizeableActivity="true"
+17-->/workspace/feature/player/src/main/AndroidManifest.xml:15:13-46
+18            android:supportsPictureInPicture="true"
+18-->/workspace/feature/player/src/main/AndroidManifest.xml:14:13-52
+19            android:theme="@style/NextPlayer"
+19-->/workspace/feature/player/src/main/AndroidManifest.xml:16:13-46
+20            android:windowSoftInputMode="adjustResize"
+20-->/workspace/feature/player/src/main/AndroidManifest.xml:17:13-55
+21            tools:targetApi="o" >
+21-->/workspace/feature/player/src/main/AndroidManifest.xml:18:13-32
+22
+23            <!-- This filter captures protocols without type info -->
+24            <intent-filter>
+24-->/workspace/feature/player/src/main/AndroidManifest.xml:21:13-42:29
+25                <action android:name="android.intent.action.VIEW" />
+25-->/workspace/feature/player/src/main/AndroidManifest.xml:22:17-69
+25-->/workspace/feature/player/src/main/AndroidManifest.xml:22:25-66
+26
+27                <category android:name="android.intent.category.DEFAULT" />
+27-->/workspace/feature/player/src/main/AndroidManifest.xml:24:17-76
+27-->/workspace/feature/player/src/main/AndroidManifest.xml:24:27-73
+28                <category android:name="android.intent.category.BROWSABLE" />
+28-->/workspace/feature/player/src/main/AndroidManifest.xml:25:17-78
+28-->/workspace/feature/player/src/main/AndroidManifest.xml:25:27-75
+29
+30                <data android:scheme="rtmp" />
+30-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+30-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+31                <data android:scheme="rtmpe" />
+31-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+31-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+32                <data android:scheme="rtmps" />
+32-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+32-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+33                <data android:scheme="rtp" />
+33-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+33-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+34                <data android:scheme="rtsp" />
+34-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+34-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+35                <data android:scheme="mms" />
+35-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+35-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+36                <data android:scheme="mmst" />
+36-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+36-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+37                <data android:scheme="mmsh" />
+37-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+37-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+38                <data android:scheme="httplive" />
+38-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+38-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+39                <data android:scheme="udp" />
+39-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+39-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+40                <data android:scheme="smb" />
+40-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+40-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+41                <data android:scheme="ftp" />
+41-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+41-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+42                <data android:scheme="sftp" />
+42-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+42-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+43                <data android:scheme="webdav" />
+43-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+43-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+44                <data android:scheme="webdavs" />
+44-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+44-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+45            </intent-filter>
+46
+47            <!-- This filter captures protocols with type info -->
+48            <intent-filter>
+48-->/workspace/feature/player/src/main/AndroidManifest.xml:45:13-69:29
+49                <action android:name="android.intent.action.VIEW" />
+49-->/workspace/feature/player/src/main/AndroidManifest.xml:22:17-69
+49-->/workspace/feature/player/src/main/AndroidManifest.xml:22:25-66
+50
+51                <category android:name="android.intent.category.DEFAULT" />
+51-->/workspace/feature/player/src/main/AndroidManifest.xml:24:17-76
+51-->/workspace/feature/player/src/main/AndroidManifest.xml:24:27-73
+52                <category android:name="android.intent.category.BROWSABLE" />
+52-->/workspace/feature/player/src/main/AndroidManifest.xml:25:17-78
+52-->/workspace/feature/player/src/main/AndroidManifest.xml:25:27-75
+53
+54                <data android:mimeType="video/*" />
+54-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+54-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+55                <data android:scheme="rtmp" />
+55-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+55-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+56                <data android:scheme="rtmpe" />
+56-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+56-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+57                <data android:scheme="rtmps" />
+57-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+57-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+58                <data android:scheme="rtp" />
+58-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+58-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+59                <data android:scheme="rtsp" />
+59-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+59-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+60                <data android:scheme="mms" />
+60-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+60-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+61                <data android:scheme="mmst" />
+61-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+61-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+62                <data android:scheme="mmsh" />
+62-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+62-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+63                <data android:scheme="httplive" />
+63-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+63-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+64                <data android:scheme="udp" />
+64-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+64-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+65                <data android:scheme="smb" />
+65-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+65-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+66                <data android:scheme="ftp" />
+66-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+66-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+67                <data android:scheme="sftp" />
+67-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+67-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+68                <data android:scheme="webdav" />
+68-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+68-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+69                <data android:scheme="webdavs" />
+69-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+69-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+70            </intent-filter>
+71            <intent-filter>
+71-->/workspace/feature/player/src/main/AndroidManifest.xml:71:13-92:29
+72                <action android:name="android.intent.action.VIEW" />
+72-->/workspace/feature/player/src/main/AndroidManifest.xml:22:17-69
+72-->/workspace/feature/player/src/main/AndroidManifest.xml:22:25-66
+73
+74                <category android:name="android.intent.category.DEFAULT" />
+74-->/workspace/feature/player/src/main/AndroidManifest.xml:24:17-76
+74-->/workspace/feature/player/src/main/AndroidManifest.xml:24:27-73
+75                <category android:name="android.intent.category.BROWSABLE" />
+75-->/workspace/feature/player/src/main/AndroidManifest.xml:25:17-78
+75-->/workspace/feature/player/src/main/AndroidManifest.xml:25:27-75
+76
+77                <data android:scheme="file" />
+77-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+77-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+78                <data android:scheme="content" />
+78-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+78-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+79                <data android:scheme="http" />
+79-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+79-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+80                <data android:scheme="https" />
+80-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+80-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+81                <data android:mimeType="video/*" />
+81-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+81-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+82                <data android:mimeType="application/sdp" />
+82-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+82-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+83                <data android:mimeType="application/mp4" />
+83-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+83-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+84                <data android:mimeType="application/vnd.apple.mpegurl" />
+84-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+84-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+85                <data android:mimeType="application/vnd.rn-realmedia" />
+85-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+85-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+86                <data android:mimeType="application/vnd.rn-realmedia-vbr" />
+86-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+86-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+87                <data android:mimeType="application/mpegurl" />
+87-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+87-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+88                <data android:mimeType="application/x-mpegurl" />
+88-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+88-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+89                <data android:mimeType="application/x-matroska" />
+89-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+89-->/workspace/feature/player/src/main/AndroidManifest.xml:52:23-49
+90            </intent-filter>
+91            <intent-filter>
+91-->/workspace/feature/player/src/main/AndroidManifest.xml:94:13-746:29
+92                <action android:name="android.intent.action.VIEW" />
+92-->/workspace/feature/player/src/main/AndroidManifest.xml:22:17-69
+92-->/workspace/feature/player/src/main/AndroidManifest.xml:22:25-66
+93
+94                <category android:name="android.intent.category.DEFAULT" />
+94-->/workspace/feature/player/src/main/AndroidManifest.xml:24:17-76
+94-->/workspace/feature/player/src/main/AndroidManifest.xml:24:27-73
+95                <category android:name="android.intent.category.BROWSABLE" />
+95-->/workspace/feature/player/src/main/AndroidManifest.xml:25:17-78
+95-->/workspace/feature/player/src/main/AndroidManifest.xml:25:27-75
+96
+97                <data android:scheme="file" />
+97-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+97-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+98                <data android:scheme="content" />
+98-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+98-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+99                <data android:scheme="http" />
+99-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+99-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+100                <data android:scheme="https" />
+100-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+100-->/workspace/feature/player/src/main/AndroidManifest.xml:27:23-44
+101                <data android:host="*" />
+101-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+101-->/workspace/feature/player/src/main/AndroidManifest.xml:104:23-39
+102                <data android:pathPattern="/.*\\.3gp" />
+102-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+102-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+103                <data android:pathPattern="/.*\\..*\\.3gp" />
+103-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+103-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+104                <data android:pathPattern="/.*\\..*\\..*\\.3gp" />
+104-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+104-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+105                <data android:pathPattern="/.*\\..*\\..*\\..*\\.3gp" />
+105-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+105-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+106                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.3gp" />
+106-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+106-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+107                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+107-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+107-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+108                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+108-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+108-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+109                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+109-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+109-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+110                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+110-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+110-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+111                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+111-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+111-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+112                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+112-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+112-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+113                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+113-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+113-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+114                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+114-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+114-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+115                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+115-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+115-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+116                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+116-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+116-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+117                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+117-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+117-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+118                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+118-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+118-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+119                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+119-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+119-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+120                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+120-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+120-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+121                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+121-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+121-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+122                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+122-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+122-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+123                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+123-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+123-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+124                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+124-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+124-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+125                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+125-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+125-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+126                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+126-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+126-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+127                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+127-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+127-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+128                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+128-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+128-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+129                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+129-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+129-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+130                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+130-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+130-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+131                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+131-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+131-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+132                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+132-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+132-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+133                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3gp" />
+133-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+133-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+134                <data android:pathPattern="/.*\\.3GP" />
+134-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+134-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+135                <data android:pathPattern="/.*\\..*\\.3GP" />
+135-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+135-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+136                <data android:pathPattern="/.*\\..*\\..*\\.3GP" />
+136-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+136-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+137                <data android:pathPattern="/.*\\..*\\..*\\..*\\.3GP" />
+137-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+137-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+138                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.3GP" />
+138-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+138-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+139                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+139-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+139-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+140                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+140-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+140-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+141                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+141-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+141-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+142                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+142-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+142-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+143                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+143-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+143-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+144                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+144-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+144-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+145                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+145-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+145-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+146                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+146-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+146-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+147                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+147-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+147-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+148                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+148-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+148-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+149                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+149-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+149-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+150                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+150-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+150-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+151                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+151-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+151-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+152                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+152-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+152-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+153                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+153-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+153-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+154                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+154-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+154-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+155                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+155-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+155-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+156                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+156-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+156-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+157                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+157-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+157-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+158                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+158-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+158-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+159                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+159-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+159-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+160                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+160-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+160-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+161                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+161-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+161-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+162                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+162-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+162-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+163                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+163-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+163-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+164                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+164-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+164-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+165                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.3GP" />
+165-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+165-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+166                <data android:pathPattern="/.*\\.avi" />
+166-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+166-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+167                <data android:pathPattern="/.*\\..*\\.avi" />
+167-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+167-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+168                <data android:pathPattern="/.*\\..*\\..*\\.avi" />
+168-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+168-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+169                <data android:pathPattern="/.*\\..*\\..*\\..*\\.avi" />
+169-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+169-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+170                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.avi" />
+170-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+170-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+171                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+171-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+171-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+172                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+172-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+172-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+173                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+173-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+173-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+174                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+174-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+174-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+175                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+175-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+175-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+176                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+176-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+176-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+177                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+177-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+177-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+178                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+178-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+178-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+179                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+179-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+179-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+180                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+180-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+180-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+181                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+181-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+181-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+182                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+182-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+182-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+183                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+183-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+183-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+184                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+184-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+184-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+185                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+185-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+185-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+186                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+186-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+186-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+187                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+187-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+187-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+188                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+188-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+188-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+189                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+189-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+189-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+190                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+190-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+190-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+191                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+191-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+191-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+192                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+192-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+192-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+193                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+193-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+193-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+194                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+194-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+194-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+195                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+195-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+195-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+196                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+196-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+196-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+197                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.avi" />
+197-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+197-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+198                <data android:pathPattern="/.*\\.AVI" />
+198-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+198-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+199                <data android:pathPattern="/.*\\..*\\.AVI" />
+199-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+199-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+200                <data android:pathPattern="/.*\\..*\\..*\\.AVI" />
+200-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+200-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+201                <data android:pathPattern="/.*\\..*\\..*\\..*\\.AVI" />
+201-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+201-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+202                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.AVI" />
+202-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+202-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+203                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+203-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+203-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+204                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+204-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+204-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+205                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+205-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+205-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+206                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+206-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+206-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+207                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+207-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+207-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+208                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+208-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+208-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+209                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+209-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+209-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+210                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+210-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+210-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+211                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+211-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+211-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+212                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+212-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+212-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+213                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+213-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+213-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+214                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+214-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+214-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+215                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+215-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+215-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+216                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+216-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+216-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+217                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+217-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+217-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+218                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+218-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+218-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+219                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+219-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+219-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+220                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+220-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+220-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+221                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+221-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+221-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+222                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+222-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+222-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+223                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+223-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+223-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+224                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+224-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+224-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+225                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+225-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+225-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+226                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+226-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+226-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+227                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+227-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+227-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+228                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+228-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+228-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+229                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.AVI" />
+229-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+229-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+230                <data android:pathPattern="/.*\\.m3u8" />
+230-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+230-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+231                <data android:pathPattern="/.*\\..*\\.m3u8" />
+231-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+231-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+232                <data android:pathPattern="/.*\\..*\\..*\\.m3u8" />
+232-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+232-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+233                <data android:pathPattern="/.*\\..*\\..*\\..*\\.m3u8" />
+233-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+233-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+234                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.m3u8" />
+234-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+234-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+235                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+235-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+235-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+236                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+236-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+236-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+237                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+237-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+237-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+238                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+238-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+238-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+239                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+239-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+239-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+240                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+240-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+240-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+241                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+241-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+241-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+242                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+242-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+242-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+243                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+243-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+243-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+244                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+244-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+244-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+245                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+245-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+245-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+246                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+246-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+246-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+247                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+247-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+247-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+248                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+248-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+248-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+249                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+249-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+249-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+250                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+250-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+250-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+251                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+251-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+251-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+252                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+252-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+252-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+253                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+253-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+253-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+254                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+254-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+254-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+255                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+255-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+255-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+256                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+256-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+256-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+257                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+257-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+257-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+258                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+258-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+258-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+259                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+259-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+259-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+260                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+260-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+260-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+261                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m3u8" />
+261-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+261-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+262                <data android:pathPattern="/.*\\.M3U8" />
+262-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+262-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+263                <data android:pathPattern="/.*\\..*\\.M3U8" />
+263-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+263-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+264                <data android:pathPattern="/.*\\..*\\..*\\.M3U8" />
+264-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+264-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+265                <data android:pathPattern="/.*\\..*\\..*\\..*\\.M3U8" />
+265-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+265-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+266                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.M3U8" />
+266-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+266-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+267                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+267-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+267-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+268                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+268-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+268-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+269                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+269-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+269-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+270                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+270-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+270-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+271                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+271-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+271-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+272                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+272-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+272-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+273                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+273-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+273-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+274                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+274-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+274-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+275                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+275-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+275-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+276                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+276-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+276-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+277                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+277-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+277-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+278                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+278-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+278-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+279                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+279-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+279-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+280                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+280-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+280-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+281                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+281-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+281-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+282                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+282-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+282-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+283                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+283-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+283-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+284                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+284-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+284-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+285                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+285-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+285-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+286                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+286-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+286-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+287                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+287-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+287-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+288                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+288-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+288-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+289                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+289-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+289-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+290                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+290-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+290-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+291                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+291-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+291-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+292                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+292-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+292-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+293                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M3U8" />
+293-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+293-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+294                <data android:pathPattern="/.*\\.m4v" />
+294-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+294-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+295                <data android:pathPattern="/.*\\..*\\.m4v" />
+295-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+295-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+296                <data android:pathPattern="/.*\\..*\\..*\\.m4v" />
+296-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+296-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+297                <data android:pathPattern="/.*\\..*\\..*\\..*\\.m4v" />
+297-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+297-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+298                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.m4v" />
+298-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+298-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+299                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+299-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+299-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+300                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+300-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+300-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+301                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+301-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+301-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+302                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+302-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+302-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+303                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+303-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+303-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+304                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+304-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+304-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+305                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+305-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+305-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+306                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+306-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+306-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+307                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+307-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+307-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+308                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+308-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+308-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+309                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+309-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+309-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+310                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+310-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+310-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+311                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+311-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+311-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+312                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+312-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+312-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+313                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+313-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+313-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+314                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+314-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+314-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+315                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+315-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+315-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+316                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+316-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+316-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+317                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+317-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+317-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+318                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+318-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+318-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+319                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+319-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+319-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+320                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+320-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+320-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+321                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+321-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+321-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+322                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+322-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+322-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+323                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+323-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+323-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+324                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+324-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+324-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+325                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.m4v" />
+325-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+325-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+326                <data android:pathPattern="/.*\\.M4V" />
+326-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+326-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+327                <data android:pathPattern="/.*\\..*\\.M4V" />
+327-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+327-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+328                <data android:pathPattern="/.*\\..*\\..*\\.M4V" />
+328-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+328-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+329                <data android:pathPattern="/.*\\..*\\..*\\..*\\.M4V" />
+329-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+329-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+330                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.M4V" />
+330-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+330-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+331                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+331-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+331-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+332                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+332-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+332-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+333                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+333-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+333-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+334                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+334-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+334-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+335                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+335-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+335-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+336                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+336-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+336-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+337                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+337-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+337-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+338                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+338-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+338-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+339                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+339-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+339-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+340                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+340-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+340-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+341                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+341-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+341-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+342                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+342-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+342-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+343                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+343-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+343-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+344                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+344-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+344-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+345                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+345-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+345-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+346                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+346-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+346-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+347                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+347-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+347-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+348                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+348-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+348-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+349                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+349-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+349-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+350                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+350-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+350-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+351                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+351-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+351-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+352                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+352-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+352-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+353                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+353-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+353-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+354                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+354-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+354-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+355                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+355-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+355-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+356                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+356-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+356-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+357                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.M4V" />
+357-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+357-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+358                <data android:pathPattern="/.*\\.mkv" />
+358-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+358-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+359                <data android:pathPattern="/.*\\..*\\.mkv" />
+359-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+359-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+360                <data android:pathPattern="/.*\\..*\\..*\\.mkv" />
+360-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+360-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+361                <data android:pathPattern="/.*\\..*\\..*\\..*\\.mkv" />
+361-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+361-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+362                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.mkv" />
+362-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+362-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+363                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+363-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+363-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+364                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+364-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+364-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+365                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+365-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+365-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+366                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+366-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+366-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+367                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+367-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+367-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+368                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+368-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+368-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+369                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+369-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+369-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+370                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+370-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+370-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+371                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+371-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+371-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+372                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+372-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+372-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+373                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+373-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+373-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+374                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+374-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+374-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+375                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+375-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+375-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+376                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+376-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+376-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+377                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+377-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+377-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+378                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+378-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+378-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+379                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+379-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+379-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+380                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+380-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+380-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+381                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+381-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+381-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+382                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+382-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+382-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+383                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+383-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+383-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+384                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+384-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+384-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+385                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+385-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+385-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+386                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+386-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+386-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+387                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+387-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+387-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+388                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+388-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+388-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+389                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mkv" />
+389-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+389-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+390                <data android:pathPattern="/.*\\.MKV" />
+390-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+390-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+391                <data android:pathPattern="/.*\\..*\\.MKV" />
+391-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+391-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+392                <data android:pathPattern="/.*\\..*\\..*\\.MKV" />
+392-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+392-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+393                <data android:pathPattern="/.*\\..*\\..*\\..*\\.MKV" />
+393-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+393-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+394                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.MKV" />
+394-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+394-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+395                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+395-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+395-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+396                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+396-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+396-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+397                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+397-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+397-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+398                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+398-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+398-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+399                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+399-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+399-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+400                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+400-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+400-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+401                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+401-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+401-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+402                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+402-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+402-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+403                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+403-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+403-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+404                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+404-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+404-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+405                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+405-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+405-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+406                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+406-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+406-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+407                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+407-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+407-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+408                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+408-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+408-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+409                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+409-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+409-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+410                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+410-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+410-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+411                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+411-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+411-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+412                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+412-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+412-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+413                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+413-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+413-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+414                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+414-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+414-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+415                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+415-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+415-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+416                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+416-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+416-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+417                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+417-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+417-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+418                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+418-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+418-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+419                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+419-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+419-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+420                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+420-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+420-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+421                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MKV" />
+421-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+421-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+422                <data android:pathPattern="/.*\\.mov" />
+422-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+422-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+423                <data android:pathPattern="/.*\\..*\\.mov" />
+423-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+423-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+424                <data android:pathPattern="/.*\\..*\\..*\\.mov" />
+424-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+424-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+425                <data android:pathPattern="/.*\\..*\\..*\\..*\\.mov" />
+425-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+425-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+426                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.mov" />
+426-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+426-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+427                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+427-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+427-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+428                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+428-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+428-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+429                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+429-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+429-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+430                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+430-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+430-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+431                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+431-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+431-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+432                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+432-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+432-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+433                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+433-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+433-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+434                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+434-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+434-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+435                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+435-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+435-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+436                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+436-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+436-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+437                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+437-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+437-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+438                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+438-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+438-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+439                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+439-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+439-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+440                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+440-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+440-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+441                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+441-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+441-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+442                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+442-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+442-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+443                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+443-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+443-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+444                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+444-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+444-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+445                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+445-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+445-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+446                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+446-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+446-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+447                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+447-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+447-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+448                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+448-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+448-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+449                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+449-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+449-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+450                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+450-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+450-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+451                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+451-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+451-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+452                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+452-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+452-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+453                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mov" />
+453-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+453-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+454                <data android:pathPattern="/.*\\.MOV" />
+454-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+454-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+455                <data android:pathPattern="/.*\\..*\\.MOV" />
+455-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+455-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+456                <data android:pathPattern="/.*\\..*\\..*\\.MOV" />
+456-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+456-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+457                <data android:pathPattern="/.*\\..*\\..*\\..*\\.MOV" />
+457-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+457-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+458                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.MOV" />
+458-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+458-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+459                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+459-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+459-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+460                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+460-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+460-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+461                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+461-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+461-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+462                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+462-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+462-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+463                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+463-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+463-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+464                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+464-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+464-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+465                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+465-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+465-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+466                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+466-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+466-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+467                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+467-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+467-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+468                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+468-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+468-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+469                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+469-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+469-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+470                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+470-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+470-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+471                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+471-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+471-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+472                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+472-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+472-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+473                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+473-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+473-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+474                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+474-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+474-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+475                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+475-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+475-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+476                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+476-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+476-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+477                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+477-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+477-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+478                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+478-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+478-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+479                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+479-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+479-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+480                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+480-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+480-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+481                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+481-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+481-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+482                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+482-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+482-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+483                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+483-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+483-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+484                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+484-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+484-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+485                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MOV" />
+485-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+485-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+486                <data android:pathPattern="/.*\\.mp4" />
+486-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+486-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+487                <data android:pathPattern="/.*\\..*\\.mp4" />
+487-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+487-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+488                <data android:pathPattern="/.*\\..*\\..*\\.mp4" />
+488-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+488-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+489                <data android:pathPattern="/.*\\..*\\..*\\..*\\.mp4" />
+489-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+489-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+490                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.mp4" />
+490-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+490-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+491                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+491-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+491-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+492                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+492-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+492-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+493                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+493-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+493-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+494                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+494-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+494-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+495                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+495-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+495-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+496                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+496-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+496-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+497                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+497-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+497-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+498                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+498-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+498-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+499                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+499-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+499-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+500                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+500-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+500-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+501                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+501-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+501-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+502                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+502-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+502-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+503                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+503-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+503-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+504                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+504-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+504-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+505                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+505-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+505-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+506                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+506-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+506-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+507                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+507-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+507-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+508                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+508-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+508-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+509                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+509-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+509-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+510                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+510-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+510-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+511                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+511-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+511-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+512                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+512-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+512-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+513                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+513-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+513-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+514                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+514-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+514-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+515                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+515-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+515-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+516                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+516-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+516-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+517                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mp4" />
+517-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+517-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+518                <data android:pathPattern="/.*\\.MP4" />
+518-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+518-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+519                <data android:pathPattern="/.*\\..*\\.MP4" />
+519-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+519-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+520                <data android:pathPattern="/.*\\..*\\..*\\.MP4" />
+520-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+520-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+521                <data android:pathPattern="/.*\\..*\\..*\\..*\\.MP4" />
+521-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+521-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+522                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.MP4" />
+522-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+522-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+523                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+523-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+523-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+524                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+524-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+524-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+525                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+525-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+525-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+526                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+526-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+526-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+527                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+527-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+527-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+528                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+528-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+528-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+529                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+529-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+529-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+530                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+530-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+530-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+531                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+531-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+531-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+532                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+532-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+532-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+533                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+533-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+533-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+534                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+534-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+534-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+535                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+535-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+535-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+536                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+536-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+536-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+537                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+537-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+537-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+538                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+538-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+538-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+539                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+539-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+539-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+540                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+540-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+540-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+541                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+541-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+541-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+542                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+542-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+542-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+543                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+543-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+543-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+544                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+544-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+544-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+545                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+545-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+545-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+546                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+546-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+546-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+547                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+547-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+547-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+548                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+548-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+548-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+549                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MP4" />
+549-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+549-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+550                <data android:pathPattern="/.*\\.mpd" />
+550-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+550-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+551                <data android:pathPattern="/.*\\..*\\.mpd" />
+551-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+551-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+552                <data android:pathPattern="/.*\\..*\\..*\\.mpd" />
+552-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+552-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+553                <data android:pathPattern="/.*\\..*\\..*\\..*\\.mpd" />
+553-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+553-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+554                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.mpd" />
+554-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+554-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+555                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+555-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+555-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+556                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+556-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+556-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+557                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+557-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+557-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+558                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+558-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+558-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+559                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+559-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+559-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+560                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+560-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+560-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+561                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+561-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+561-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+562                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+562-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+562-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+563                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+563-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+563-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+564                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+564-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+564-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+565                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+565-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+565-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+566                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+566-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+566-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+567                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+567-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+567-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+568                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+568-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+568-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+569                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+569-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+569-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+570                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+570-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+570-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+571                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+571-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+571-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+572                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+572-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+572-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+573                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+573-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+573-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+574                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+574-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+574-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+575                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+575-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+575-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+576                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+576-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+576-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+577                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+577-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+577-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+578                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+578-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+578-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+579                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+579-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+579-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+580                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+580-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+580-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+581                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mpd" />
+581-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+581-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+582                <data android:pathPattern="/.*\\.MPD" />
+582-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+582-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+583                <data android:pathPattern="/.*\\..*\\.MPD" />
+583-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+583-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+584                <data android:pathPattern="/.*\\..*\\..*\\.MPD" />
+584-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+584-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+585                <data android:pathPattern="/.*\\..*\\..*\\..*\\.MPD" />
+585-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+585-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+586                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.MPD" />
+586-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+586-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+587                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+587-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+587-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+588                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+588-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+588-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+589                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+589-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+589-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+590                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+590-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+590-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+591                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+591-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+591-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+592                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+592-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+592-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+593                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+593-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+593-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+594                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+594-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+594-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+595                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+595-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+595-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+596                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+596-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+596-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+597                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+597-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+597-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+598                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+598-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+598-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+599                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+599-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+599-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+600                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+600-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+600-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+601                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+601-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+601-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+602                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+602-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+602-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+603                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+603-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+603-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+604                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+604-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+604-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+605                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+605-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+605-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+606                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+606-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+606-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+607                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+607-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+607-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+608                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+608-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+608-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+609                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+609-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+609-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+610                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+610-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+610-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+611                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+611-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+611-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+612                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+612-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+612-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+613                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.MPD" />
+613-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+613-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+614                <data android:pathPattern="/.*\\.ts" />
+614-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+614-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+615                <data android:pathPattern="/.*\\..*\\.ts" />
+615-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+615-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+616                <data android:pathPattern="/.*\\..*\\..*\\.ts" />
+616-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+616-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+617                <data android:pathPattern="/.*\\..*\\..*\\..*\\.ts" />
+617-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+617-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+618                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.ts" />
+618-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+618-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+619                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+619-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+619-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+620                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+620-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+620-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+621                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+621-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+621-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+622                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+622-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+622-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+623                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+623-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+623-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+624                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+624-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+624-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+625                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+625-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+625-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+626                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+626-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+626-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+627                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+627-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+627-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+628                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+628-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+628-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+629                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+629-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+629-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+630                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+630-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+630-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+631                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+631-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+631-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+632                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+632-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+632-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+633                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+633-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+633-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+634                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+634-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+634-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+635                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+635-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+635-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+636                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+636-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+636-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+637                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+637-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+637-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+638                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+638-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+638-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+639                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+639-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+639-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+640                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+640-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+640-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+641                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+641-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+641-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+642                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+642-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+642-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+643                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+643-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+643-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+644                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+644-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+644-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+645                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ts" />
+645-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+645-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+646                <data android:pathPattern="/.*\\.TS" />
+646-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+646-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+647                <data android:pathPattern="/.*\\..*\\.TS" />
+647-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+647-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+648                <data android:pathPattern="/.*\\..*\\..*\\.TS" />
+648-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+648-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+649                <data android:pathPattern="/.*\\..*\\..*\\..*\\.TS" />
+649-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+649-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+650                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.TS" />
+650-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+650-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+651                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+651-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+651-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+652                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+652-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+652-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+653                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+653-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+653-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+654                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+654-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+654-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+655                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+655-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+655-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+656                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+656-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+656-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+657                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+657-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+657-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+658                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+658-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+658-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+659                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+659-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+659-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+660                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+660-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+660-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+661                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+661-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+661-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+662                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+662-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+662-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+663                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+663-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+663-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+664                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+664-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+664-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+665                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+665-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+665-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+666                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+666-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+666-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+667                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+667-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+667-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+668                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+668-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+668-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+669                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+669-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+669-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+670                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+670-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+670-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+671                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+671-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+671-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+672                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+672-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+672-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+673                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+673-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+673-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+674                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+674-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+674-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+675                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+675-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+675-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+676                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+676-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+676-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+677                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.TS" />
+677-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+677-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+678                <data android:pathPattern="/.*\\.webm" />
+678-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+678-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+679                <data android:pathPattern="/.*\\..*\\.webm" />
+679-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+679-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+680                <data android:pathPattern="/.*\\..*\\..*\\.webm" />
+680-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+680-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+681                <data android:pathPattern="/.*\\..*\\..*\\..*\\.webm" />
+681-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+681-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+682                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.webm" />
+682-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+682-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+683                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+683-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+683-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+684                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+684-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+684-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+685                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+685-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+685-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+686                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+686-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+686-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+687                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+687-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+687-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+688                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+688-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+688-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+689                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+689-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+689-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+690                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+690-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+690-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+691                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+691-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+691-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+692                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+692-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+692-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+693                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+693-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+693-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+694                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+694-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+694-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+695                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+695-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+695-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+696                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+696-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+696-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+697                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+697-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+697-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+698                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+698-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+698-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+699                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+699-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+699-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+700                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+700-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+700-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+701                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+701-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+701-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+702                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+702-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+702-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+703                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+703-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+703-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+704                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+704-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+704-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+705                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+705-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+705-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+706                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+706-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+706-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+707                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+707-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+707-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+708                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+708-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+708-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+709                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.webm" />
+709-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+709-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+710                <data android:pathPattern="/.*\\.WEBM" />
+710-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+710-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+711                <data android:pathPattern="/.*\\..*\\.WEBM" />
+711-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+711-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+712                <data android:pathPattern="/.*\\..*\\..*\\.WEBM" />
+712-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+712-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+713                <data android:pathPattern="/.*\\..*\\..*\\..*\\.WEBM" />
+713-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+713-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+714                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.WEBM" />
+714-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+714-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+715                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+715-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+715-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+716                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+716-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+716-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+717                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+717-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+717-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+718                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+718-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+718-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+719                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+719-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+719-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+720                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+720-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+720-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+721                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+721-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+721-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+722                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+722-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+722-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+723                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+723-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+723-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+724                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+724-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+724-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+725                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+725-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+725-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+726                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+726-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+726-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+727                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+727-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+727-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+728                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+728-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+728-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+729                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+729-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+729-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+730                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+730-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+730-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+731                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+731-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+731-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+732                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+732-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+732-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+733                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+733-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+733-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+734                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+734-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+734-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+735                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+735-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+735-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+736                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+736-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+736-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+737                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+737-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+737-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+738                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+738-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+738-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+739                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+739-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+739-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+740                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+740-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+740-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+741                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.WEBM" />
+741-->/workspace/feature/player/src/main/AndroidManifest.xml:27:17-47
+741-->/workspace/feature/player/src/main/AndroidManifest.xml:106:23-54
+742            </intent-filter>
+743        </activity>
+744
+745        <service
+745-->/workspace/feature/player/src/main/AndroidManifest.xml:749:9-756:19
+746            android:name="dev.anilbeesetti.nextplayer.feature.player.service.PlayerService"
+746-->/workspace/feature/player/src/main/AndroidManifest.xml:750:13-50
+747            android:exported="true"
+747-->/workspace/feature/player/src/main/AndroidManifest.xml:751:13-36
+748            android:foregroundServiceType="mediaPlayback" >
+748-->/workspace/feature/player/src/main/AndroidManifest.xml:752:13-58
+749            <intent-filter>
+749-->/workspace/feature/player/src/main/AndroidManifest.xml:753:13-755:29
+750                <action android:name="androidx.media3.session.MediaSessionService" />
+750-->/workspace/feature/player/src/main/AndroidManifest.xml:754:17-85
+750-->/workspace/feature/player/src/main/AndroidManifest.xml:754:25-83
+751            </intent-filter>
+752        </service>
+753    </application>
+754
+755</manifest>

@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "dev.anilbeesetti.nextplayer.feature.player.test.player-mergeDebugUnitTestResources-73:/values-w600dp-land-v13/values-w600dp-land-v13.xml",
+            "map": [
+                {
+                    "source": "/home/ubuntu/.gradle/caches/9.7.1/transforms/ab804076369e5e20e91516e83a5af785/transformed/material-1.14.0/res/values-w600dp-land-v13/values-w600dp-land-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "54",
+                        "endOffsets": "105"
+                    }
+                }
+            ]
+        }
+    ]
+}

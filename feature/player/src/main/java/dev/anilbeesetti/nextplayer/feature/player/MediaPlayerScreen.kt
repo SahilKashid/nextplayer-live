@@ -120,6 +120,7 @@ internal fun MediaPlayerContent(
         enablePanGesture = playerPreferences.enablePanGesture,
         onEvent = { onAction(PlayerAction.OnVideoZoomEvent(it)) },
     )
+    videoZoomAndContentScaleState.useRememberedZoom = playerPreferences.rememberPlayerZoom
     val brightnessState = if (!isPreview) rememberBrightnessState() else null
     val volumeAndBrightnessGestureState = if (volumeState != null && brightnessState != null) {
         rememberVolumeAndBrightnessGestureState(
@@ -157,6 +158,15 @@ internal fun MediaPlayerContent(
             if (playerPreferences.rememberPlayerBrightness) {
                 onAction(PlayerAction.UpdatePlayerBrightness(brightnessState.currentBrightness))
             }
+        }
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        if (playerPreferences.rememberPlayerZoom) {
+            videoZoomAndContentScaleState.restoreRememberedZoom(
+                zoom = playerPreferences.playerZoom,
+                panX = playerPreferences.playerZoomPanX,
+                panY = playerPreferences.playerZoomPanY,
+            )
         }
     }
 

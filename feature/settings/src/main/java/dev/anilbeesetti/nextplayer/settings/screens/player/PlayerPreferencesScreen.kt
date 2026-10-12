@@ -196,6 +196,15 @@ private fun PlayerPreferencesScreenContent(
                     onClick = { onAction(PlayerPreferencesUiEvent.ToggleRememberBrightnessLevel) },
                 )
                 PreferenceSwitch(
+                    title = stringResource(id = R.string.remember_zoom_level),
+                    description = stringResource(
+                        id = R.string.remember_zoom_level_description,
+                    ),
+                    icon = NextIcons.Zoom,
+                    isChecked = state.preferences.rememberPlayerZoom,
+                    onClick = { onAction(PlayerPreferencesUiEvent.ToggleRememberZoomLevel) },
+                )
+                PreferenceSwitch(
                     title = stringResource(id = R.string.remember_selections),
                     description = stringResource(id = R.string.remember_selections_description),
                     icon = NextIcons.Selection,

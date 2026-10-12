@@ -92,6 +92,7 @@ import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
+import androidx.compose.material.icons.rounded.ZoomIn
 
 object NextIcons {
     val Add = Icons.Rounded.Add
@@ -165,6 +166,7 @@ object NextIcons {
     val Update = Icons.Rounded.Update
     val Video = Icons.Rounded.Movie
     val VolumeUp = Icons.AutoMirrored.Rounded.VolumeUp
+    val Zoom = Icons.Rounded.ZoomIn
     val ButtonsPosition = Icons.Rounded.AppSettingsAlt
     val Close = Icons.Rounded.Close
     val History = Icons.Rounded.History

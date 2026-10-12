@@ -1,0 +1,66 @@
+{
+    "logs": [
+        {
+            "outputFile": "dev.anilbeesetti.nextplayer.feature.player.test.player-mergeDebugUnitTestResources-73:/values-v28/values-v28.xml",
+            "map": [
+                {
+                    "source": "/home/ubuntu/.gradle/caches/9.7.1/transforms/ab804076369e5e20e91516e83a5af785/transformed/material-1.14.0/res/values-v28/values-v28.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,159,258,356,452,547,644,732,820,908,996,1083,1170,1257,1344",
+                        "endLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,19",
+                        "endColumns": "103,98,97,95,94,96,87,87,87,87,86,86,86,86,10",
+                        "endOffsets": "154,253,351,447,542,639,727,815,903,991,1078,1165,1252,1339,1626"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,44",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,159,258,356,452,547,644,732,820,908,996,1083,1170,1257,2842",
+                        "endLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,47",
+                        "endColumns": "103,98,97,95,94,96,87,87,87,87,86,86,86,86,10",
+                        "endOffsets": "154,253,351,447,542,639,727,815,903,991,1078,1165,1252,1339,3124"
+                    }
+                },
+                {
+                    "source": "/home/ubuntu/.gradle/caches/9.7.1/transforms/459f5e434d5fb7402e78b28015bd653f/transformed/core-1.5.0/res/values-v28/values.xml",
+                    "from": {
+                        "startLines": "4,13",
+                        "startColumns": "0,0",
+                        "startOffsets": "180,659",
+                        "endLines": "12,21",
+                        "endColumns": "8,8",
+                        "endOffsets": "658,1135"
+                    },
+                    "to": {
+                        "startLines": "26,35",
+                        "startColumns": "4,4",
+                        "startOffsets": "1878,2361",
+                        "endLines": "34,43",
+                        "endColumns": "8,8",
+                        "endOffsets": "2356,2837"
+                    }
+                },
+                {
+                    "source": "/home/ubuntu/.gradle/caches/9.7.1/transforms/8ca7db593987dd7967a13fef57a0858f/transformed/appcompat-1.8.0/res/values-v28/values-v28.xml",
+                    "from": {
+                        "startLines": "2,3,4,8",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,130,217,397",
+                        "endLines": "2,3,7,11",
+                        "endColumns": "74,86,12,12",
+                        "endOffsets": "125,212,392,584"
+                    },
+                    "to": {
+                        "startLines": "16,17,18,22",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "1344,1419,1506,1686",
+                        "endLines": "16,17,21,25",
+                        "endColumns": "74,86,12,12",
+                        "endOffsets": "1414,1501,1681,1873"
+                    }
+                }
+            ]
+        }
+    ]
+}

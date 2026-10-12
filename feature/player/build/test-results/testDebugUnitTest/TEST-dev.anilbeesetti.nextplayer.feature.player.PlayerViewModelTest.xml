@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.anilbeesetti.nextplayer.feature.player.PlayerViewModelTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-12T11:23:55.293Z" hostname="cursor" time="4.44">
+  <properties/>
+  <testcase name="rememberedZoomIsGlobalAndSkippedWhenTheToggleIsOff" classname="dev.anilbeesetti.nextplayer.feature.player.PlayerViewModelTest" time="4.101"/>
+  <testcase name="queued toggles use latest preferences and preserve playback state" classname="dev.anilbeesetti.nextplayer.feature.player.PlayerViewModelTest" time="0.079"/>
+  <testcase name="preference and decoder updates preserve paused playback without a state subscriber" classname="dev.anilbeesetti.nextplayer.feature.player.PlayerViewModelTest" time="0.033"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
