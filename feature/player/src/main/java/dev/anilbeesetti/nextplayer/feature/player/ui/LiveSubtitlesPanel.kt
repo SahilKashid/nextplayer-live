@@ -41,7 +41,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.common.Utils
 import dev.anilbeesetti.nextplayer.core.ui.R
@@ -59,7 +58,7 @@ private const val RapidCueGapMs = 500L
 /**
  * Landscape live-subtitles panel.
  *
- * Scroll and bold/color both follow [LiveSubtitlesState.scrollTargetKey] (early lead).
+ * Scroll and color both follow [LiveSubtitlesState.scrollTargetKey] (early lead).
  * Keys are cue identities (not list indexes), so remux remaps and lead hysteresis
  * stay flicker-free for highlight the same way they do for scroll.
  */
@@ -230,11 +229,12 @@ private suspend fun LazyListState.centerItemInViewport(index: Int, animated: Boo
 }
 
 /**
- * Stateless highlight styling. No animations — the highlighted cue identity changes
- * only when playback's current cue changes, so instant style swaps stay crisp.
+ * Highlight is background and text color only. Weight, size, letter spacing, and
+ * padding stay on bodyMedium so a cue keeps the same line breaks when it scrolls
+ * into the center.
  */
 @Composable
-private fun LiveSubtitleCueRow(
+internal fun LiveSubtitleCueRow(
     cue: TimedCue,
     isHighlighted: Boolean,
     onClick: () -> Unit,
@@ -267,9 +267,7 @@ private fun LiveSubtitleCueRow(
         Spacer(modifier = Modifier.size(2.dp))
         Text(
             text = cue.text,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = if (isHighlighted) FontWeight.SemiBold else FontWeight.Normal,
-            ),
+            style = MaterialTheme.typography.bodyMedium,
             color = contentColor,
         )
     }
