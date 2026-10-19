@@ -67,6 +67,8 @@ one is always selected (preferred match, else first) — never left on Disable.
 
 The active cue is driven primarily from Media3 `EVENT_CUES` / `player.currentCues` (same path as the on-video overlay). Text is matched against the loaded `TimedCue` list so the panel stays in lockstep with nextlib's delay-adjusted `NextTextRenderer`. A ~50ms position tick while the panel is open is used only as a fallback between cues. Position fallback applies OffsetRenderer semantics (`position * speed - delay`); EVENT_CUES matching does **not** double-apply delay.
 
+**Allocation rule (OOM regression, fixed v1.1.4 — do not undo):** matching goes through `LiveSubtitleCueMatcher`. Its regexes are compiled once, and `LiveSubtitlesState` caches the normalized timeline once per cue-list instance and reuses it on every tick. Never normalize the whole cue list — and never construct a `Regex` — inside `matchCuesToIndex` / the tick: the pre-fix code compiled ~3 patterns per cue per 50 ms tick (~90k pattern compilations/sec for a 1,500-cue film) and OOM'd the 256 MB heap on the main thread (`Pattern.matcher -> normalizeCueText:605 -> matchCuesToIndex -> updateCurrentCueIndexFromPlayer -> observe$2`, retraced with the 1.1.3 R8 `mapping.txt`).
+
 ## Cache
 
 Cue timelines are cached in a session LRU (~32 entries) and on disk under `context.subtitleCacheDir` as compact `live_cues_*.bin` files (legacy JSON is migrated on read). Memory hits paint immediately; disk hits avoid a full demux spinner on reopen of the same video+track.

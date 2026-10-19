@@ -20,7 +20,6 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
 import dev.anilbeesetti.nextplayer.feature.player.utils.subtitle.SubtitleCueLoader
-import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +137,24 @@ class LiveSubtitlesState(
     private var lastTrackSignature: String? = null
     /** Realtime millis until which scroll/highlight lead is disabled (after seek). */
     private var leadDisabledUntilElapsedMs: Long = 0L
+
+    /**
+     * Normalized cue texts for [cues], rebuilt only when the cue-list
+     * instance changes. The ~50 ms highlight tick reuses this instead of
+     * re-normalizing (and re-compiling regexes for) the whole timeline —
+     * see [LiveSubtitleCueMatcher].
+     */
+    private var normalizedCuesSource: List<TimedCue>? = null
+    private var normalizedCueTexts: List<String> = emptyList()
+
+    private fun normalizedTextsForCurrentCues(): List<String> {
+        val current = cues
+        if (normalizedCuesSource !== current) {
+            normalizedCueTexts = LiveSubtitleCueMatcher.normalizedTexts(current)
+            normalizedCuesSource = current
+        }
+        return normalizedCueTexts
+    }
 
     private val followController = LiveSubtitlesFollowController(
         scope = scope,
@@ -372,43 +389,20 @@ class LiveSubtitlesState(
         }
         if (activeTexts.isEmpty()) return false
 
-        val joined = activeTexts.joinToString("\n")
-        val candidates = ArrayList<Int>()
-        for (i in cues.indices) {
-            val normalized = cues[i].text.normalizeCueText()
-            if (normalized == joined || activeTexts.any { it == normalized }) {
-                candidates += i
-            }
-        }
-        // Soft contains matching can oscillate across progressive partial lists.
-        // Prefer exact normalized matches; only soft-match once loading is finished.
-        if (candidates.isEmpty() && !isLoading) {
-            for (i in cues.indices) {
-                val normalized = cues[i].text.normalizeCueText()
-                if (activeTexts.any { active ->
-                        normalized.contains(active) || active.contains(normalized)
-                    }
-                ) {
-                    candidates += i
-                }
-            }
-        }
-        if (candidates.isEmpty()) return false
-
-        if (candidates.size == 1) {
-            commitCurrentCueIndex(candidates[0])
-            return true
-        }
-
         // Disambiguate duplicate texts near the delay-adjusted position.
         val speed = subtitleSpeed.coerceIn(0.1f, 10f)
         val effective = (player.currentPosition.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
-        commitCurrentCueIndex(
-            candidates.minBy { idx ->
-                val cue = cues[idx]
-                abs((cue.startMs + cue.endMs) / 2L - effective)
-            },
+        val index = LiveSubtitleCueMatcher.matchIndex(
+            cues = cues,
+            normalizedCueTexts = normalizedTextsForCurrentCues(),
+            activeTexts = activeTexts,
+            effectivePositionMs = effective,
+            // Soft contains matching can oscillate across progressive
+            // partial lists; only soft-match once loading is finished.
+            allowSoftMatch = !isLoading,
         )
+        if (index < 0) return false
+        commitCurrentCueIndex(index)
         return true
     }
 
@@ -601,7 +595,4 @@ class LiveSubtitlesState(
 }
 
 private fun String.normalizeCueText(): String =
-    trim()
-        .replace(Regex("""\s+"""), " ")
-        .replace(Regex("""</?[^>]+>"""), "")
-        .replace(Regex("""\{[^}]*\}"""), "")
+    LiveSubtitleCueMatcher.normalizeCueText(this)
