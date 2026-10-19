@@ -126,4 +126,26 @@ class LiveSubtitleCueMatcherTest {
         LiveSubtitleCueMatcher.matchIndex(cues, normalized, listOf("Same line"), 3_400L, true)
         assertEquals(before, normalized)
     }
+
+    @Test
+    fun match_rapidCuesWithinOneSecond_advancePerCueInOrder() {
+        // Five cues inside a single second (200 ms each): the matcher must
+        // return each cue in turn as it becomes active, not one per second.
+        // This guards the fast-tracking behaviour the 50 ms tick + EVENT_CUES
+        // path provides — the OOM fix must not slow highlight down.
+        val rapid = (0 until 5).map { i ->
+            TimedCue(startMs = i * 200L, endMs = (i + 1) * 200L, text = "rapid $i")
+        }
+        val rapidNormalized = LiveSubtitleCueMatcher.normalizedTexts(rapid)
+        val matched = rapid.mapIndexed { i, cue ->
+            LiveSubtitleCueMatcher.matchIndex(
+                cues = rapid,
+                normalizedCueTexts = rapidNormalized,
+                activeTexts = listOf(cue.text),
+                effectivePositionMs = cue.startMs + 100L,
+                allowSoftMatch = false,
+            )
+        }
+        assertEquals(listOf(0, 1, 2, 3, 4), matched)
+    }
 }

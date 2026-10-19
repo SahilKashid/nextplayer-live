@@ -106,4 +106,17 @@ class LiveSubtitlesTrackChangeTest {
             LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(cues, 1_000L),
         )
     }
+
+    @Test
+    fun nearestCue_rapidCuesWithinOneSecond_advancesPerCue() {
+        // Position fallback (50 ms tick) must land on each 200 ms cue in
+        // turn inside one second, so highlight keeps up with rapid dialogue.
+        val rapid = (0 until 5).map { i ->
+            TimedCue(startMs = i * 200L, endMs = (i + 1) * 200L, text = "rapid $i")
+        }
+        val indices = (0 until 5).map { i ->
+            LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(rapid, i * 200L + 100L)
+        }
+        assertEquals(listOf(0, 1, 2, 3, 4), indices)
+    }
 }
