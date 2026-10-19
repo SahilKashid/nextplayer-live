@@ -109,6 +109,7 @@ sequence). Never publish Live under upstream’s `applicationId`.
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesPanel.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/LiveSubtitlesSplit.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesState.kt
+feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitleCueMatcher.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesPanelPlacement.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitlesFollowController.kt
 feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCache.kt
@@ -170,6 +171,7 @@ Also keep `docs/live-subtitles.md` when present.
 - **Remember zoom (v1.1.2):** `rememberPlayerZoom` defaults **on**, next to remember brightness. Saved value is global (`playerZoom` default **1**, `playerZoomPanX` / `playerZoomPanY` default **0**), restored on `ON_START`, and written when the pinch changes. Resize mode stays stock `playerVideoZoom` and is always saved. Per-video `videoScale` stays for when the toggle is off. Pan is a fraction of the player-slot range, applied on `PlayerSurface` inside the live-subtitles player slot, not on the split layout. Touchpoints: `PlayerPreferences`, `MediaPlayerScreen`, `PlayerViewModel`, `VideoZoomAndContentScaleState`, `PlayerGestures`, `PlayerPreferencesScreen` / `PlayerPreferencesViewModel`, `strings.xml` (`remember_zoom_level`).
 - **Sidecar discovery:** all-files access + path probe for `.vtt/.srt/.ass/.ssa/.ttml`; rescan every open; auto-select when tracks exist (prefer eng); never leave Disable; decode `%20` in labels (v1.0.6).
 - **Media-change snap:** on next/prev, drop previous-video list offset (`listResetKey`) and re-anchor to playhead nearest-cue immediately, even with empty currentCues (v1.0.7).
+- **Cue-matching allocation (OOM fix, unreleased after v1.1.3):** highlight matching must go through `LiveSubtitleCueMatcher` — regexes compiled once, normalized timeline cached once per cue-list instance in `LiveSubtitlesState`. Never re-normalize / re-compile regexes for every cue on the ~50 ms tick; that allocation storm OOM'd the main thread in 1.1.3 (retraced: `normalizeCueText:605 -> matchCuesToIndex`). Unit test: `LiveSubtitleCueMatcherTest`. Keep Live version unchanged for the same-version re-release unless told otherwise.
 
 See `docs/live-subtitles.md`.
 
@@ -266,6 +268,7 @@ feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/
 feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/MatroskaClusterIndexerTest.kt
 feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/IncompleteMatroskaSeekExtractorTest.kt
 feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCacheTest.kt
+feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/state/LiveSubtitleCueMatcherTest.kt
 ```
 
 Also port if present on the Live ref:
