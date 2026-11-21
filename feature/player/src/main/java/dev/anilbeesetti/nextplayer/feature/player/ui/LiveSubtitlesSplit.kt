@@ -59,21 +59,43 @@ internal fun LiveSubtitlesSplit(
         val width = constraints.maxWidth
         val height = constraints.maxHeight
         val panelWidth = if (panelVisible) {
-            (width * LiveSubtitlesPanelFraction).roundToInt().coerceIn(0, width)
+            (width * LiveSubtitlesPanelFraction).roundToInt().coerceIn(
+                0,
+                width,
+            )
         } else {
             0
         }
         val playerWidth = width - panelWidth
         val playerPlaceable = measurables
             .first { it.layoutId == PlayerSlot }
-            .measure(Constraints.fixed(playerWidth, height))
+            .measure(
+                Constraints.fixed(
+                    playerWidth,
+                    height,
+                ),
+            )
         val panelPlaceable = measurables
             .firstOrNull { it.layoutId == PanelSlot }
-            ?.measure(Constraints.fixed(panelWidth, height))
-        layout(width, height) {
+            ?.measure(
+                Constraints.fixed(
+                    panelWidth,
+                    height,
+                ),
+            )
+        layout(
+            width,
+            height,
+        ) {
             val playerX = if (panelVisible && panelOnLeft) panelWidth else 0
-            playerPlaceable.place(playerX, 0)
-            panelPlaceable?.place(if (panelOnLeft) 0 else playerWidth, 0)
+            playerPlaceable.place(
+                playerX,
+                0,
+            )
+            panelPlaceable?.place(
+                if (panelOnLeft) 0 else playerWidth,
+                0,
+            )
         }
     }
 }

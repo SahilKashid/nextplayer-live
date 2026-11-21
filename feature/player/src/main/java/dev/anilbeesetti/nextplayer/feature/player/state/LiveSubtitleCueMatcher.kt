@@ -34,15 +34,22 @@ internal object LiveSubtitleCueMatcher {
     private val HtmlTag = Regex("""</?[^>]+>""")
     private val AssOverrideTag = Regex("""\{[^}]*\}""")
 
-    fun normalizeCueText(text: String): String =
-        text.trim()
-            .replace(Whitespace, " ")
-            .replace(HtmlTag, "")
-            .replace(AssOverrideTag, "")
+    fun normalizeCueText(text: String): String = text.trim()
+        .replace(
+            Whitespace,
+            " ",
+        )
+        .replace(
+            HtmlTag,
+            "",
+        )
+        .replace(
+            AssOverrideTag,
+            "",
+        )
 
     /** Normalized text for every cue, in cue order. Cache this per cue list. */
-    fun normalizedTexts(cues: List<TimedCue>): List<String> =
-        cues.map { normalizeCueText(it.text) }
+    fun normalizedTexts(cues: List<TimedCue>): List<String> = cues.map { normalizeCueText(it.text) }
 
     /**
      * Index of the cue matching one of [activeTexts] (already normalized,

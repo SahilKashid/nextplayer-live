@@ -39,17 +39,15 @@ import org.koin.core.annotation.Single
  */
 @UnstableApi
 @Single
-class NextDataSourceFactory(
-    private val context: Context,
-    private val sessions: NetworkSessions,
-) : DataSource.Factory {
+class NextDataSourceFactory(private val context: Context, private val sessions: NetworkSessions) :
+    DataSource.Factory {
 
     override fun createDataSource(): DataSource = SchemeDispatchingDataSource(
         context = context,
         growingFile = GrowingFileDataSource.Factory().createDataSource(),
         growingContent = GrowingContentDataSource.Factory(context).createDataSource(),
         default = DefaultDataSource.Factory(context).createDataSource(),
-        network = NetworkDataSource(sessions),
+        network = NetworkDataSource(sessions = sessions),
     )
 
     /** Disconnects the network client held for playback. Call when the player is released. */
@@ -75,6 +73,7 @@ private class SchemeDispatchingDataSource(
         val uri = dataSpec.uri
         val (target, effectiveSpec) = when {
             NetworkUri.isNetworkUri(uri) -> network to dataSpec
+
             isFileUri(uri) -> {
                 val path = GrowingFileDataSource.resolvePath(uri)
                 if (path != null && File(path).canRead() &&
@@ -85,6 +84,7 @@ private class SchemeDispatchingDataSource(
                     growingFile to dataSpec
                 }
             }
+
             isContentUri(uri) -> {
                 val path = context.getPath(uri)
                 if (path != null && File(path).canRead()) {
@@ -95,7 +95,11 @@ private class SchemeDispatchingDataSource(
                         // Rewrite to file:// so GrowingFileDataSource can open via RandomAccessFile.
                         growingFile to dataSpec.withUri(File(path).toUri())
                     }
-                } else if (!IncompleteLocalMedia.shouldPlayAsGrowing(context, uri)) {
+                } else if (!IncompleteLocalMedia.shouldPlayAsGrowing(
+                        context,
+                        uri,
+                    )
+                ) {
                     // Path unresolved/unreadable but AFD tip is settled-complete
                     // (typical Open-with / share-sheet content:// into a finished file).
                     default to dataSpec
@@ -104,6 +108,7 @@ private class SchemeDispatchingDataSource(
                     growingContent to dataSpec
                 }
             }
+
             else -> default to dataSpec
         }
         delegate = target
@@ -111,7 +116,11 @@ private class SchemeDispatchingDataSource(
     }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
-        checkNotNull(delegate) { "read() before open()" }.read(buffer, offset, length)
+        checkNotNull(value = delegate) { "read() before open()" }.read(
+            buffer,
+            offset,
+            length,
+        )
 
     override fun getUri(): Uri? = delegate?.uri
 
@@ -130,10 +139,14 @@ private class SchemeDispatchingDataSource(
     override fun getResponseHeaders(): Map<String, List<String>> =
         delegate?.responseHeaders ?: emptyMap()
 
-    private fun isFileUri(uri: Uri): Boolean =
-        ContentResolver.SCHEME_FILE.equals(uri.scheme, ignoreCase = true) ||
-            (uri.scheme.isNullOrEmpty() && uri.path?.startsWith("/") == true)
+    private fun isFileUri(uri: Uri): Boolean = ContentResolver.SCHEME_FILE.equals(
+        uri.scheme,
+        ignoreCase = true,
+    ) ||
+        (uri.scheme.isNullOrEmpty() && uri.path?.startsWith("/") == true)
 
-    private fun isContentUri(uri: Uri): Boolean =
-        ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)
+    private fun isContentUri(uri: Uri): Boolean = ContentResolver.SCHEME_CONTENT.equals(
+        uri.scheme,
+        ignoreCase = true,
+    )
 }

@@ -35,7 +35,12 @@ fun rememberVideoZoomAndContentScaleState(
     onEvent: (VideoZoomEvent) -> Unit = {},
 ): VideoZoomAndContentScaleState {
     val coroutineScope = rememberCoroutineScope()
-    val videoZoomAndContentScaleState = remember {
+    val videoZoomAndContentScaleState = remember(
+        player,
+        initialContentScale,
+        enableZoomGesture,
+        enablePanGesture,
+    ) {
         VideoZoomAndContentScaleState(
             player = player,
             initialContentScale = initialContentScale,
@@ -45,7 +50,7 @@ fun rememberVideoZoomAndContentScaleState(
             coroutineScope = coroutineScope,
         )
     }
-    LaunchedEffect(player) { videoZoomAndContentScaleState.observe() }
+    LaunchedEffect(videoZoomAndContentScaleState) { videoZoomAndContentScaleState.observe() }
     return videoZoomAndContentScaleState
 }
 
@@ -73,19 +78,19 @@ class VideoZoomAndContentScaleState(
     private var playerAreaWidthPx: Int = 0
     private var playerAreaHeightPx: Int = 0
 
-    var videoContentScale: VideoContentScale by mutableStateOf(initialContentScale)
+    var videoContentScale: VideoContentScale by mutableStateOf(value = initialContentScale)
         private set
 
-    var zoom: Float by mutableFloatStateOf(1f)
+    var zoom: Float by mutableFloatStateOf(value = 1f)
         private set
 
     var offset: Offset by mutableStateOf(Offset.Zero)
         private set
 
-    var isZooming: Boolean by mutableStateOf(false)
+    var isZooming: Boolean by mutableStateOf(value = false)
         private set
 
-    var showContentScaleIndicator: Boolean by mutableStateOf(false)
+    var showContentScaleIndicator: Boolean by mutableStateOf(value = false)
         private set
 
     private var showContentScaleJob: Job? = null
@@ -96,7 +101,7 @@ class VideoZoomAndContentScaleState(
         panX = 0f
         panY = 0f
         offset = Offset.Zero
-        onEvent(VideoZoomEvent.ContentScaleChanged(videoContentScale))
+        onEvent(VideoZoomEvent.ContentScaleChanged(contentScale = videoContentScale))
         updateVideoScaleMetadataAndSendEvent()
         showContentScaleIndicator()
     }
@@ -126,7 +131,7 @@ class VideoZoomAndContentScaleState(
         showContentScaleJob?.cancel()
         showContentScaleIndicator = true
         showContentScaleJob = coroutineScope.launch {
-            delay(CONTENT_SCALE_INDICATOR_DURATION_MS)
+            delay(timeMillis = CONTENT_SCALE_INDICATOR_DURATION_MS)
             showContentScaleIndicator = false
             showContentScaleJob = null
         }
@@ -146,14 +151,34 @@ class VideoZoomAndContentScaleState(
         zoom = PlayerZoomPan.clampZoom(zoom * zoomChange)
 
         if (enablePanGesture) {
-            val maxX = PlayerZoomPan.maxPan(zoom, constraints.maxWidth)
-            val maxY = PlayerZoomPan.maxPan(zoom, constraints.maxHeight)
-            offset = Offset(
-                x = (offset.x + zoom * panChange.x).coerceIn(-maxX, maxX),
-                y = (offset.y + zoom * panChange.y).coerceIn(-maxY, maxY),
+            val maxX = PlayerZoomPan.maxPan(
+                zoom,
+                constraints.maxWidth,
             )
-            panX = PlayerZoomPan.fraction(offset.x, zoom, constraints.maxWidth)
-            panY = PlayerZoomPan.fraction(offset.y, zoom, constraints.maxHeight)
+            val maxY = PlayerZoomPan.maxPan(
+                zoom,
+                constraints.maxHeight,
+            )
+            offset = Offset(
+                x = (offset.x + zoom * panChange.x).coerceIn(
+                    minimumValue = -maxX,
+                    maximumValue = maxX,
+                ),
+                y = (offset.y + zoom * panChange.y).coerceIn(
+                    minimumValue = -maxY,
+                    maximumValue = maxY,
+                ),
+            )
+            panX = PlayerZoomPan.fraction(
+                offset.x,
+                zoom,
+                constraints.maxWidth,
+            )
+            panY = PlayerZoomPan.fraction(
+                offset.y,
+                zoom,
+                constraints.maxHeight,
+            )
         } else {
             offset = offsetInPlayerArea()
         }
@@ -176,8 +201,16 @@ class VideoZoomAndContentScaleState(
     }
 
     private fun offsetInPlayerArea(): Offset = Offset(
-        x = PlayerZoomPan.offsetPx(panX, zoom, playerAreaWidthPx),
-        y = PlayerZoomPan.offsetPx(panY, zoom, playerAreaHeightPx),
+        x = PlayerZoomPan.offsetPx(
+            panX,
+            zoom,
+            playerAreaWidthPx,
+        ),
+        y = PlayerZoomPan.offsetPx(
+            panY,
+            zoom,
+            playerAreaHeightPx,
+        ),
     )
 
     private fun updateVideoScaleMetadataAndSendEvent(zoom: Float = this.zoom) {
@@ -186,7 +219,14 @@ class VideoZoomAndContentScaleState(
             player.currentMediaItemIndex,
             currentMediaItem.copy(videoZoom = zoom),
         )
-        onEvent(VideoZoomEvent.ZoomChanged(currentMediaItem, zoom, panX, panY))
+        onEvent(
+            VideoZoomEvent.ZoomChanged(
+                mediaItem = currentMediaItem,
+                zoom = zoom,
+                panX = panX,
+                panY = panY,
+            ),
+        )
     }
 }
 

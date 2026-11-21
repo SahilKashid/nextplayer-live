@@ -45,7 +45,10 @@ object SubtitleCueLoader {
     )
 
     suspend fun loadSelectedTrackCues(context: Context, player: Player): List<TimedCue> =
-        loadSelectedTrackCuesDetailed(context, player).cues
+        loadSelectedTrackCuesDetailed(
+            context,
+            player,
+        ).cues
 
     suspend fun loadSelectedTrackCuesDetailed(
         context: Context,
@@ -54,7 +57,11 @@ object SubtitleCueLoader {
     ): LoadResult {
         val selection = withContext(Dispatchers.Main.immediate) {
             resolveSelectedSubtitle(player)
-        } ?: return LoadResult(emptyList(), "none", fromCache = false)
+        } ?: return LoadResult(
+            emptyList(),
+            "none",
+            fromCache = false,
+        )
 
         val mediaId = withContext(Dispatchers.Main.immediate) {
             player.currentMediaItem?.mediaId
@@ -86,20 +93,38 @@ object SubtitleCueLoader {
 
         // Memory hit: paint immediately, no spinner.
         LiveSubtitleCueCache.getMemoryOnly(cacheKey)?.let {
-            return LoadResult(it, cacheKey, fromCache = true, isUnsupportedBitmapTrack = false)
+            return LoadResult(
+                it,
+                cacheKey,
+                fromCache = true,
+                isUnsupportedBitmapTrack = false,
+            )
         }
 
         val diskHit = withContext(Dispatchers.IO) {
-            LiveSubtitleCueCache.get(context, cacheKey)
+            LiveSubtitleCueCache.get(
+                context,
+                cacheKey,
+            )
         }
         if (diskHit != null) {
-            return LoadResult(diskHit, cacheKey, fromCache = true, isUnsupportedBitmapTrack = false)
+            return LoadResult(
+                diskHit,
+                cacheKey,
+                fromCache = true,
+                isUnsupportedBitmapTrack = false,
+            )
         }
 
         val loaded = withContext(Dispatchers.IO) {
             when {
                 selection.externalUri != null ->
-                    loadExternalCues(context, selection.externalUri, selection.format)
+                    loadExternalCues(
+                        context,
+                        selection.externalUri,
+                        selection.format,
+                    )
+
                 selection.mediaUri != null && selection.format != null -> {
                     EmbeddedSubtitleCueExtractor.extract(
                         context = context,
@@ -110,13 +135,18 @@ object SubtitleCueLoader {
                         onPartialCues = onPartialCues,
                     )
                 }
+
                 else -> emptyList()
             }
         }
         // Cache only the complete final list — never mid-progressive partials.
         if (loaded.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                LiveSubtitleCueCache.put(context, cacheKey, loaded)
+                LiveSubtitleCueCache.put(
+                    context,
+                    cacheKey,
+                    loaded,
+                )
             }
         }
         return LoadResult(
@@ -146,7 +176,10 @@ object SubtitleCueLoader {
         val textTrackIndex = textGroups.indexOf(selectedGroup).coerceAtLeast(0)
         val mediaUri = player.currentMediaItem?.localConfiguration?.uri
         val configs = player.currentMediaItem?.localConfiguration?.subtitleConfigurations.orEmpty()
-        val externalUri = resolveExternalSubtitleUri(format, configs)
+        val externalUri = resolveExternalSubtitleUri(
+            format,
+            configs,
+        )
         return SelectedSubtitle(
             externalUri = externalUri,
             mediaUri = mediaUri,
@@ -187,9 +220,16 @@ object SubtitleCueLoader {
                 ?.let { parsed ->
                     // Only accept if it matches a known configuration (avoid treating
                     // embedded numeric ids as file URIs).
-                    if (configs.any { it.id == formatId || it.uri == parsed || it.uri.toString() == formatId }) {
+                    if (configs.any {
+                            it.id == formatId || it.uri == parsed ||
+                                it.uri.toString() == formatId
+                        }
+                    ) {
                         return configs.firstOrNull { it.id == formatId }?.uri
-                            ?: configs.firstOrNull { it.uri == parsed || it.uri.toString() == formatId }?.uri
+                            ?: configs.firstOrNull {
+                                it.uri == parsed ||
+                                    it.uri.toString() == formatId
+                            }?.uri
                             ?: parsed
                     }
                 }
@@ -201,7 +241,12 @@ object SubtitleCueLoader {
 
         // Unique mime match (e.g. codecs=text/vtt vs configuration mimeType=text/vtt).
         if (!originalMime.isNullOrBlank()) {
-            val mimeMatches = configs.filter { configurationMimeMatches(it.mimeType, originalMime) }
+            val mimeMatches = configs.filter {
+                configurationMimeMatches(
+                    it.mimeType,
+                    originalMime,
+                )
+            }
             if (mimeMatches.size == 1) return mimeMatches.first().uri
         }
 
@@ -210,11 +255,23 @@ object SubtitleCueLoader {
         if (configs.size == 1) {
             val only = configs.first()
             val looksExternal =
-                (!formatId.isNullOrBlank() && (formatId == only.id || formatId == only.uri.toString())) ||
+                (
+                    !formatId.isNullOrBlank() &&
+                        (formatId == only.id || formatId == only.uri.toString())
+                    ) ||
                     (!label.isNullOrBlank() && label == only.label) ||
-                    configurationMimeMatches(only.mimeType, format.sampleMimeType) ||
-                    configurationMimeMatches(only.mimeType, originalMime) ||
-                    configurationMimeMatches(only.mimeType, format.codecs)
+                    configurationMimeMatches(
+                        only.mimeType,
+                        format.sampleMimeType,
+                    ) ||
+                    configurationMimeMatches(
+                        only.mimeType,
+                        originalMime,
+                    ) ||
+                    configurationMimeMatches(
+                        only.mimeType,
+                        format.codecs,
+                    )
             if (looksExternal) return only.uri
         }
         return null
@@ -223,7 +280,10 @@ object SubtitleCueLoader {
     private fun configurationMimeMatches(configMime: String?, formatMime: String?): Boolean {
         if (configMime.isNullOrBlank() || formatMime.isNullOrBlank()) return false
         if (formatMime == MimeTypes.APPLICATION_MEDIA3_CUES) return false
-        return configMime.equals(formatMime, ignoreCase = true)
+        return configMime.equals(
+            formatMime,
+            ignoreCase = true,
+        )
     }
 
     internal fun loadExternalCues(
@@ -231,26 +291,48 @@ object SubtitleCueLoader {
         uri: Uri,
         format: Format? = null,
     ): List<TimedCue> {
-        val bytes = readBytes(context, uri) ?: return emptyList()
-        val mimeType = resolveExternalMime(uri, format)
+        val bytes = readBytes(
+            context,
+            uri,
+        ) ?: return emptyList()
+        val mimeType = resolveExternalMime(
+            uri,
+            format,
+        )
 
-        if (isLegacyParsedMime(mimeType) || mimeType.equals("text/vtt", ignoreCase = true)) {
+        if (isLegacyParsedMime(mimeType) || mimeType.equals(
+                "text/vtt",
+                ignoreCase = true,
+            )
+        ) {
             val content = decodeSubtitleBytes(bytes)
-            val parsed = SubtitleCueParser.parse(content, mimeType)
+            val parsed = SubtitleCueParser.parse(
+                content,
+                mimeType,
+            )
             if (parsed.isNotEmpty()) return parsed
         }
 
         // Content sniff: URI/path may have lost the .vtt extension (content://).
-        val sniffed = SubtitleCueParser.parse(decodeSubtitleBytes(bytes), mimeType = null)
+        val sniffed = SubtitleCueParser.parse(
+            decodeSubtitleBytes(bytes),
+            mimeType = null,
+        )
         if (sniffed.isNotEmpty()) return sniffed
 
         // ASS/TTML/others (and SRT/VTT fallback) via Media3 subtitle parsers.
-        val media3 = parseWithMedia3(bytes, mimeType)
+        val media3 = parseWithMedia3(
+            bytes,
+            mimeType,
+        )
         if (media3.isNotEmpty()) return media3
 
         // Last resort: try Media3 as WebVTT when format/codecs say VTT but URI mime was wrong.
         if (mimeType != MimeTypes.TEXT_VTT) {
-            val asVtt = parseWithMedia3(bytes, MimeTypes.TEXT_VTT)
+            val asVtt = parseWithMedia3(
+                bytes,
+                MimeTypes.TEXT_VTT,
+            )
             if (asVtt.isNotEmpty()) return asVtt
         }
         return emptyList()
@@ -261,12 +343,20 @@ object SubtitleCueLoader {
         val original = format?.let { EmbeddedSubtitleCueExtractor.originalSubtitleMime(it) }
         return when {
             uriMime == MimeTypes.TEXT_VTT -> MimeTypes.TEXT_VTT
+
             original == MimeTypes.TEXT_VTT ||
-                original.equals("text/vtt", ignoreCase = true) -> MimeTypes.TEXT_VTT
+                original.equals(
+                    "text/vtt",
+                    ignoreCase = true,
+                ) -> MimeTypes.TEXT_VTT
+
             format?.sampleMimeType == MimeTypes.TEXT_VTT -> MimeTypes.TEXT_VTT
+
             // Prefer non-default URI mime; otherwise fall back to format original mime.
             uriMime != MimeTypes.APPLICATION_SUBRIP -> uriMime
+
             !original.isNullOrBlank() && original != MimeTypes.APPLICATION_MEDIA3_CUES -> original
+
             else -> uriMime
         }
     }
@@ -274,7 +364,10 @@ object SubtitleCueLoader {
     private fun isLegacyParsedMime(mimeType: String): Boolean =
         mimeType == MimeTypes.APPLICATION_SUBRIP ||
             mimeType == MimeTypes.TEXT_VTT ||
-            mimeType.equals("text/vtt", ignoreCase = true)
+            mimeType.equals(
+                "text/vtt",
+                ignoreCase = true,
+            )
 
     private fun decodeSubtitleBytes(bytes: ByteArray): String {
         // Strip UTF-8 BOM; also tolerate UTF-16 LE/BE BOM for sideloaded files.
@@ -284,10 +377,13 @@ object SubtitleCueLoader {
                 bytes[1] == 0xBB.toByte() &&
                 bytes[2] == 0xBF.toByte() ->
                 bytes.toString(Charset.forName("UTF-8")).removePrefix("\uFEFF")
+
             bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte() ->
                 bytes.toString(Charset.forName("UTF-16LE")).removePrefix("\uFEFF")
+
             bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte() ->
                 bytes.toString(Charset.forName("UTF-16BE")).removePrefix("\uFEFF")
+
             else -> bytes.toString(Charset.forName("UTF-8")).removePrefix("\uFEFF")
         }
     }
@@ -305,7 +401,9 @@ object SubtitleCueLoader {
                 bytes.size,
                 SubtitleParser.OutputOptions.allCues(),
             ) { cuesWithTiming ->
-                for (timed in EmbeddedSubtitleCueExtractor.cuesWithTimingToTimedCues(cuesWithTiming)) {
+                for (timed in EmbeddedSubtitleCueExtractor.cuesWithTimingToTimedCues(
+                    cuesWithTiming,
+                )) {
                     val key = "${timed.startMs}|${timed.endMs}|${timed.text}"
                     if (seen.add(key)) parsed += timed
                 }
@@ -315,13 +413,11 @@ object SubtitleCueLoader {
         return parsed.sortedBy { it.startMs }
     }
 
-    private fun readBytes(context: Context, uri: Uri): ByteArray? {
-        return runCatching {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                input.readBytes()
-            } ?: uri.path?.let { path ->
-                java.io.File(path).takeIf { it.exists() && it.isFile }?.readBytes()
-            }
-        }.getOrNull()
-    }
+    private fun readBytes(context: Context, uri: Uri): ByteArray? = runCatching {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            input.readBytes()
+        } ?: uri.path?.let { path ->
+            java.io.File(path).takeIf { it.exists() && it.isFile }?.readBytes()
+        }
+    }.getOrNull()
 }

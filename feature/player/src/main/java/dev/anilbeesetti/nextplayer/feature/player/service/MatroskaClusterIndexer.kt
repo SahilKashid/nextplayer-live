@@ -51,7 +51,10 @@ object MatroskaClusterIndexer {
     /** `min(1MiB, tip/8)` — scales down for small tips. */
     fun safetyMarginFor(tip: Long): Long {
         if (tip <= 0L) return 0L
-        return min(SAFETY_MARGIN_BYTES, tip / 8L)
+        return min(
+            SAFETY_MARGIN_BYTES,
+            tip / 8L,
+        )
     }
 
     /** Readable tip minus [safetyMarginFor]; never negative. */
@@ -63,8 +66,15 @@ object MatroskaClusterIndexer {
     fun indexFile(file: File, tip: Long, safeTip: Long = safeTip(tip)): ClusterIndex? {
         if (!file.exists() || tip < 16L || safeTip < 16L) return null
         return try {
-            RandomAccessFile(file, "r").use { raf ->
-                index(EbmlProbe.Reader.fromRaf(raf), tip, safeTip)
+            RandomAccessFile(
+                file,
+                "r",
+            ).use { raf ->
+                index(
+                    EbmlProbe.Reader.fromRaf(raf),
+                    tip,
+                    safeTip,
+                )
             }
         } catch (_: IOException) {
             null
@@ -80,7 +90,11 @@ object MatroskaClusterIndexer {
     ): ClusterIndex? {
         if (data.size < 16 || tip < 16L || safeTip < 16L) return null
         return try {
-            index(EbmlProbe.Reader.fromBytes(data), tip, safeTip)
+            index(
+                EbmlProbe.Reader.fromBytes(data),
+                tip,
+                safeTip,
+            )
         } catch (_: Exception) {
             null
         }
@@ -92,7 +106,11 @@ object MatroskaClusterIndexer {
      */
     fun toSeekMap(index: ClusterIndex, durationUs: Long): IndexSeekMap? {
         if (index.size < MIN_CLUSTERS) return null
-        return IndexSeekMap(index.positions, index.timesUs, durationUs)
+        return IndexSeekMap(
+            index.positions,
+            index.timesUs,
+            durationUs,
+        )
     }
 
     fun nearestAtOrBefore(positions: LongArray, target: Long): Long {
@@ -115,14 +133,24 @@ object MatroskaClusterIndexer {
     }
 
     private fun index(reader: EbmlProbe.Reader, tip: Long, safeTip: Long): ClusterIndex? {
-        val limit = minOf(safeTip, tip, reader.length).coerceAtLeast(0L)
+        val limit = minOf(
+            safeTip,
+            tip,
+            reader.length,
+        ).coerceAtLeast(0L)
         if (limit < 16L) return null
 
         val ebmlId = reader.readId(limit) ?: return null
         if (ebmlId.value != ID_EBML) return null
         val ebmlSize = reader.readSize(limit) ?: return null
         if (ebmlSize.isUnknownSize || ebmlSize.value < 0L) return null
-        if (!reader.skip(ebmlSize.value, limit)) return null
+        if (!reader.skip(
+                ebmlSize.value,
+                limit,
+            )
+        ) {
+            return null
+        }
 
         val segmentId = reader.readId(limit) ?: return null
         if (segmentId.value != ID_SEGMENT) return null
@@ -130,7 +158,10 @@ object MatroskaClusterIndexer {
         val segmentEnd = if (segmentSize.isUnknownSize) {
             limit
         } else {
-            minOf(limit, reader.position + segmentSize.value)
+            minOf(
+                limit,
+                reader.position + segmentSize.value,
+            )
         }
 
         var timecodeScale = DEFAULT_TIMECODE_SCALE
@@ -160,36 +191,83 @@ object MatroskaClusterIndexer {
                         segmentEnd,
                     )
                     val timecode = if (probeEnd > payloadStart) {
-                        readClusterTimecode(reader, payloadStart, probeEnd)
+                        readClusterTimecode(
+                            reader,
+                            payloadStart,
+                            probeEnd,
+                        )
                     } else {
                         null
                     }
                     if (timecode != null) {
                         positions.add(elemStart)
-                        timesUs.add(scaleToUs(timecode, timecodeScale))
+                        timesUs.add(
+                            scaleToUs(
+                                timecode,
+                                timecodeScale,
+                            ),
+                        )
                     }
                     if (truncated) break
                     if (knownSize) {
-                        reader.seek(minOf(payloadEnd, segmentEnd))
+                        reader.seek(
+                            minOf(
+                                payloadEnd,
+                                segmentEnd,
+                            ),
+                        )
                     } else {
-                        walkUntilLevel1(reader, segmentEnd)
+                        walkUntilLevel1(
+                            reader,
+                            segmentEnd,
+                        )
                     }
                 }
+
                 ID_INFO -> {
-                    val infoEnd = if (knownSize) minOf(payloadEnd, segmentEnd) else segmentEnd
-                    val parsed = readTimecodeScale(reader, payloadStart, infoEnd)
+                    val infoEnd = if (knownSize) {
+                        minOf(
+                            payloadEnd,
+                            segmentEnd,
+                        )
+                    } else {
+                        segmentEnd
+                    }
+                    val parsed = readTimecodeScale(
+                        reader,
+                        payloadStart,
+                        infoEnd,
+                    )
                     if (parsed != null && parsed > 0L) timecodeScale = parsed
                     if (knownSize) {
-                        reader.seek(minOf(payloadEnd, segmentEnd))
+                        reader.seek(
+                            minOf(
+                                payloadEnd,
+                                segmentEnd,
+                            ),
+                        )
                     } else {
-                        walkUntilLevel1(reader, segmentEnd)
+                        walkUntilLevel1(
+                            reader,
+                            segmentEnd,
+                        )
                     }
                 }
+
                 else -> {
                     if (knownSize) {
-                        if (!reader.skip(size.value, segmentEnd)) break
+                        if (!reader.skip(
+                                size.value,
+                                segmentEnd,
+                            )
+                        ) {
+                            break
+                        }
                     } else {
-                        walkUntilLevel1(reader, segmentEnd)
+                        walkUntilLevel1(
+                            reader,
+                            segmentEnd,
+                        )
                     }
                 }
             }
@@ -214,6 +292,7 @@ object MatroskaClusterIndexer {
         ID_TAGS,
         ID_ATTACHMENTS,
         -> true
+
         else -> false
     }
 
@@ -227,7 +306,13 @@ object MatroskaClusterIndexer {
                 return
             }
             if (size.isUnknownSize || size.value < 0L) return
-            if (!reader.skip(size.value, limit)) return
+            if (!reader.skip(
+                    size.value,
+                    limit,
+                )
+            ) {
+                return
+            }
         }
     }
 
@@ -243,7 +328,10 @@ object MatroskaClusterIndexer {
             if (size.isUnknownSize || size.value < 0L) return null
             if (id.value == ID_TIMECODE) {
                 if (size.value !in 1L..8L) return null
-                return reader.readUnsignedInteger(size.value.toInt(), probeEnd)
+                return reader.readUnsignedInteger(
+                    size.value.toInt(),
+                    probeEnd,
+                )
             }
             val valueEnd = reader.position + size.value
             if (valueEnd > probeEnd) return null
@@ -269,8 +357,15 @@ object MatroskaClusterIndexer {
             }
             if (size.isUnknownSize || size.value < 0L) break
             if (id.value == ID_TIMECODE_SCALE && size.value in 1L..8L) {
-                found = reader.readUnsignedInteger(size.value.toInt(), infoEnd)
-            } else if (!reader.skip(size.value, infoEnd)) {
+                found = reader.readUnsignedInteger(
+                    size.value.toInt(),
+                    infoEnd,
+                )
+            } else if (!reader.skip(
+                    size.value,
+                    infoEnd,
+                )
+            ) {
                 break
             }
         }

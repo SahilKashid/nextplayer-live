@@ -37,18 +37,30 @@ class PlayerViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(dispatcher)
+        Dispatchers.setMain(dispatcher = dispatcher)
         val mediaRepository = FakeMediaRepository()
         viewModel = PlayerViewModel(
             mediaRepository = mediaRepository,
             preferencesRepository = preferences,
             getSortedPlaylistUseCase = GetSortedPlaylistUseCase(
-                getSortedVideosUseCase = GetSortedVideosUseCase(mediaRepository, preferences, dispatcher),
+                getSortedVideosUseCase = GetSortedVideosUseCase(
+                    mediaRepository = mediaRepository,
+                    preferencesRepository = preferences,
+                    defaultDispatcher = dispatcher,
+                ),
                 preferencesRepository = preferences,
                 context = RuntimeEnvironment.getApplication(),
                 defaultDispatcher = dispatcher,
             ),
-            output = PlayerViewModel.Output({}, {}, {}, {}, {}, {}, {}),
+            output = PlayerViewModel.Output(
+                navigateUp = {},
+                selectSubtitle = {},
+                selectAudio = {},
+                playInBackground = {},
+                setVideoDecoderMode = {},
+                setAudioDecoderMode = {},
+                tryDecoderFallback = {},
+            ),
         )
     }
 
@@ -59,48 +71,78 @@ class PlayerViewModelTest {
     }
 
     @Test
-    fun `preference and decoder updates preserve paused playback without a state subscriber`() = runTest(dispatcher) {
-        viewModel.onAction(PlayerAction.UpdatePlayWhenReady(false))
-        assertFalse(viewModel.state.value.playWhenReady)
-        val decoderState = DecoderServiceState(videoMode = DecoderMode.SOFTWARE)
-        viewModel.onAction(PlayerAction.UpdateDecoderServiceState(decoderState))
+    fun `preference and decoder updates preserve paused playback without a state subscriber`() =
+        runTest(context = dispatcher) {
+            viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady = false))
+            assertFalse(viewModel.state.value.playWhenReady)
+            val decoderState = DecoderServiceState(videoMode = DecoderMode.SOFTWARE)
+            viewModel.onAction(PlayerAction.UpdateDecoderServiceState(state = decoderState))
 
-        preferences.updatePlayerPreferences { it.copy(playerBrightness = 0.4f) }
+            preferences.updatePlayerPreferences { it.copy(playerBrightness = 0.4f) }
+            runCurrent()
+
+            assertFalse(viewModel.state.value.playWhenReady)
+            assertEquals(
+                0.4f,
+                viewModel.state.value.playerPreferences.playerBrightness,
+            )
+            assertEquals(
+                decoderState,
+                viewModel.state.value.decoderServiceState,
+            )
+
+            viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady = true))
+            assertTrue(viewModel.state.value.playWhenReady)
+            assertEquals(
+                0.4f,
+                viewModel.state.value.playerPreferences.playerBrightness,
+            )
+        }
+
+    @Test
+    fun `subtitle offset update is saved to preferences`() = runTest(context = dispatcher) {
+        viewModel.onAction(PlayerAction.UpdateSubtitleOffset(y = -0.4f))
         runCurrent()
 
-        assertFalse(viewModel.state.value.playWhenReady)
-        assertEquals(0.4f, viewModel.state.value.playerPreferences.playerBrightness)
-        assertEquals(decoderState, viewModel.state.value.decoderServiceState)
-
-        viewModel.onAction(PlayerAction.UpdatePlayWhenReady(true))
-        assertTrue(viewModel.state.value.playWhenReady)
-        assertEquals(0.4f, viewModel.state.value.playerPreferences.playerBrightness)
+        assertEquals(
+            -0.4f,
+            viewModel.state.value.playerPreferences.subtitleOffsetY,
+        )
     }
 
     @Test
-    fun `queued toggles use latest preferences and preserve playback state`() = runTest(dispatcher) {
-        preferences.updatePlayerPreferences { it.copy(showRemainingTime = false) }
-        viewModel.onAction(PlayerAction.UpdatePlayWhenReady(false))
-        viewModel.onAction(PlayerAction.ToggleTimeDisplay)
-        viewModel.onAction(PlayerAction.UpdatePlayerBrightness(0.7f))
-        viewModel.onAction(PlayerAction.ToggleTimeDisplay)
-        runCurrent()
+    fun `queued toggles use latest preferences and preserve playback state`() =
+        runTest(context = dispatcher) {
+            preferences.updatePlayerPreferences { it.copy(showRemainingTime = false) }
+            viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady = false))
+            viewModel.onAction(action = PlayerAction.ToggleTimeDisplay)
+            viewModel.onAction(PlayerAction.UpdatePlayerBrightness(value = 0.7f))
+            viewModel.onAction(action = PlayerAction.ToggleTimeDisplay)
+            runCurrent()
 
-        assertFalse(viewModel.state.value.playerPreferences.showRemainingTime)
-        assertEquals(0.7f, viewModel.state.value.playerPreferences.playerBrightness)
-        assertFalse(viewModel.state.value.playWhenReady)
+            assertFalse(viewModel.state.value.playerPreferences.showRemainingTime)
+            assertEquals(
+                0.7f,
+                viewModel.state.value.playerPreferences.playerBrightness,
+            )
+            assertFalse(viewModel.state.value.playWhenReady)
 
-        viewModel.onAction(PlayerAction.ToggleTimeDisplay)
-        runCurrent()
-        assertTrue(viewModel.state.value.playerPreferences.showRemainingTime)
-    }
+            viewModel.onAction(action = PlayerAction.ToggleTimeDisplay)
+            runCurrent()
+            assertTrue(viewModel.state.value.playerPreferences.showRemainingTime)
+        }
 
     @Test
-    fun rememberedZoomIsGlobalAndSkippedWhenTheToggleIsOff() = runTest(dispatcher) {
+    fun rememberedZoomIsGlobalAndSkippedWhenTheToggleIsOff() = runTest(context = dispatcher) {
         val mediaItem = MediaItem.Builder().setMediaId("content://video").build()
         viewModel.onAction(
             PlayerAction.OnVideoZoomEvent(
-                VideoZoomEvent.ZoomChanged(mediaItem, zoom = 1.5f, panX = 0.25f, panY = -0.5f),
+                VideoZoomEvent.ZoomChanged(
+                    mediaItem = mediaItem,
+                    zoom = 1.5f,
+                    panX = 0.25f,
+                    panY = -0.5f,
+                ),
             ),
         )
         runCurrent()
@@ -116,7 +158,12 @@ class PlayerViewModelTest {
         runCurrent()
         viewModel.onAction(
             PlayerAction.OnVideoZoomEvent(
-                VideoZoomEvent.ZoomChanged(mediaItem, zoom = 2f, panX = 1f, panY = 1f),
+                VideoZoomEvent.ZoomChanged(
+                    mediaItem = mediaItem,
+                    zoom = 2f,
+                    panX = 1f,
+                    panY = 1f,
+                ),
             ),
         )
         runCurrent()

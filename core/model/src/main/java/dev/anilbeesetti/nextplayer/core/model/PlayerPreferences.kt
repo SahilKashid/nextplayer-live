@@ -24,7 +24,10 @@ data class PlayerPreferences(
     val loopMode: LoopMode = LoopMode.OFF,
 
     // Controls (Gestures)
-    @Deprecated(message = "Use individual enableVolumeSwipeGesture and enableBrightnessSwipeGesture instead")
+    @Deprecated(
+        message =
+            "Use individual enableVolumeSwipeGesture and enableBrightnessSwipeGesture instead",
+    )
     val useSwipeControls: Boolean = true,
     val enableVolumeSwipeGesture: Boolean = true,
     val enableBrightnessSwipeGesture: Boolean = true,
@@ -76,6 +79,8 @@ data class PlayerPreferences(
      */
     val showOnVideoSubtitles: Boolean = true,
     val subtitleVerticalPosition: Float = DEFAULT_SUBTITLE_VERTICAL_POSITION,
+    // Vertical distance from the default subtitle spot, as a fraction of the player height.
+    val subtitleOffsetY: Float = 0f,
 ) {
     /**
      * Legacy helper for [showOverlaySubtitlesWithLivePanel]. Playback uses

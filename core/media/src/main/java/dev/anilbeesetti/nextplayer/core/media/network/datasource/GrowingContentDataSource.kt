@@ -36,9 +36,7 @@ import java.io.InterruptedIOException
  * Never uses Media3's fixed-length [androidx.media3.datasource.ContentDataSource] for this path.
  */
 @UnstableApi
-class GrowingContentDataSource(
-    context: Context,
-) : BaseDataSource(/* isNetwork = */ false) {
+class GrowingContentDataSource(context: Context) : BaseDataSource(/* isNetwork = */ false) {
 
     private val resolver: ContentResolver = context.applicationContext.contentResolver
 
@@ -54,6 +52,7 @@ class GrowingContentDataSource(
 
     /** Last observed *readable* tip (SEEK_HOLE / zero-tail aware when possible). */
     private var lastObservedLength: Long = -1L
+
     /** Last AFD / channel declared length (may include sparse holes / zero padding). */
     private var lastDeclaredLength: Long = -1L
     private var lastGrowthElapsedMs: Long = 0L
@@ -66,7 +65,11 @@ class GrowingContentDataSource(
     override fun open(dataSpec: DataSpec): Long {
         closed = false
         val openUri = dataSpec.uri
-        if (!ContentResolver.SCHEME_CONTENT.equals(openUri.scheme, ignoreCase = true)) {
+        if (!ContentResolver.SCHEME_CONTENT.equals(
+                openUri.scheme,
+                ignoreCase = true,
+            )
+        ) {
             throw IOException("GrowingContentDataSource requires content:// URI: $openUri")
         }
 
@@ -76,8 +79,14 @@ class GrowingContentDataSource(
         transferInitializing(dataSpec)
 
         try {
-            waitUntilReadable(openUri, dataSpec.position)
-            openDescriptorAt(openUri, dataSpec.position)
+            waitUntilReadable(
+                openUri,
+                dataSpec.position,
+            )
+            openDescriptorAt(
+                openUri,
+                dataSpec.position,
+            )
             readPosition = dataSpec.position
             bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
                 dataSpec.length
@@ -89,7 +98,10 @@ class GrowingContentDataSource(
         } catch (e: IOException) {
             throw e
         } catch (e: Exception) {
-            throw IOException("Failed to open growing content URI $openUri", e)
+            throw IOException(
+                "Failed to open growing content URI $openUri",
+                e,
+            )
         }
 
         opened = true
@@ -106,7 +118,10 @@ class GrowingContentDataSource(
         val toRead = if (bytesRemaining == C.LENGTH_UNSET.toLong()) {
             length
         } else {
-            minOf(length.toLong(), bytesRemaining).toInt()
+            minOf(
+                length.toLong(),
+                bytesRemaining,
+            ).toInt()
         }
 
         while (true) {
@@ -114,7 +129,10 @@ class GrowingContentDataSource(
 
             val stream = inputStream
             if (stream == null) {
-                openDescriptorAt(openUri, readPosition)
+                openDescriptorAt(
+                    openUri,
+                    readPosition,
+                )
                 continue
             }
 
@@ -124,22 +142,39 @@ class GrowingContentDataSource(
             if (readable >= 0L && readable != AssetFileDescriptor.UNKNOWN_LENGTH) {
                 val available = readable - readPosition
                 if (available <= 0L) {
-                    if (SparseAwareFileLength.isSparsePartial(lastDeclaredLength, readable)) {
+                    if (SparseAwareFileLength.isSparsePartial(
+                            lastDeclaredLength,
+                            readable,
+                        )
+                    ) {
                         // Tip reached but sparse tail remains — poll like growing.
                         if (isDownloadFinished(openUri)) {
                             return C.RESULT_END_OF_INPUT
                         }
                         sleepInterruptibly(POLL_INTERVAL_MS)
-                        reopenAt(openUri, readPosition)
+                        reopenAt(
+                            openUri,
+                            readPosition,
+                        )
                         continue
                     }
                     // Fall through to stream EOF / reopen logic below.
                 } else {
-                    val capped = minOf(toRead.toLong(), available).toInt()
+                    val capped = minOf(
+                        toRead.toLong(),
+                        available,
+                    ).toInt()
                     val bytesRead = try {
-                        stream.read(buffer, offset, capped)
+                        stream.read(
+                            buffer,
+                            offset,
+                            capped,
+                        )
                     } catch (_: IOException) {
-                        reopenAt(openUri, readPosition)
+                        reopenAt(
+                            openUri,
+                            readPosition,
+                        )
                         continue
                     }
                     if (bytesRead > 0) {
@@ -152,15 +187,25 @@ class GrowingContentDataSource(
                         return bytesRead
                     }
                     // Unexpected EOF inside tip — reopen.
-                    reopenAt(openUri, readPosition)
+                    reopenAt(
+                        openUri,
+                        readPosition,
+                    )
                     continue
                 }
             }
 
             val bytesRead = try {
-                stream.read(buffer, offset, toRead)
+                stream.read(
+                    buffer,
+                    offset,
+                    toRead,
+                )
             } catch (_: IOException) {
-                reopenAt(openUri, readPosition)
+                reopenAt(
+                    openUri,
+                    readPosition,
+                )
                 continue
             }
 
@@ -176,7 +221,10 @@ class GrowingContentDataSource(
 
             // EOF on current stream — reopen; if length grew past readPosition, continue.
             val previousLength = lastObservedLength
-            reopenAt(openUri, readPosition)
+            reopenAt(
+                openUri,
+                readPosition,
+            )
             val newLength = lastObservedLength
             if (newLength > previousLength && newLength > readPosition) {
                 continue
@@ -185,7 +233,11 @@ class GrowingContentDataSource(
                 // Same reported length but stream ended early; try reading again after reopen.
                 continue
             }
-            if (SparseAwareFileLength.isSparsePartial(lastDeclaredLength, newLength)) {
+            if (SparseAwareFileLength.isSparsePartial(
+                    lastDeclaredLength,
+                    newLength,
+                )
+            ) {
                 sleepInterruptibly(POLL_INTERVAL_MS)
                 continue
             }
@@ -223,7 +275,10 @@ class GrowingContentDataSource(
         while (true) {
             throwIfClosedOrInterrupted()
             try {
-                openDescriptorAt(uri, 0L)
+                openDescriptorAt(
+                    uri,
+                    0L,
+                )
                 val length = lastObservedLength
                 val declared = lastDeclaredLength
                 if (position <= 0L) {
@@ -232,7 +287,10 @@ class GrowingContentDataSource(
                 }
                 if (length == AssetFileDescriptor.UNKNOWN_LENGTH || length >= position) {
                     // Seek target reachable (or unknown growing length); open() will position.
-                    openDescriptorAt(uri, position)
+                    openDescriptorAt(
+                        uri,
+                        position,
+                    )
                     return
                 }
                 val now = System.currentTimeMillis()
@@ -243,15 +301,23 @@ class GrowingContentDataSource(
                 val looksGrowing = looksPartialName(displayName) ||
                     looksPartialName(uri.lastPathSegment) ||
                     (lastGrowthElapsedMs > 0L && now - lastGrowthElapsedMs < RECENT_GROWTH_WINDOW_MS) ||
-                    SparseAwareFileLength.isSparsePartial(declared, length)
+                    SparseAwareFileLength.isSparsePartial(
+                        declared,
+                        length,
+                    )
                 // Cue-style far seeks on a growing content URI: fail fast after a short wait.
                 if (gap > CUE_SEEK_GAP_BYTES &&
                     looksGrowing &&
                     now - waitStarted >= CUE_SEEK_FAIL_FAST_MS
                 ) {
-                    throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+                    throw DataSourceException(
+                        PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+                    )
                 }
-                if (SparseAwareFileLength.isSparsePartial(declared, length) ||
+                if (SparseAwareFileLength.isSparsePartial(
+                        declared,
+                        length,
+                    ) ||
                     looksPartialName(displayName)
                 ) {
                     stableLength = length
@@ -266,7 +332,9 @@ class GrowingContentDataSource(
                         now - stableSince >= STABLE_DURATION_MS &&
                         !looksPartialName(displayName)
                     ) {
-                        throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+                        throw DataSourceException(
+                            PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+                        )
                     }
                 } else {
                     stableLength = length
@@ -296,7 +364,11 @@ class GrowingContentDataSource(
             return false
         }
         refreshReadableTip()
-        if (SparseAwareFileLength.isSparsePartial(lastDeclaredLength, lastObservedLength)) {
+        if (SparseAwareFileLength.isSparsePartial(
+                lastDeclaredLength,
+                lastObservedLength,
+            )
+        ) {
             return false
         }
         val stableWait = if (lastGrowthElapsedMs > 0L) STABLE_DURATION_MS else FIRST_EOF_STABLE_MS
@@ -306,12 +378,19 @@ class GrowingContentDataSource(
             throwIfClosedOrInterrupted()
             sleepInterruptibly(POLL_INTERVAL_MS)
             try {
-                reopenAt(uri, readPosition)
+                reopenAt(
+                    uri,
+                    readPosition,
+                )
             } catch (_: IOException) {
                 return false
             }
             val length = lastObservedLength
-            if (SparseAwareFileLength.isSparsePartial(lastDeclaredLength, length)) {
+            if (SparseAwareFileLength.isSparsePartial(
+                    lastDeclaredLength,
+                    length,
+                )
+            ) {
                 return false
             }
             if (length != lastLength) {
@@ -323,7 +402,10 @@ class GrowingContentDataSource(
             // Probe: if reopen positioned at readPosition still has a readable byte, not finished.
             val stream = inputStream
             if (stream != null &&
-                !SparseAwareFileLength.isSparsePartial(lastDeclaredLength, length)
+                !SparseAwareFileLength.isSparsePartial(
+                    lastDeclaredLength,
+                    length,
+                )
             ) {
                 val probe = try {
                     stream.read()
@@ -332,7 +414,10 @@ class GrowingContentDataSource(
                 }
                 if (probe >= 0) {
                     // Consumed one byte while probing — reopen at the original position next loop.
-                    reopenAt(uri, readPosition)
+                    reopenAt(
+                        uri,
+                        readPosition,
+                    )
                     return false
                 }
             }
@@ -342,13 +427,19 @@ class GrowingContentDataSource(
             lastLength = length
         }
         // Stable EOF (including UNKNOWN_LENGTH) for STABLE_DURATION_MS.
-        return !SparseAwareFileLength.isSparsePartial(lastDeclaredLength, lastObservedLength)
+        return !SparseAwareFileLength.isSparsePartial(
+            lastDeclaredLength,
+            lastObservedLength,
+        )
     }
 
     private fun openDescriptorAt(uri: Uri, position: Long) {
         synchronized(lock) {
             closeDescriptorQuietly()
-            val afd = resolver.openAssetFileDescriptor(uri, "r")
+            val afd = resolver.openAssetFileDescriptor(
+                uri,
+                "r",
+            )
                 ?: throw IOException("Could not open file descriptor for: $uri")
             assetFileDescriptor = afd
             val stream = FileInputStream(afd.fileDescriptor)
@@ -370,20 +461,21 @@ class GrowingContentDataSource(
             if (declared != AssetFileDescriptor.UNKNOWN_LENGTH && declared >= 0L) {
                 lastDeclaredLength = declared
                 val fd = currentFd()
-                val readable = resolveReadableTip(declared, fd)
+                val readable = resolveReadableTip(
+                    declared,
+                    fd,
+                )
                 noteObservedLength(readable)
             }
         }
     }
 
-    private fun currentFd(): FileDescriptor? {
-        return try {
-            assetFileDescriptor?.parcelFileDescriptor?.fileDescriptor
-                ?: assetFileDescriptor?.fileDescriptor
-                ?: inputStream?.fd
-        } catch (_: IOException) {
-            null
-        }
+    private fun currentFd(): FileDescriptor? = try {
+        assetFileDescriptor?.parcelFileDescriptor?.fileDescriptor
+            ?: assetFileDescriptor?.fileDescriptor
+            ?: inputStream?.fd
+    } catch (_: IOException) {
+        null
     }
 
     /** Re-probe SEEK_HOLE / zero-tail tip without reopening when an FD is already open. */
@@ -391,15 +483,28 @@ class GrowingContentDataSource(
         val declared = lastDeclaredLength
         if (declared < 0L || declared == AssetFileDescriptor.UNKNOWN_LENGTH) return
         val fd = currentFd() ?: return
-        val readable = resolveReadableTip(declared, fd)
+        val readable = resolveReadableTip(
+            declared,
+            fd,
+        )
         noteObservedLength(readable)
     }
 
     private fun resolveReadableTip(declared: Long, fd: FileDescriptor?): Long {
         if (fd == null) return declared
-        val hole = SparseAwareFileLength.sparseHoleReadableEnd(declared, fd)
-        val tailData = SparseAwareFileLength.tailHasRealData(declared, fd)
-        val chosen = SparseAwareFileLength.chooseReadableEnd(declared, hole, tailData)
+        val hole = SparseAwareFileLength.sparseHoleReadableEnd(
+            declared,
+            fd,
+        )
+        val tailData = SparseAwareFileLength.tailHasRealData(
+            declared,
+            fd,
+        )
+        val chosen = SparseAwareFileLength.chooseReadableEnd(
+            declared,
+            hole,
+            tailData,
+        )
         if (tailData && chosen >= declared) {
             cachedZeroTailTip = declared
             return declared
@@ -410,7 +515,10 @@ class GrowingContentDataSource(
         }
         val now = System.currentTimeMillis()
         if (cachedZeroTailTip < 0L) {
-            val tip = SparseAwareFileLength.readableEnd(declared, fd)
+            val tip = SparseAwareFileLength.readableEnd(
+                declared,
+                fd,
+            )
             cachedZeroTailTip = tip
             lastTipProbeElapsedMs = now
             return if (tip < declared) tip else declared
@@ -430,7 +538,10 @@ class GrowingContentDataSource(
     }
 
     private fun reopenAt(uri: Uri, position: Long) {
-        openDescriptorAt(uri, position)
+        openDescriptorAt(
+            uri,
+            position,
+        )
     }
 
     private fun noteObservedLength(length: Long) {
@@ -448,12 +559,24 @@ class GrowingContentDataSource(
     private fun publishReadableTip(readableEnd: Long) {
         val u = uri ?: return
         val key = u.toString()
-        ReadableTipTracker.update(key, readableEnd, lastDeclaredLength)
+        ReadableTipTracker.update(
+            key,
+            readableEnd,
+            lastDeclaredLength,
+        )
         val path = GrowingFileDataSource.resolvePath(u)
         if (path != null) {
-            ReadableTipTracker.update(path, readableEnd, lastDeclaredLength)
+            ReadableTipTracker.update(
+                path,
+                readableEnd,
+                lastDeclaredLength,
+            )
             if (path.startsWith("/")) {
-                ReadableTipTracker.update("file://$path", readableEnd, lastDeclaredLength)
+                ReadableTipTracker.update(
+                    "file://$path",
+                    readableEnd,
+                    lastDeclaredLength,
+                )
             }
         }
     }
@@ -476,7 +599,13 @@ class GrowingContentDataSource(
     private fun queryDisplayName(uri: Uri): String? {
         var cursor: Cursor? = null
         return try {
-            cursor = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            cursor = resolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )
             if (cursor != null && cursor.moveToFirst()) {
                 val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (idx >= 0) cursor.getString(idx) else null
@@ -511,6 +640,7 @@ class GrowingContentDataSource(
 
     companion object {
         private const val POLL_INTERVAL_MS = 50L
+
         /** Match [GrowingFileDataSource]: wait through downloader buffer pauses. */
         private const val STABLE_DURATION_MS = 30_000L
         private const val RECENT_GROWTH_WINDOW_MS = 15_000L
@@ -525,9 +655,7 @@ class GrowingContentDataSource(
     }
 
     /** Creates [GrowingContentDataSource] instances. */
-    class Factory(
-        private val context: Context,
-    ) : DataSource.Factory {
+    class Factory(private val context: Context) : DataSource.Factory {
         override fun createDataSource(): DataSource = GrowingContentDataSource(context)
     }
 }

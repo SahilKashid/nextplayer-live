@@ -48,25 +48,34 @@ class GrowingFileLoadErrorHandlingPolicy(
         return delegate.getRetryDelayMsFor(loadErrorInfo)
     }
 
-    override fun getMinimumLoadableRetryCount(dataType: Int): Int {
-        return maxOf(
-            delegate.getMinimumLoadableRetryCount(dataType),
-            MIN_GROWING_LOADABLE_RETRIES,
-        )
-    }
+    override fun getMinimumLoadableRetryCount(dataType: Int): Int = maxOf(
+        delegate.getMinimumLoadableRetryCount(dataType),
+        MIN_GROWING_LOADABLE_RETRIES,
+    )
 
-    private fun shouldRetryGrowingLocal(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Boolean {
+    private fun shouldRetryGrowingLocal(
+        loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo,
+    ): Boolean {
         val uri = loadErrorInfo.loadEventInfo.uri
         if (!isLocalUri(uri)) return false
         if (!isRetriableWhileGrowing(loadErrorInfo.exception)) return false
-        return appearsStillGrowingOrIncomplete(uri, loadErrorInfo.errorCount)
+        return appearsStillGrowingOrIncomplete(
+            uri,
+            loadErrorInfo.errorCount,
+        )
     }
 
     private fun isLocalUri(uri: Uri): Boolean {
         val scheme = uri.scheme
         return scheme.isNullOrEmpty() ||
-            ContentResolver.SCHEME_FILE.equals(scheme, ignoreCase = true) ||
-            ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)
+            ContentResolver.SCHEME_FILE.equals(
+                scheme,
+                ignoreCase = true,
+            ) ||
+            ContentResolver.SCHEME_CONTENT.equals(
+                scheme,
+                ignoreCase = true,
+            )
     }
 
     private fun appearsStillGrowingOrIncomplete(uri: Uri, errorCount: Int): Boolean {
@@ -91,7 +100,11 @@ class GrowingFileLoadErrorHandlingPolicy(
             return errorCount < retryCap(tipAdvancing = tipAdvancing(path))
         }
 
-        if (ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)) {
+        if (ContentResolver.SCHEME_CONTENT.equals(
+                uri.scheme,
+                ignoreCase = true,
+            )
+        ) {
             val displayName = queryDisplayName(uri)
             if (GrowingContentDataSource.looksPartialName(displayName) ||
                 GrowingContentDataSource.looksPartialName(uri.lastPathSegment)
@@ -123,46 +136,42 @@ class GrowingFileLoadErrorHandlingPolicy(
             second.declaredLength > first.declaredLength
     }
 
-    private fun queryDisplayName(uri: Uri): String? {
-        return try {
-            appContext.contentResolver.query(
-                uri,
-                arrayOf(OpenableColumns.DISPLAY_NAME),
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (idx >= 0) cursor.getString(idx) else null
-                } else {
-                    uri.lastPathSegment
-                }
-            } ?: uri.lastPathSegment
-        } catch (_: Exception) {
-            uri.lastPathSegment
-        }
+    private fun queryDisplayName(uri: Uri): String? = try {
+        appContext.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) cursor.getString(idx) else null
+            } else {
+                uri.lastPathSegment
+            }
+        } ?: uri.lastPathSegment
+    } catch (_: Exception) {
+        uri.lastPathSegment
     }
 
-    private fun queryContentSize(uri: Uri): Long? {
-        return try {
-            appContext.contentResolver.query(
-                uri,
-                arrayOf(OpenableColumns.SIZE),
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndex(OpenableColumns.SIZE)
-                    if (idx >= 0 && !cursor.isNull(idx)) cursor.getLong(idx) else null
-                } else {
-                    null
-                }
+    private fun queryContentSize(uri: Uri): Long? = try {
+        appContext.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.SIZE),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idx = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (idx >= 0 && !cursor.isNull(idx)) cursor.getLong(idx) else null
+            } else {
+                null
             }
-        } catch (_: Exception) {
-            null
         }
+    } catch (_: Exception) {
+        null
     }
 
     private fun isRetriableWhileGrowing(error: IOException): Boolean {
@@ -177,8 +186,14 @@ class GrowingFileLoadErrorHandlingPolicy(
             // Matroska varint / EBML races while reading a zero tail.
             val msg = cause.message.orEmpty()
             val name = cause.javaClass.name
-            if (msg.contains("No valid varint length mask", ignoreCase = true) ||
-                msg.contains("VarintReader", ignoreCase = true) ||
+            if (msg.contains(
+                    "No valid varint length mask",
+                    ignoreCase = true,
+                ) ||
+                msg.contains(
+                    "VarintReader",
+                    ignoreCase = true,
+                ) ||
                 name.contains("VarintReader") ||
                 name.contains("DefaultEbmlReader") ||
                 name.contains("MatroskaExtractor")
@@ -195,12 +210,16 @@ class GrowingFileLoadErrorHandlingPolicy(
         /** ~500–700ms between attempts. */
         private const val RETRY_DELAY_MS = 600L
         private const val STABLE_POLL_MS = 200L
+
         /** Below this size, headers may not be snifftable yet — allow brief retries. */
         private const val SNIFF_READY_BYTES = 64L * 1024L
+
         /** Floor for ExoPlayer's minimum loadable retry count. */
         private const val MIN_GROWING_LOADABLE_RETRIES = 12
+
         /** Cap while the tip is advancing or the file is tiny / partial. */
         const val MAX_GROWING_RETRIES = 12
+
         /** Smaller cap when the tip is stuck (incomplete but not writing). */
         const val MAX_STUCK_RETRIES = 6
     }

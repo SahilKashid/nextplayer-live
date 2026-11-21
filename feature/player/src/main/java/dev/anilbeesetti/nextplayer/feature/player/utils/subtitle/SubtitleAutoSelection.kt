@@ -64,17 +64,22 @@ object SubtitleAutoSelection {
         }
 
         // null, out-of-range, or Disable (-1): always pick a real track when any exist.
-        return autoSelectIndex(trackLanguages, preferredLanguage)
+        return autoSelectIndex(
+            trackLanguages,
+            preferredLanguage,
+        )
     }
 
-    fun autoSelectIndex(
-        trackLanguages: List<String?>,
-        preferredLanguage: String,
-    ): Int {
+    fun autoSelectIndex(trackLanguages: List<String?>, preferredLanguage: String): Int {
         if (trackLanguages.isEmpty()) return 0
         val preferred = preferredLanguage.trim().lowercase()
         if (preferred.isNotEmpty()) {
-            val match = trackLanguages.indexOfFirst { languagesMatch(preferred, it) }
+            val match = trackLanguages.indexOfFirst {
+                languagesMatch(
+                    preferred,
+                    it,
+                )
+            }
             if (match >= 0) return match
         }
         // Prefer first track that has any language tag (often a sidecar), else index 0.

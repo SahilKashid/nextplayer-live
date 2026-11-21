@@ -10,19 +10,54 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Text sidecar subtitle extensions discovered next to a video file. */
-val SUBTITLE_FILE_EXTENSIONS = listOf("srt", "ssa", "ass", "vtt", "ttml")
+val SUBTITLE_FILE_EXTENSIONS = listOf(
+    "srt",
+    "ssa",
+    "ass",
+    "vtt",
+    "ttml",
+)
 
 /**
  * Modest language / variant tags probed when directory listing is unavailable
  * (scoped storage on Android 13+ with only READ_MEDIA_VIDEO).
  */
 val SUBTITLE_LANGUAGE_TAGS = listOf(
-    "en", "eng", "en.forced", "eng.forced", "en.sdh", "eng.sdh",
-    "es", "spa", "fr", "fre", "fra", "de", "ger", "deu",
-    "it", "ita", "pt", "por", "pt.br", "ru", "rus",
-    "ja", "jpn", "zh", "chi", "zho", "ko", "kor",
-    "hi", "hin", "ar", "ara",
-    "forced", "sdh", "cc",
+    "en",
+    "eng",
+    "en.forced",
+    "eng.forced",
+    "en.sdh",
+    "eng.sdh",
+    "es",
+    "spa",
+    "fr",
+    "fre",
+    "fra",
+    "de",
+    "ger",
+    "deu",
+    "it",
+    "ita",
+    "pt",
+    "por",
+    "pt.br",
+    "ru",
+    "rus",
+    "ja",
+    "jpn",
+    "zh",
+    "chi",
+    "zho",
+    "ko",
+    "kor",
+    "hi",
+    "hin",
+    "ar",
+    "ara",
+    "forced",
+    "sdh",
+    "cc",
 )
 
 /**
@@ -58,19 +93,35 @@ fun findSubtitleSidecars(
         ?.asSequence()
         ?.filter { it.isFile }
         ?.filter { it.extension.lowercase() in SUBTITLE_FILE_EXTENSIONS }
-        ?.filter { candidate -> matchesSubtitleBasename(mediaNameLower, candidate.nameWithoutExtension) }
+        ?.filter { candidate ->
+            matchesSubtitleBasename(
+                mediaNameLower,
+                candidate.nameWithoutExtension,
+            )
+        }
         ?.toList()
         .orEmpty()
 
     val candidates = if (listed.isNotEmpty()) {
         listed
     } else {
-        probeSubtitleSidecars(parentDir, mediaName)
+        probeSubtitleSidecars(
+            parentDir,
+            mediaName,
+        )
     }
 
     return candidates.sortedWith(
         compareBy<File> { candidate ->
-            if (candidate.nameWithoutExtension.equals(mediaName, ignoreCase = true)) 0 else 1
+            if (candidate.nameWithoutExtension.equals(
+                    mediaName,
+                    ignoreCase = true,
+                )
+            ) {
+                0
+            } else {
+                1
+            }
         }.thenBy { it.name.lowercase() },
     )
 }
@@ -82,12 +133,18 @@ fun findSubtitleSidecars(
 fun probeSubtitleSidecars(parentDir: File, mediaName: String): List<File> {
     val found = LinkedHashSet<File>()
     for (ext in SUBTITLE_FILE_EXTENSIONS) {
-        val exact = File(parentDir, "$mediaName.$ext")
+        val exact = File(
+            parentDir,
+            "$mediaName.$ext",
+        )
         if (exact.isFile) found.add(exact)
     }
     for (tag in SUBTITLE_LANGUAGE_TAGS) {
         for (ext in SUBTITLE_FILE_EXTENSIONS) {
-            val tagged = File(parentDir, "$mediaName.$tag.$ext")
+            val tagged = File(
+                parentDir,
+                "$mediaName.$tag.$ext",
+            )
             if (tagged.isFile) found.add(tagged)
         }
     }
@@ -103,8 +160,6 @@ fun matchesSubtitleBasename(mediaNameLower: String, subtitleBaseName: String): B
     return base == mediaNameLower || base.startsWith("$mediaNameLower.")
 }
 
-
-
 /**
  * Decodes a URI path segment / filename for UI display.
  * Turns `My%20Movie.en.vtt` into `My Movie.en.vtt`.
@@ -115,7 +170,13 @@ fun decodeUriDisplayName(name: String): String {
     val leaf = name.substringAfterLast('/').substringAfterLast(':')
     if ('%' !in leaf) return leaf
     return try {
-        URLDecoder.decode(leaf.replace("+", "%2B"), StandardCharsets.UTF_8.name())
+        URLDecoder.decode(
+            leaf.replace(
+                "+",
+                "%2B",
+            ),
+            StandardCharsets.UTF_8.name(),
+        )
     } catch (_: Exception) {
         leaf
     }
@@ -131,12 +192,22 @@ fun extractSubtitleLanguageFromFilename(filename: String): String? {
     val base = leaf.substringBeforeLast('.').takeIf { it != leaf } ?: return null
     val parts = base.split('.').filter { it.isNotEmpty() }
     if (parts.size < 2) return null
-    val skip = setOf("forced", "sdh", "cc")
+    val skip = setOf(
+        "forced",
+        "sdh",
+        "cc",
+    )
     for (part in parts.drop(1)) {
         val tag = part.lowercase()
         if (tag in skip) continue
         if (tag.length in 2..3 && tag.all { it.isLetter() }) return tag
-        if (tag.matches(Regex("^[a-z]{2}(-[a-z]{2,8})?$", RegexOption.IGNORE_CASE))) {
+        if (tag.matches(
+                Regex(
+                    "^[a-z]{2}(-[a-z]{2,8})?$",
+                    RegexOption.IGNORE_CASE,
+                ),
+            )
+        ) {
             return tag.substringBefore('-').lowercase()
         }
     }
@@ -160,7 +231,11 @@ suspend fun File.getLocalSubtitles(
 
 fun String.getThumbnail(): File? {
     val filePathWithoutExtension = this.substringBeforeLast(".")
-    val imageExtensions = listOf("png", "jpg", "jpeg")
+    val imageExtensions = listOf(
+        "png",
+        "jpg",
+        "jpeg",
+    )
     for (imageExtension in imageExtensions) {
         val file = File("$filePathWithoutExtension.$imageExtension")
         if (file.exists()) return file
@@ -168,9 +243,7 @@ fun String.getThumbnail(): File? {
     return null
 }
 
-fun File.isSubtitle(): Boolean {
-    return extension.lowercase() in SUBTITLE_FILE_EXTENSIONS
-}
+fun File.isSubtitle(): Boolean = extension.lowercase() in SUBTITLE_FILE_EXTENSIONS
 
 fun File.deleteFiles() {
     try {

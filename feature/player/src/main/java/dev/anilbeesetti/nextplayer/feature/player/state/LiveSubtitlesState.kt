@@ -31,6 +31,7 @@ import kotlinx.coroutines.withContext
 
 private val FastHighlightTick = 50.milliseconds
 private val IdleHighlightTick = 500.milliseconds
+
 // Start centering the upcoming cue slightly before it becomes active so the
 // slide finishes as bold/highlight lands (matches scroll animation length).
 private val ScrollLeadMs = 380L
@@ -57,11 +58,19 @@ fun rememberLiveSubtitlesState(
             scope = scope,
             initialPanelVisible = initialPanelVisible,
             initialPanelOnLeft = initialPanelOnLeft,
-            onPanelPlacementChanged = { open, onLeft -> panelPlacementChanged.value(open, onLeft) },
+            onPanelPlacementChanged = { open, onLeft ->
+                panelPlacementChanged.value(
+                    open,
+                    onLeft,
+                )
+            },
         )
     }
     LaunchedEffect(player) { state.observe() }
-    LaunchedEffect(subtitleDelayMs, subtitleSpeed) {
+    LaunchedEffect(
+        subtitleDelayMs,
+        subtitleSpeed,
+    ) {
         state.subtitleDelayMs = subtitleDelayMs
         state.subtitleSpeed = subtitleSpeed
         // Delay/speed only affect the position fallback path — EVENT_CUES already
@@ -135,6 +144,7 @@ class LiveSubtitlesState(
 
     private var loadJob: Job? = null
     private var lastTrackSignature: String? = null
+
     /** Realtime millis until which scroll/highlight lead is disabled (after seek). */
     private var leadDisabledUntilElapsedMs: Long = 0L
 
@@ -164,7 +174,12 @@ class LiveSubtitlesState(
 
     /** Off → right → left → off. */
     fun cyclePanel() {
-        applyPlacement(LiveSubtitlesPanelPlacement.from(isPanelVisible, isPanelOnLeft).cycle())
+        applyPlacement(
+            LiveSubtitlesPanelPlacement.from(
+                isPanelVisible,
+                isPanelOnLeft,
+            ).cycle(),
+        )
     }
 
     /** Rotate dismisses the panel before the orientation change. */
@@ -174,7 +189,10 @@ class LiveSubtitlesState(
 
     fun updatePanelVisible(visible: Boolean) {
         val placement = if (visible) {
-            LiveSubtitlesPanelPlacement.from(open = true, onLeft = isPanelOnLeft)
+            LiveSubtitlesPanelPlacement.from(
+                open = true,
+                onLeft = isPanelOnLeft,
+            )
         } else {
             LiveSubtitlesPanelPlacement.OFF
         }
@@ -193,7 +211,10 @@ class LiveSubtitlesState(
         }
         isPanelOnLeft = onLeft
         isPanelVisible = visible
-        onPanelPlacementChanged(visible, onLeft)
+        onPanelPlacementChanged(
+            visible,
+            onLeft,
+        )
         if (visible) {
             followController.resetFollowing()
             updateCurrentCueIndexFromPlayer()
@@ -306,14 +327,19 @@ class LiveSubtitlesState(
             commitScrollTargetIndex(-1)
             return
         }
-        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val speed = subtitleSpeed.coerceIn(
+            0.1f,
+            10f,
+        )
         val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
         // Nearest cue by time — works with empty currentCues (gaps / before first).
-        val index = LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(cues, effective)
+        val index = LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(
+            cues,
+            effective,
+        )
         commitCurrentCueIndex(index)
         updateScrollTarget(positionMs)
     }
-
 
     /**
      * Lead **scroll only** toward the next cue shortly before it becomes current.
@@ -327,11 +353,17 @@ class LiveSubtitlesState(
             // No active-index highlight (e.g. empty list) — still anchor scroll to
             // the nearest cue by playhead when the timeline is non-empty.
             if (cues.isNotEmpty()) {
-                val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+                val speed = subtitleSpeed.coerceIn(
+                    0.1f,
+                    10f,
+                )
                 val effective =
                     (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
                 commitScrollTargetIndex(
-                    LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(cues, effective),
+                    LiveSubtitlesTrackChange.nearestCueIndexByPlayhead(
+                        cues,
+                        effective,
+                    ),
                 )
             } else {
                 commitScrollTargetIndex(current)
@@ -359,7 +391,10 @@ class LiveSubtitlesState(
             return
         }
 
-        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val speed = subtitleSpeed.coerceIn(
+            0.1f,
+            10f,
+        )
         val effective = (positionMs.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
         val gapToNext = (cues[next].startMs - cues[current].startMs).coerceAtLeast(0L)
         val leadMs = when {
@@ -390,7 +425,10 @@ class LiveSubtitlesState(
         if (activeTexts.isEmpty()) return false
 
         // Disambiguate duplicate texts near the delay-adjusted position.
-        val speed = subtitleSpeed.coerceIn(0.1f, 10f)
+        val speed = subtitleSpeed.coerceIn(
+            0.1f,
+            10f,
+        )
         val effective = (player.currentPosition.toDouble() * speed - subtitleDelayMs.toDouble()).toLong()
         val index = LiveSubtitleCueMatcher.matchIndex(
             cues = cues,
@@ -455,7 +493,11 @@ class LiveSubtitlesState(
                         // Prefer larger / newer snapshots so phase merges don't regress.
                         val latestPending = pendingPartial
                         if (cues.isNotEmpty() && partial.size < cues.size) return@launch
-                        if (latestPending != null && partial.size < latestPending.size) return@launch
+                        if (latestPending != null &&
+                            partial.size < latestPending.size
+                        ) {
+                            return@launch
+                        }
                         pendingPartial = partial
                         if (coalesceJob?.isActive == true) return@launch
                         coalesceJob = scope.launch(Dispatchers.Main.immediate) {
@@ -556,7 +598,6 @@ class LiveSubtitlesState(
         updateCurrentCueIndexFromPlayer()
     }
 
-
     /** Update current cue + highlight key. Highlight key only changes when identity changes. */
     private fun commitCurrentCueIndex(index: Int) {
         currentCueIndex = index
@@ -594,5 +635,4 @@ class LiveSubtitlesState(
     }
 }
 
-private fun String.normalizeCueText(): String =
-    LiveSubtitleCueMatcher.normalizeCueText(this)
+private fun String.normalizeCueText(): String = LiveSubtitleCueMatcher.normalizeCueText(this)

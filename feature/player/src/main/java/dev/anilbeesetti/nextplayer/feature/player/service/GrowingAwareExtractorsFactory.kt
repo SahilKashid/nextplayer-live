@@ -42,9 +42,7 @@ import dev.anilbeesetti.nextplayer.core.media.network.datasource.ReadableTipTrac
  * (no tip key). Non-local / network URIs keep cue-seek enabled.
  */
 @UnstableApi
-class GrowingAwareExtractorsFactory(
-    context: Context,
-) : ExtractorsFactory {
+class GrowingAwareExtractorsFactory(context: Context) : ExtractorsFactory {
 
     private val appContext = context.applicationContext
     private val subtitleParserFactory = DefaultSubtitleParserFactory()
@@ -52,25 +50,41 @@ class GrowingAwareExtractorsFactory(
     override fun createExtractors(): Array<Extractor> =
         buildFactory(disableSeekForCues = true).createExtractors()
 
-    override fun createExtractors(
-        uri: Uri,
-        headers: Map<String, List<String>>,
-    ): Array<Extractor> {
-        val growing = isLikelyGrowing(appContext, uri)
+    override fun createExtractors(uri: Uri, headers: Map<String, List<String>>): Array<Extractor> {
+        val growing = isLikelyGrowing(
+            appContext,
+            uri,
+        )
         val extractors = buildFactory(disableSeekForCues = growing)
-            .createExtractors(uri, headers)
+            .createExtractors(
+                uri,
+                headers,
+            )
         if (!growing) return extractors
 
-        val path = resolveLocalPath(appContext, uri)
+        val path = resolveLocalPath(
+            appContext,
+            uri,
+        )
         val tipKey = path ?: uri.toString()
-        val pathProvider: () -> String? = { path ?: resolveLocalPath(appContext, uri) }
+        val pathProvider: () -> String? = {
+            path ?: resolveLocalPath(
+                appContext,
+                uri,
+            )
+        }
 
         return Array(extractors.size) { index ->
             val extractor = extractors[index]
             if (isMatroskaExtractor(extractor)) {
                 IncompleteMatroskaSeekExtractor(
                     delegate = extractor,
-                    tipProvider = { tipForKey(tipKey, path) },
+                    tipProvider = {
+                        tipForKey(
+                            tipKey,
+                            path,
+                        )
+                    },
                     filePathProvider = pathProvider,
                 )
             } else {
@@ -97,27 +111,43 @@ class GrowingAwareExtractorsFactory(
         fun isLikelyGrowing(context: Context, uri: Uri): Boolean {
             val scheme = uri.scheme
             val isLocal = scheme.isNullOrEmpty() ||
-                ContentResolver.SCHEME_FILE.equals(scheme, ignoreCase = true) ||
-                ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)
+                ContentResolver.SCHEME_FILE.equals(
+                    scheme,
+                    ignoreCase = true,
+                ) ||
+                ContentResolver.SCHEME_CONTENT.equals(
+                    scheme,
+                    ignoreCase = true,
+                )
             if (!isLocal) return false
 
-            val path = resolveLocalPath(context, uri)
+            val path = resolveLocalPath(
+                context,
+                uri,
+            )
             if (path != null) {
                 return IncompleteLocalMedia.shouldPlayAsGrowing(path)
             }
 
             // content:// without a resolvable path — inspect via AFD/PFD (Open-with).
-            if (ContentResolver.SCHEME_CONTENT.equals(scheme, ignoreCase = true)) {
-                return IncompleteLocalMedia.shouldPlayAsGrowing(context, uri)
+            if (ContentResolver.SCHEME_CONTENT.equals(
+                    scheme,
+                    ignoreCase = true,
+                )
+            ) {
+                return IncompleteLocalMedia.shouldPlayAsGrowing(
+                    context,
+                    uri,
+                )
             }
 
             return false
         }
 
-        fun resolveLocalPath(context: Context, uri: Uri): String? {
-            return runCatching { context.getPath(uri) }.getOrNull()
-                ?: GrowingFileDataSource.resolvePath(uri)
-        }
+        fun resolveLocalPath(context: Context, uri: Uri): String? = runCatching {
+            context.getPath(uri)
+        }.getOrNull()
+            ?: GrowingFileDataSource.resolvePath(uri)
 
         fun isMatroskaExtractor(extractor: Extractor): Boolean {
             var current: Extractor? = extractor
@@ -125,7 +155,13 @@ class GrowingAwareExtractorsFactory(
             while (current != null && depth < 8) {
                 if (current is MatroskaExtractor) return true
                 val name = current.javaClass.name
-                if (name.contains("MatroskaExtractor", ignoreCase = false)) return true
+                if (name.contains(
+                        "MatroskaExtractor",
+                        ignoreCase = false,
+                    )
+                ) {
+                    return true
+                }
                 val next = current.underlyingImplementation
                 if (next === current) break
                 current = next
@@ -151,21 +187,30 @@ class GrowingAwareExtractorsFactory(
         }
 
         private fun tipForKey(tipKey: String, path: String?): Long {
-            for (key in tipLookupKeys(tipKey, path)) {
+            for (key in tipLookupKeys(
+                tipKey,
+                path,
+            )) {
                 val tracked = ReadableTipTracker.tipFor(key)
                 if (tracked > 0L) return tracked
             }
             if (path != null) {
                 val snap = IncompleteLocalMedia.inspect(path)
                 if (snap.readableEnd > 0L) {
-                    for (key in tipLookupKeys(tipKey, path)) {
-                        ReadableTipTracker.update(key, snap.readableEnd, snap.declaredLength)
+                    for (key in tipLookupKeys(
+                        tipKey,
+                        path,
+                    )) {
+                        ReadableTipTracker.update(
+                            key,
+                            snap.readableEnd,
+                            snap.declaredLength,
+                        )
                     }
                     return snap.readableEnd
                 }
             }
             return -1L
         }
-
     }
 }

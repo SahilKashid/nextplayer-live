@@ -9,6 +9,7 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import dev.anilbeesetti.nextplayer.core.common.storagePermission
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -18,8 +19,21 @@ import org.junit.runner.RunWith
 class MainActivityPermissionTest {
 
     @Test
-    fun api24RequestsReadStoragePermission() {
-        assertEquals(Manifest.permission.READ_EXTERNAL_STORAGE, storagePermission)
+    @SdkSuppress(maxSdkVersion = 32)
+    fun pre33RequestsReadStoragePermission() {
+        assertEquals(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            storagePermission,
+        )
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
+    fun api33RequestsReadMediaVideoPermission() {
+        assertEquals(
+            Manifest.permission.READ_MEDIA_VIDEO,
+            storagePermission,
+        )
     }
 
     @Test
@@ -27,16 +41,26 @@ class MainActivityPermissionTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals(
             PackageManager.PERMISSION_DENIED,
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE),
+            ContextCompat.checkSelfPermission(
+                context,
+                storagePermission,
+            ),
         )
 
         context.startActivity(
-            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            Intent(
+                context,
+                MainActivity::class.java,
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         SystemClock.sleep(1_000)
 
         val activityManager = context.getSystemService(ActivityManager::class.java)
-        val topActivity = activityManager.appTasks.first().taskInfo?.topActivity
-        assertEquals(MainActivity::class.java.name, topActivity?.className)
+        // The permission dialog can be on top while MainActivity remains alive underneath it.
+        val baseActivity = activityManager.appTasks.first().taskInfo?.baseActivity
+        assertEquals(
+            MainActivity::class.java.name,
+            baseActivity?.className,
+        )
     }
 }

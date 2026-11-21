@@ -51,7 +51,10 @@ import kotlin.math.abs
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-private val ScrollAnimation = tween<Float>(durationMillis = 320, easing = FastOutSlowInEasing)
+private val ScrollAnimation = tween<Float>(
+    durationMillis = 320,
+    easing = FastOutSlowInEasing,
+)
 private const val NearCenterTolerancePx = 8f
 private const val RapidCueGapMs = 500L
 
@@ -63,10 +66,7 @@ private const val RapidCueGapMs = 500L
  * stay flicker-free for highlight the same way they do for scroll.
  */
 @Composable
-fun LiveSubtitlesPanel(
-    state: LiveSubtitlesState,
-    modifier: Modifier = Modifier,
-) {
+fun LiveSubtitlesPanel(state: LiveSubtitlesState, modifier: Modifier = Modifier) {
     // Fresh LazyListState per media/track signature so next/prev does not keep
     // the previous video's firstVisibleItemIndex. Progressive fills keep the
     // same listResetKey and therefore the same scroll state.
@@ -97,7 +97,12 @@ fun LiveSubtitlesPanel(
             // Scroll only — keyed on cue identity so remux prepends don't restart scroll.
             // Restart when listResetKey / listState changes so we do not scroll an
             // orphaned LazyListState after next/prev media.
-            LaunchedEffect(state.isFollowing, halfViewportPx, state.listResetKey, listState) {
+            LaunchedEffect(
+                state.isFollowing,
+                halfViewportPx,
+                state.listResetKey,
+                listState,
+            ) {
                 if (!state.isFollowing) return@LaunchedEffect
                 snapshotFlow { state.scrollTargetKey }
                     .distinctUntilChanged()
@@ -108,13 +113,19 @@ fun LiveSubtitlesPanel(
                         if (index < 0) return@collectLatest
                         if (listState.isItemNearViewportCenter(index)) return@collectLatest
                         val snap = state.cues.isRapidGapTo(index)
-                        listState.centerItemInViewport(index, animated = !snap)
+                        listState.centerItemInViewport(
+                            index,
+                            animated = !snap,
+                        )
                     }
             }
 
             when {
                 state.isLoading && state.cues.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         CircularProgressIndicator(modifier = Modifier.size(36.dp))
                     }
                 }
@@ -222,7 +233,10 @@ private suspend fun LazyListState.centerItemInViewport(index: Int, animated: Boo
     val delta = itemCenterDelta(index) ?: return
     if (abs(delta) <= NearCenterTolerancePx) return
     if (animated) {
-        animateScrollBy(delta, animationSpec = ScrollAnimation)
+        animateScrollBy(
+            delta,
+            animationSpec = ScrollAnimation,
+        )
     } else {
         scrollBy(delta)
     }
@@ -234,11 +248,7 @@ private suspend fun LazyListState.centerItemInViewport(index: Int, animated: Boo
  * into the center.
  */
 @Composable
-internal fun LiveSubtitleCueRow(
-    cue: TimedCue,
-    isHighlighted: Boolean,
-    onClick: () -> Unit,
-) {
+internal fun LiveSubtitleCueRow(cue: TimedCue, isHighlighted: Boolean, onClick: () -> Unit) {
     val background = if (isHighlighted) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -257,7 +267,10 @@ internal fun LiveSubtitleCueRow(
             .clip(MaterialTheme.shapes.medium)
             .background(background)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(
+                horizontal = 12.dp,
+                vertical = 10.dp,
+            ),
     ) {
         Text(
             text = timeLabel,
