@@ -73,7 +73,9 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     override fun open(dataSpec: DataSpec): Long {
         closed = false
         val resolvedPath = resolvePath(dataSpec.uri)
-            ?: throw IOException("GrowingFileDataSource requires a filesystem path: ${dataSpec.uri}")
+            ?: throw IOException(
+                "GrowingFileDataSource requires a filesystem path: ${dataSpec.uri}",
+            )
 
         uri = dataSpec.uri
         path = resolvedPath
@@ -81,8 +83,14 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         transferInitializing(dataSpec)
 
         try {
-            waitUntilPositionAvailable(resolvedPath, dataSpec.position)
-            openFileAt(resolvedPath, dataSpec.position)
+            waitUntilPositionAvailable(
+                resolvedPath,
+                dataSpec.position,
+            )
+            openFileAt(
+                resolvedPath,
+                dataSpec.position,
+            )
             readPosition = dataSpec.position
             bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
                 dataSpec.length
@@ -98,7 +106,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         } catch (e: IOException) {
             throw e
         } catch (e: Exception) {
-            throw IOException("Failed to open growing file $resolvedPath", e)
+            throw IOException(
+                "Failed to open growing file $resolvedPath",
+                e,
+            )
         }
 
         opened = true
@@ -115,7 +126,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         val toRead = if (bytesRemaining == C.LENGTH_UNSET.toLong()) {
             length
         } else {
-            minOf(length.toLong(), bytesRemaining).toInt()
+            minOf(
+                length.toLong(),
+                bytesRemaining,
+            ).toInt()
         }
 
         while (true) {
@@ -123,19 +137,42 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
             val localFile = File(path)
             val declared = localFile.length()
-            val lengthOnDisk = effectiveLength(path, declared)
+            val lengthOnDisk = effectiveLength(
+                path,
+                declared,
+            )
             noteLength(lengthOnDisk)
             val available = lengthOnDisk - readPosition
 
             if (available > 0) {
-                ensureFileReflectsLength(path, declared)
+                ensureFileReflectsLength(
+                    path,
+                    declared,
+                )
                 val raf = file ?: return C.RESULT_END_OF_INPUT
                 val bytesRead = try {
-                    raf.read(buffer, offset, minOf(toRead.toLong(), available).toInt())
+                    raf.read(
+                        buffer,
+                        offset,
+                        minOf(
+                            toRead.toLong(),
+                            available,
+                        ).toInt(),
+                    )
                 } catch (_: IOException) {
                     // File may have been replaced / truncated by the downloader; reopen once.
-                    reopenAt(path, readPosition)
-                    file!!.read(buffer, offset, minOf(toRead.toLong(), available).toInt())
+                    reopenAt(
+                        path,
+                        readPosition,
+                    )
+                    file!!.read(
+                        buffer,
+                        offset,
+                        minOf(
+                            toRead.toLong(),
+                            available,
+                        ).toInt(),
+                    )
                 }
                 if (bytesRead > 0) {
                     readPosition += bytesRead
@@ -146,7 +183,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                     return bytesRead
                 }
                 // read() returned -1 despite length claiming data — reopen and retry.
-                reopenAt(path, readPosition)
+                reopenAt(
+                    path,
+                    readPosition,
+                )
                 continue
             }
 
@@ -187,29 +227,44 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         val raf = file
         // Prefer in-place tip tracking on the open RAF (avoids reopening for every poll).
         if (raf != null) {
-            return effectiveLengthWithRaf(raf, path, declared)
+            return effectiveLengthWithRaf(
+                raf,
+                path,
+                declared,
+            )
         }
-        return SparseAwareFileLength.readableEnd(path, declared, fd = null)
+        return SparseAwareFileLength.readableEnd(
+            path,
+            declared,
+            fd = null,
+        )
     }
 
-    private fun effectiveLengthWithRaf(
-        raf: RandomAccessFile,
-        path: String,
-        declared: Long,
-    ): Long {
+    private fun effectiveLengthWithRaf(raf: RandomAccessFile, path: String, declared: Long): Long {
         // SEEK_HOLE first (sparse preallocation). A far hole plus a real tail
         // means the download already reached EOF — do not cap at a stale hole.
         val holeBased = try {
-            SparseAwareFileLength.sparseHoleReadableEnd(path, declared, raf.fd)
+            SparseAwareFileLength.sparseHoleReadableEnd(
+                path,
+                declared,
+                raf.fd,
+            )
         } catch (_: Exception) {
             declared
         }
         val tailData = try {
-            SparseAwareFileLength.tailHasRealData(raf, declared)
+            SparseAwareFileLength.tailHasRealData(
+                raf,
+                declared,
+            )
         } catch (_: Exception) {
             false
         }
-        val chosen = SparseAwareFileLength.chooseReadableEnd(declared, holeBased, tailData)
+        val chosen = SparseAwareFileLength.chooseReadableEnd(
+            declared,
+            holeBased,
+            tailData,
+        )
         if (tailData && chosen >= declared) {
             cachedReadableTip = declared
             return declared
@@ -221,10 +276,17 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         }
         val now = System.currentTimeMillis()
         if (cachedReadableTip < 0L) {
-            if (!SparseAwareFileLength.quickTailIsAllZeros(raf, declared)) {
+            if (!SparseAwareFileLength.quickTailIsAllZeros(
+                    raf,
+                    declared,
+                )
+            ) {
                 return declared
             }
-            cachedReadableTip = SparseAwareFileLength.zeroPaddedReadableEnd(raf, declared)
+            cachedReadableTip = SparseAwareFileLength.zeroPaddedReadableEnd(
+                raf,
+                declared,
+            )
             lastTipProbeElapsedMs = now
         } else if (
             now - lastTipProbeElapsedMs >= TIP_REPROBE_MS ||
@@ -258,7 +320,10 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 continue
             }
             val declared = f.length()
-            val size = effectiveLength(path, declared)
+            val size = effectiveLength(
+                path,
+                declared,
+            )
             val mtime = f.lastModified()
             noteLength(size)
             // Seek is OK at or before current readable tip; past a finished file is an error.
@@ -271,21 +336,31 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             }
             val incomplete = looksPartialFileName(f.name) ||
                 isActivelyGrowing(mtime) ||
-                SparseAwareFileLength.isSparsePartial(declared, size)
+                SparseAwareFileLength.isSparsePartial(
+                    declared,
+                    size,
+                )
             // Seeks should already be clamped to the safe tip. If a seek still opens past the
             // readable end on an incomplete file, fail fast (~200–500ms) instead of spinning
             // on a long stable wait / forever-poll (loading spinner then parse failure).
             if (incomplete && now - waitStarted >= SEEK_PAST_TIP_FAIL_FAST_MS) {
-                throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+                throw DataSourceException(
+                    PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+                )
             }
             val gap = position - size
             // Legacy cue-style far seeks on ambiguous files: fail after a short wait once the
             // gap is clearly beyond the next cluster fill.
             if (gap > CUE_SEEK_GAP_BYTES && now - waitStarted >= CUE_SEEK_FAIL_FAST_MS) {
-                throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+                throw DataSourceException(
+                    PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+                )
             }
             if (looksPartialFileName(f.name) ||
-                SparseAwareFileLength.isSparsePartial(declared, size)
+                SparseAwareFileLength.isSparsePartial(
+                    declared,
+                    size,
+                )
             ) {
                 stableSize = size
                 stableMtime = mtime
@@ -297,7 +372,9 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
                 if (stableSince == 0L) {
                     stableSince = now
                 } else if (now - stableSince >= STABLE_DURATION_MS) {
-                    throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+                    throw DataSourceException(
+                        PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+                    )
                 }
             } else {
                 stableSize = size
@@ -345,10 +422,16 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     private fun isDownloadFinished(file: File): Boolean {
         val path = file.absolutePath
         val declared = file.length()
-        val readable = effectiveLength(path, declared)
+        val readable = effectiveLength(
+            path,
+            declared,
+        )
         // Partial name or tip behind declared → still downloading; keep polling.
         if (looksPartialFileName(file.name) ||
-            SparseAwareFileLength.isSparsePartial(declared, readable)
+            SparseAwareFileLength.isSparsePartial(
+                declared,
+                readable,
+            )
         ) {
             noteLength(readable)
             return false
@@ -362,10 +445,16 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             throwIfClosedOrInterrupted()
             sleepInterruptibly(POLL_INTERVAL_MS)
             val loopDeclared = file.length()
-            val size = effectiveLength(path, loopDeclared)
+            val size = effectiveLength(
+                path,
+                loopDeclared,
+            )
             noteLength(size)
             if (looksPartialFileName(file.name) ||
-                SparseAwareFileLength.isSparsePartial(loopDeclared, size)
+                SparseAwareFileLength.isSparsePartial(
+                    loopDeclared,
+                    size,
+                )
             ) {
                 return false
             }
@@ -378,9 +467,15 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             lastSize = size
         }
         val finalDeclared = file.length()
-        val finalReadable = effectiveLength(path, finalDeclared)
+        val finalReadable = effectiveLength(
+            path,
+            finalDeclared,
+        )
         if (looksPartialFileName(file.name) ||
-            SparseAwareFileLength.isSparsePartial(finalDeclared, finalReadable)
+            SparseAwareFileLength.isSparsePartial(
+                finalDeclared,
+                finalReadable,
+            )
         ) {
             return false
         }
@@ -408,18 +503,38 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         }
         // Publish under path, DataSpec URI, and file:// forms so tipProvider never misses
         // after SchemeDispatch rewrites the URI.
-        ReadableTipTracker.update(path, readableEnd, declared)
+        ReadableTipTracker.update(
+            path,
+            readableEnd,
+            declared,
+        )
         if (path.startsWith("/")) {
-            ReadableTipTracker.update("file://$path", readableEnd, declared)
+            ReadableTipTracker.update(
+                "file://$path",
+                readableEnd,
+                declared,
+            )
         }
         uri?.let { u ->
             val uriStr = u.toString()
-            ReadableTipTracker.update(uriStr, readableEnd, declared)
+            ReadableTipTracker.update(
+                uriStr,
+                readableEnd,
+                declared,
+            )
             val uriPath = resolvePath(u)
             if (uriPath != null && uriPath != path) {
-                ReadableTipTracker.update(uriPath, readableEnd, declared)
+                ReadableTipTracker.update(
+                    uriPath,
+                    readableEnd,
+                    declared,
+                )
                 if (uriPath.startsWith("/")) {
-                    ReadableTipTracker.update("file://$uriPath", readableEnd, declared)
+                    ReadableTipTracker.update(
+                        "file://$uriPath",
+                        readableEnd,
+                        declared,
+                    )
                 }
             }
         }
@@ -428,14 +543,20 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
     private fun openFileAt(path: String, position: Long) {
         synchronized(lock) {
             file?.close()
-            val raf = RandomAccessFile(path, "r")
+            val raf = RandomAccessFile(
+                path,
+                "r",
+            )
             raf.seek(position)
             file = raf
         }
     }
 
     private fun reopenAt(path: String, position: Long) {
-        openFileAt(path, position)
+        openFileAt(
+            path,
+            position,
+        )
     }
 
     /**
@@ -446,10 +567,16 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
         val raf = file ?: return
         try {
             if (raf.length() < declaredLength) {
-                reopenAt(path, readPosition)
+                reopenAt(
+                    path,
+                    readPosition,
+                )
             }
         } catch (_: IOException) {
-            reopenAt(path, readPosition)
+            reopenAt(
+                path,
+                readPosition,
+            )
         }
     }
 
@@ -474,19 +601,24 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
 
     companion object {
         private const val POLL_INTERVAL_MS = 50L
+
         /**
          * Idle stability before treating a growing file as finished.
          * Download managers often pause well beyond a few seconds between flushes — wait
          * through those (VLC-style) rather than EOF mid-cluster.
          */
         private const val STABLE_DURATION_MS = 30_000L
+
         /** Keep waiting if length grew this recently. */
         private const val RECENT_GROWTH_WINDOW_MS = 15_000L
+
         /** First complete-looking EOF: wait this long for an append before finishing. */
         private const val FIRST_EOF_STABLE_MS = 2_000L
+
         /** Far seeks (e.g. Matroska Cues near EOF) beyond current length + this gap fail fast. */
         private const val CUE_SEEK_GAP_BYTES = 256L * 1024L
         private const val CUE_SEEK_FAIL_FAST_MS = 500L
+
         /**
          * Incomplete-file seeks past the readable tip: short wait only. Approximate seeking
          * should already clamp; do not spin the loading UI for seconds on a bad open.
@@ -506,7 +638,12 @@ class GrowingFileDataSource : BaseDataSource(/* isNetwork = */ false) {
             val scheme = uri.scheme
             return when {
                 scheme.isNullOrEmpty() -> uri.path ?: uri.toString().takeIf { it.startsWith("/") }
-                scheme.equals("file", ignoreCase = true) -> uri.path
+
+                scheme.equals(
+                    "file",
+                    ignoreCase = true,
+                ) -> uri.path
+
                 else -> null
             }
         }

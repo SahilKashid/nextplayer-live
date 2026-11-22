@@ -81,17 +81,29 @@ object SparseAwareFileLength {
      */
     fun tailHasRealData(raf: RandomAccessFile, declaredLength: Long): Boolean {
         if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
-        return !quickTailIsAllZeros(raf, declaredLength)
+        return !quickTailIsAllZeros(
+            raf,
+            declaredLength,
+        )
     }
 
     fun tailHasRealData(path: String, declaredLength: Long, fd: FileDescriptor?): Boolean {
         if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
         return try {
             if (fd != null) {
-                tailHasRealData(declaredLength, fd)
+                tailHasRealData(
+                    declaredLength,
+                    fd,
+                )
             } else {
-                RandomAccessFile(path, "r").use { raf ->
-                    tailHasRealData(raf, declaredLength)
+                RandomAccessFile(
+                    path,
+                    "r",
+                ).use { raf ->
+                    tailHasRealData(
+                        raf,
+                        declaredLength,
+                    )
                 }
             }
         } catch (_: IOException) {
@@ -104,7 +116,10 @@ object SparseAwareFileLength {
     fun tailHasRealData(declaredLength: Long, fd: FileDescriptor?): Boolean {
         if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES || fd == null) return false
         return try {
-            !quickTailIsAllZerosFd(fd, declaredLength)
+            !quickTailIsAllZerosFd(
+                fd,
+                declaredLength,
+            )
         } catch (_: Exception) {
             false
         }
@@ -129,12 +144,29 @@ object SparseAwareFileLength {
         preferZeroTailScan: Boolean = false,
     ): Long {
         if (declaredLength <= 0L) return 0L
-        val holeBased = holeReadableEnd(path, declaredLength, fd)
-        val tailData = !preferZeroTailScan && tailHasRealData(path, declaredLength, fd)
-        val chosen = chooseReadableEnd(declaredLength, holeBased, tailData)
+        val holeBased = holeReadableEnd(
+            path,
+            declaredLength,
+            fd,
+        )
+        val tailData = !preferZeroTailScan && tailHasRealData(
+            path,
+            declaredLength,
+            fd,
+        )
+        val chosen = chooseReadableEnd(
+            declaredLength,
+            holeBased,
+            tailData,
+        )
         if (tailData && chosen >= declaredLength) return declaredLength
         if (chosen < declaredLength) return chosen
-        return zeroTailOrDeclared(path, declaredLength, fd, preferZeroTailScan)
+        return zeroTailOrDeclared(
+            path,
+            declaredLength,
+            fd,
+            preferZeroTailScan,
+        )
     }
 
     /**
@@ -147,12 +179,26 @@ object SparseAwareFileLength {
     ): Long {
         if (declaredLength <= 0L) return 0L
         if (fd == null) return declaredLength
-        val holeBased = holeReadableEndWithFd(declaredLength, fd)
-        val tailData = !preferZeroTailScan && tailHasRealData(declaredLength, fd)
-        val chosen = chooseReadableEnd(declaredLength, holeBased, tailData)
+        val holeBased = holeReadableEndWithFd(
+            declaredLength,
+            fd,
+        )
+        val tailData = !preferZeroTailScan && tailHasRealData(
+            declaredLength,
+            fd,
+        )
+        val chosen = chooseReadableEnd(
+            declaredLength,
+            holeBased,
+            tailData,
+        )
         if (tailData && chosen >= declaredLength) return declaredLength
         if (chosen < declaredLength) return chosen
-        return zeroTailOrDeclaredWithFd(declaredLength, fd, preferZeroTailScan)
+        return zeroTailOrDeclaredWithFd(
+            declaredLength,
+            fd,
+            preferZeroTailScan,
+        )
     }
 
     /**
@@ -165,7 +211,10 @@ object SparseAwareFileLength {
         if (declaredLength <= 0L) return 0L
         val saved = raf.filePointer
         return try {
-            findZeroPaddedTip(raf, declaredLength)
+            findZeroPaddedTip(
+                raf,
+                declaredLength,
+            )
         } finally {
             try {
                 raf.seek(saved)
@@ -181,16 +230,33 @@ object SparseAwareFileLength {
      */
     fun extendZeroPaddedTip(raf: RandomAccessFile, knownTip: Long, declaredLength: Long): Long {
         if (declaredLength <= 0L) return 0L
-        if (knownTip < 0L) return zeroPaddedReadableEnd(raf, declaredLength)
+        if (knownTip < 0L) {
+            return zeroPaddedReadableEnd(
+                raf,
+                declaredLength,
+            )
+        }
         if (knownTip >= declaredLength) return declaredLength
         val saved = raf.filePointer
         return try {
-            val probeEnd = min(knownTip + ZERO_TAIL_PROBE_BYTES, declaredLength)
-            if (!windowHasData(raf, knownTip, probeEnd)) {
+            val probeEnd = min(
+                knownTip + ZERO_TAIL_PROBE_BYTES,
+                declaredLength,
+            )
+            if (!windowHasData(
+                    raf,
+                    knownTip,
+                    probeEnd,
+                )
+            ) {
                 knownTip
             } else {
                 // Tip advanced — find new end from knownTip forward (still sequential).
-                findZeroPaddedTipFrom(raf, knownTip, declaredLength)
+                findZeroPaddedTipFrom(
+                    raf,
+                    knownTip,
+                    declaredLength,
+                )
             }
         } finally {
             try {
@@ -209,8 +275,15 @@ object SparseAwareFileLength {
         if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
         val saved = raf.filePointer
         return try {
-            val start = maxOf(0L, declaredLength - tailBytes)
-            !windowHasData(raf, start, declaredLength)
+            val start = maxOf(
+                0L,
+                declaredLength - tailBytes,
+            )
+            !windowHasData(
+                raf,
+                start,
+                declaredLength,
+            )
         } finally {
             try {
                 raf.seek(saved)
@@ -224,12 +297,19 @@ object SparseAwareFileLength {
      * the zero-padded tip separately on the hot poll path.
      */
     fun sparseHoleReadableEnd(path: String, declaredLength: Long, fd: FileDescriptor?): Long =
-        holeReadableEnd(path, declaredLength, fd)
+        holeReadableEnd(
+            path,
+            declaredLength,
+            fd,
+        )
 
     fun sparseHoleReadableEnd(declaredLength: Long, fd: FileDescriptor?): Long {
         if (declaredLength <= 0L) return 0L
         if (fd == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return declaredLength
-        return holeReadableEndWithFd(declaredLength, fd)
+        return holeReadableEndWithFd(
+            declaredLength,
+            fd,
+        )
     }
 
     private fun holeReadableEnd(path: String, declaredLength: Long, fd: FileDescriptor?): Long {
@@ -237,11 +317,20 @@ object SparseAwareFileLength {
             return declaredLength
         }
         if (fd != null) {
-            return holeReadableEndWithFd(declaredLength, fd)
+            return holeReadableEndWithFd(
+                declaredLength,
+                fd,
+            )
         }
         return try {
-            RandomAccessFile(path, "r").use { raf ->
-                holeReadableEndWithFd(declaredLength, raf.fd)
+            RandomAccessFile(
+                path,
+                "r",
+            ).use { raf ->
+                holeReadableEndWithFd(
+                    declaredLength,
+                    raf.fd,
+                )
             }
         } catch (_: IOException) {
             declaredLength
@@ -255,14 +344,26 @@ object SparseAwareFileLength {
             return declaredLength
         }
         return try {
-            val cur = Os.lseek(fd, 0L, OsConstants.SEEK_CUR)
+            val cur = Os.lseek(
+                fd,
+                0L,
+                OsConstants.SEEK_CUR,
+            )
             try {
-                val hole = Os.lseek(fd, 0L, SEEK_HOLE)
+                val hole = Os.lseek(
+                    fd,
+                    0L,
+                    SEEK_HOLE,
+                )
                 // Do not collapse tip to 0 via chooseReadableEnd's hole==0 branch for SEEK_HOLE:
                 // hole at 0 can mean "no data extent" OR probe quirk; prefer declared when hole==0.
                 if (hole > 0L && hole < declaredLength) hole else declaredLength
             } finally {
-                Os.lseek(fd, cur, OsConstants.SEEK_SET)
+                Os.lseek(
+                    fd,
+                    cur,
+                    OsConstants.SEEK_SET,
+                )
             }
         } catch (_: ErrnoException) {
             declaredLength
@@ -281,11 +382,21 @@ object SparseAwareFileLength {
             return declaredLength
         }
         return try {
-            RandomAccessFile(path, "r").use { raf ->
-                if (!preferZeroTailScan && !quickTailIsAllZeros(raf, declaredLength)) {
+            RandomAccessFile(
+                path,
+                "r",
+            ).use { raf ->
+                if (!preferZeroTailScan && !quickTailIsAllZeros(
+                        raf,
+                        declaredLength,
+                    )
+                ) {
                     return declaredLength
                 }
-                val tip = zeroPaddedReadableEnd(raf, declaredLength)
+                val tip = zeroPaddedReadableEnd(
+                    raf,
+                    declaredLength,
+                )
                 if (tip < declaredLength) tip else declaredLength
             }
         } catch (_: IOException) {
@@ -304,15 +415,31 @@ object SparseAwareFileLength {
             return declaredLength
         }
         return try {
-            val cur = Os.lseek(fd, 0L, OsConstants.SEEK_CUR)
+            val cur = Os.lseek(
+                fd,
+                0L,
+                OsConstants.SEEK_CUR,
+            )
             try {
-                if (!preferZeroTailScan && !quickTailIsAllZerosFd(fd, declaredLength)) {
+                if (!preferZeroTailScan && !quickTailIsAllZerosFd(
+                        fd,
+                        declaredLength,
+                    )
+                ) {
                     return declaredLength
                 }
-                val tip = findZeroPaddedTipFd(fd, 0L, declaredLength)
+                val tip = findZeroPaddedTipFd(
+                    fd,
+                    0L,
+                    declaredLength,
+                )
                 if (tip < declaredLength) tip else declaredLength
             } finally {
-                Os.lseek(fd, cur, OsConstants.SEEK_SET)
+                Os.lseek(
+                    fd,
+                    cur,
+                    OsConstants.SEEK_SET,
+                )
             }
         } catch (_: ErrnoException) {
             declaredLength
@@ -327,11 +454,23 @@ object SparseAwareFileLength {
     fun zeroPaddedReadableEnd(fd: FileDescriptor, declaredLength: Long): Long {
         if (declaredLength <= 0L) return 0L
         return try {
-            val cur = Os.lseek(fd, 0L, OsConstants.SEEK_CUR)
+            val cur = Os.lseek(
+                fd,
+                0L,
+                OsConstants.SEEK_CUR,
+            )
             try {
-                findZeroPaddedTipFd(fd, 0L, declaredLength)
+                findZeroPaddedTipFd(
+                    fd,
+                    0L,
+                    declaredLength,
+                )
             } finally {
-                Os.lseek(fd, cur, OsConstants.SEEK_SET)
+                Os.lseek(
+                    fd,
+                    cur,
+                    OsConstants.SEEK_SET,
+                )
             }
         } catch (_: ErrnoException) {
             declaredLength
@@ -342,19 +481,44 @@ object SparseAwareFileLength {
 
     fun extendZeroPaddedTip(fd: FileDescriptor, knownTip: Long, declaredLength: Long): Long {
         if (declaredLength <= 0L) return 0L
-        if (knownTip < 0L) return zeroPaddedReadableEnd(fd, declaredLength)
+        if (knownTip < 0L) {
+            return zeroPaddedReadableEnd(
+                fd,
+                declaredLength,
+            )
+        }
         if (knownTip >= declaredLength) return declaredLength
         return try {
-            val cur = Os.lseek(fd, 0L, OsConstants.SEEK_CUR)
+            val cur = Os.lseek(
+                fd,
+                0L,
+                OsConstants.SEEK_CUR,
+            )
             try {
-                val probeEnd = min(knownTip + ZERO_TAIL_PROBE_BYTES, declaredLength)
-                if (!windowHasDataFd(fd, knownTip, probeEnd)) {
+                val probeEnd = min(
+                    knownTip + ZERO_TAIL_PROBE_BYTES,
+                    declaredLength,
+                )
+                if (!windowHasDataFd(
+                        fd,
+                        knownTip,
+                        probeEnd,
+                    )
+                ) {
                     knownTip
                 } else {
-                    findZeroPaddedTipFd(fd, knownTip, declaredLength)
+                    findZeroPaddedTipFd(
+                        fd,
+                        knownTip,
+                        declaredLength,
+                    )
                 }
             } finally {
-                Os.lseek(fd, cur, OsConstants.SEEK_SET)
+                Os.lseek(
+                    fd,
+                    cur,
+                    OsConstants.SEEK_SET,
+                )
             }
         } catch (_: ErrnoException) {
             knownTip
@@ -369,10 +533,19 @@ object SparseAwareFileLength {
         tailBytes: Int = ZERO_TAIL_QUICK_CHECK_BYTES,
     ): Boolean {
         if (declaredLength < ZERO_TAIL_MIN_DECLARED_BYTES) return false
-        val start = maxOf(0L, declaredLength - tailBytes)
+        val start = maxOf(
+            0L,
+            declaredLength - tailBytes,
+        )
         // Probe failure (Os.read unsupported / EIO) must NOT look like an all-zero tail,
         // or finished content:// Open-with URIs collapse tip→0 and hang on Growing*.
-        return when (val probe = windowHasDataFdOrNull(fd, start, declaredLength)) {
+        return when (
+            val probe = windowHasDataFdOrNull(
+                fd,
+                start,
+                declaredLength,
+            )
+        ) {
             null -> false
             else -> !probe
         }
@@ -384,43 +557,91 @@ object SparseAwareFileLength {
         declaredLength: Long,
     ): Long {
         if (declaredLength <= 0L) return 0L
-        val from = searchFrom.coerceIn(0L, declaredLength)
+        val from = searchFrom.coerceIn(
+            0L,
+            declaredLength,
+        )
         val probe = ZERO_TAIL_PROBE_BYTES.toLong()
-        val lastStart = maxOf(from, declaredLength - probe)
-        if (windowHasDataFd(fd, lastStart, declaredLength)) {
-            return findLastNonZeroExclusiveFd(fd, lastStart, declaredLength)
+        val lastStart = maxOf(
+            from,
+            declaredLength - probe,
+        )
+        if (windowHasDataFd(
+                fd,
+                lastStart,
+                declaredLength,
+            )
+        ) {
+            return findLastNonZeroExclusiveFd(
+                fd,
+                lastStart,
+                declaredLength,
+            )
         }
         var lo = from
         var hi = declaredLength
         while (hi - lo > probe) {
             val mid = (lo + hi) ushr 1
-            if (windowHasDataFd(fd, mid, min(mid + probe, declaredLength))) {
+            if (windowHasDataFd(
+                    fd,
+                    mid,
+                    min(
+                        mid + probe,
+                        declaredLength,
+                    ),
+                )
+            ) {
                 lo = mid
             } else {
                 hi = mid
             }
         }
-        if (lo == from && !windowHasDataFd(fd, from, min(from + probe, declaredLength))) {
+        if (lo == from && !windowHasDataFd(
+                fd,
+                from,
+                min(
+                    from + probe,
+                    declaredLength,
+                ),
+            )
+        ) {
             return if (from == 0L) 0L else from
         }
-        return findLastNonZeroExclusiveFd(fd, lo, hi)
+        return findLastNonZeroExclusiveFd(
+            fd,
+            lo,
+            hi,
+        )
     }
 
     private fun findLastNonZeroExclusiveFd(fd: FileDescriptor, start: Long, end: Long): Long {
         if (end <= start) return start
         var pos = end
-        val bufSize = min(ZERO_TAIL_PROBE_BYTES.toLong(), end - start).toInt().coerceAtLeast(1)
+        val bufSize = min(
+            ZERO_TAIL_PROBE_BYTES.toLong(),
+            end - start,
+        ).toInt().coerceAtLeast(1)
         val buf = ByteArray(bufSize)
         val bb = java.nio.ByteBuffer.wrap(buf)
         while (pos > start) {
-            val readStart = maxOf(start, pos - buf.size)
+            val readStart = maxOf(
+                start,
+                pos - buf.size,
+            )
             val len = (pos - readStart).toInt()
-            Os.lseek(fd, readStart, OsConstants.SEEK_SET)
+            Os.lseek(
+                fd,
+                readStart,
+                OsConstants.SEEK_SET,
+            )
             bb.clear()
             bb.limit(len)
             var got = 0
             while (got < len) {
-                val n = Os.read(fd, bb)
+                val n = Os.read(
+                    fd,
+                    bb,
+                )
                 if (n <= 0) break
                 got += n
             }
@@ -435,7 +656,11 @@ object SparseAwareFileLength {
     }
 
     private fun windowHasDataFd(fd: FileDescriptor, start: Long, end: Long): Boolean =
-        windowHasDataFdOrNull(fd, start, end) == true
+        windowHasDataFdOrNull(
+            fd,
+            start,
+            end,
+        ) == true
 
     /**
      * @return true if a non-zero byte was seen, false if the window is all zeros,
@@ -443,20 +668,33 @@ object SparseAwareFileLength {
      */
     private fun windowHasDataFdOrNull(fd: FileDescriptor, start: Long, end: Long): Boolean? {
         if (end <= start) return false
-        val bufSize = min(ZERO_TAIL_PROBE_BYTES.toLong(), end - start).toInt().coerceAtLeast(1)
+        val bufSize = min(
+            ZERO_TAIL_PROBE_BYTES.toLong(),
+            end - start,
+        ).toInt().coerceAtLeast(1)
         val buf = ByteArray(bufSize)
         val bb = java.nio.ByteBuffer.wrap(buf)
         var pos = start
         var readAnything = false
         while (pos < end) {
-            val toRead = min(buf.size.toLong(), end - pos).toInt()
+            val toRead = min(
+                buf.size.toLong(),
+                end - pos,
+            ).toInt()
             try {
-                Os.lseek(fd, pos, OsConstants.SEEK_SET)
+                Os.lseek(
+                    fd,
+                    pos,
+                    OsConstants.SEEK_SET,
+                )
                 bb.clear()
                 bb.limit(toRead)
                 var got = 0
                 while (got < toRead) {
-                    val n = Os.read(fd, bb)
+                    val n = Os.read(
+                        fd,
+                        bb,
+                    )
                     if (n <= 0) {
                         // EOF / error before filling the window.
                         return if (readAnything || got > 0) false else null
@@ -480,9 +718,12 @@ object SparseAwareFileLength {
     /**
      * Binary search for the exclusive end of the non-zero prefix (sequential download tip).
      */
-    internal fun findZeroPaddedTip(raf: RandomAccessFile, declaredLength: Long): Long {
-        return findZeroPaddedTipFrom(raf, 0L, declaredLength)
-    }
+    internal fun findZeroPaddedTip(raf: RandomAccessFile, declaredLength: Long): Long =
+        findZeroPaddedTipFrom(
+            raf,
+            0L,
+            declaredLength,
+        )
 
     internal fun findZeroPaddedTipFrom(
         raf: RandomAccessFile,
@@ -490,13 +731,28 @@ object SparseAwareFileLength {
         declaredLength: Long,
     ): Long {
         if (declaredLength <= 0L) return 0L
-        val from = searchFrom.coerceIn(0L, declaredLength)
+        val from = searchFrom.coerceIn(
+            0L,
+            declaredLength,
+        )
         val probe = ZERO_TAIL_PROBE_BYTES.toLong()
 
         // Quick: last window has data → refine last non-zero within it.
-        val lastStart = maxOf(from, declaredLength - probe)
-        if (windowHasData(raf, lastStart, declaredLength)) {
-            return findLastNonZeroExclusive(raf, lastStart, declaredLength)
+        val lastStart = maxOf(
+            from,
+            declaredLength - probe,
+        )
+        if (windowHasData(
+                raf,
+                lastStart,
+                declaredLength,
+            )
+        ) {
+            return findLastNonZeroExclusive(
+                raf,
+                lastStart,
+                declaredLength,
+            )
         }
 
         // Last window all zeros — binary search under sequential-prefix assumption.
@@ -504,34 +760,64 @@ object SparseAwareFileLength {
         var hi = declaredLength
         while (hi - lo > probe) {
             val mid = (lo + hi) ushr 1
-            if (windowHasData(raf, mid, min(mid + probe, declaredLength))) {
+            if (windowHasData(
+                    raf,
+                    mid,
+                    min(
+                        mid + probe,
+                        declaredLength,
+                    ),
+                )
+            ) {
                 lo = mid
             } else {
                 hi = mid
             }
         }
-        if (lo == from && !windowHasData(raf, from, min(from + probe, declaredLength))) {
+        if (lo == from && !windowHasData(
+                raf,
+                from,
+                min(
+                    from + probe,
+                    declaredLength,
+                ),
+            )
+        ) {
             // No data in the first probe of the search range.
             // If searching from 0, file may be all zeros.
             if (from == 0L) return 0L
             return from
         }
-        return findLastNonZeroExclusive(raf, lo, hi)
+        return findLastNonZeroExclusive(
+            raf,
+            lo,
+            hi,
+        )
     }
 
     /** Exclusive end (= index after last non-zero) in [start, end). */
     internal fun findLastNonZeroExclusive(raf: RandomAccessFile, start: Long, end: Long): Long {
         if (end <= start) return start
         var pos = end
-        val bufSize = min(ZERO_TAIL_PROBE_BYTES.toLong(), end - start).toInt().coerceAtLeast(1)
+        val bufSize = min(
+            ZERO_TAIL_PROBE_BYTES.toLong(),
+            end - start,
+        ).toInt().coerceAtLeast(1)
         val buf = ByteArray(bufSize)
         while (pos > start) {
-            val readStart = maxOf(start, pos - buf.size)
+            val readStart = maxOf(
+                start,
+                pos - buf.size,
+            )
             val len = (pos - readStart).toInt()
             raf.seek(readStart)
             var off = 0
             while (off < len) {
-                val n = raf.read(buf, off, len - off)
+                val n = raf.read(
+                    buf,
+                    off,
+                    len - off,
+                )
                 if (n < 0) break
                 off += n
             }
@@ -547,15 +833,25 @@ object SparseAwareFileLength {
 
     internal fun windowHasData(raf: RandomAccessFile, start: Long, end: Long): Boolean {
         if (end <= start) return false
-        val bufSize = min(ZERO_TAIL_PROBE_BYTES.toLong(), end - start).toInt().coerceAtLeast(1)
+        val bufSize = min(
+            ZERO_TAIL_PROBE_BYTES.toLong(),
+            end - start,
+        ).toInt().coerceAtLeast(1)
         val buf = ByteArray(bufSize)
         var pos = start
         while (pos < end) {
-            val toRead = min(buf.size.toLong(), end - pos).toInt()
+            val toRead = min(
+                buf.size.toLong(),
+                end - pos,
+            ).toInt()
             raf.seek(pos)
             var off = 0
             while (off < toRead) {
-                val n = raf.read(buf, off, toRead - off)
+                val n = raf.read(
+                    buf,
+                    off,
+                    toRead - off,
+                )
                 if (n < 0) return false
                 off += n
             }

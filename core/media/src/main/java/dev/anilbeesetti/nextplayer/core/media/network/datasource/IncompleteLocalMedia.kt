@@ -55,7 +55,10 @@ object IncompleteLocalMedia {
     ) {
         /** True when the readable tip is behind the declared size (sparse hole or zero tail). */
         val tipBehindDeclared: Boolean
-            get() = SparseAwareFileLength.isSparsePartial(declaredLength, readableEnd)
+            get() = SparseAwareFileLength.isSparsePartial(
+                declaredLength,
+                readableEnd,
+            )
 
         /** Content-based incomplete: partial name **or** tip behind declared length. */
         val incomplete: Boolean
@@ -85,20 +88,31 @@ object IncompleteLocalMedia {
         val name = fileName ?: file.name
         val partial = looksPartialFileName(name) || looksPartialFileName(file.name)
         if (!file.exists()) {
-            return Snapshot(declaredLength = -1L, readableEnd = -1L, partialName = partial)
+            return Snapshot(
+                declaredLength = -1L,
+                readableEnd = -1L,
+                partialName = partial,
+            )
         }
         val declared = file.length()
-        val readable = SparseAwareFileLength.readableEnd(path, declared, fd = null)
-        return Snapshot(declaredLength = declared, readableEnd = readable, partialName = partial)
+        val readable = SparseAwareFileLength.readableEnd(
+            path,
+            declared,
+            fd = null,
+        )
+        return Snapshot(
+            declaredLength = declared,
+            readableEnd = readable,
+            partialName = partial,
+        )
     }
 
     /** Inspect an already-open [fd] (content AFD / RAF). */
-    fun inspect(
-        declaredLength: Long,
-        fd: FileDescriptor?,
-        fileName: String?,
-    ): Snapshot {
-        val readable = SparseAwareFileLength.readableEnd(declaredLength, fd)
+    fun inspect(declaredLength: Long, fd: FileDescriptor?, fileName: String?): Snapshot {
+        val readable = SparseAwareFileLength.readableEnd(
+            declaredLength,
+            fd,
+        )
         return Snapshot(
             declaredLength = declaredLength,
             readableEnd = readable,
@@ -114,15 +128,24 @@ object IncompleteLocalMedia {
     fun isIncomplete(path: String?, fileName: String? = null): Boolean {
         if (looksPartialFileName(fileName)) return true
         if (path.isNullOrEmpty()) return false
-        val base = path.replace('\\', '/').substringAfterLast('/')
+        val base = path.replace(
+            '\\',
+            '/',
+        ).substringAfterLast('/')
         if (looksPartialFileName(base)) return true
         val file = File(path)
         if (looksPartialFileName(file.name)) return true
         if (!file.exists()) return false
-        return inspect(path, fileName).incomplete
+        return inspect(
+            path,
+            fileName,
+        ).incomplete
     }
 
-    fun isIncomplete(file: File): Boolean = inspect(file.absolutePath, file.name).incomplete
+    fun isIncomplete(file: File): Boolean = inspect(
+        file.absolutePath,
+        file.name,
+    ).incomplete
 
     /**
      * Optional growth check: declared length or readable tip increased across [pollMs].
@@ -159,16 +182,21 @@ object IncompleteLocalMedia {
         val file = File(path)
         if (looksPartialFileName(file.name) || looksPartialFileName(path)) return true
         if (!file.exists()) return true
-        val snapshot = inspect(path, fileName)
+        val snapshot = inspect(
+            path,
+            fileName,
+        )
         if (snapshot.incomplete) return true
         val age = nowMs - file.lastModified()
         if (age < 0L) return true
         if (age < RECENT_MTIME_FOR_POLL_MS) {
-            return isGrowingAcrossPoll(path, growthPollMs)
+            return isGrowingAcrossPoll(
+                path,
+                growthPollMs,
+            )
         }
         return false
     }
-
 
     /**
      * Content-URI variant of [shouldPlayAsGrowing]: inspects bytes through an AFD/PFD when
@@ -183,20 +211,34 @@ object IncompleteLocalMedia {
         nowMs: Long = System.currentTimeMillis(),
         growthPollMs: Long = DEFAULT_GROWTH_POLL_MS,
     ): Boolean {
-        if (!ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)) {
+        if (!ContentResolver.SCHEME_CONTENT.equals(
+                uri.scheme,
+                ignoreCase = true,
+            )
+        ) {
             val path = GrowingFileDataSource.resolvePath(uri)
             return if (path != null) {
-                shouldPlayAsGrowing(path, nowMs = nowMs, growthPollMs = growthPollMs)
+                shouldPlayAsGrowing(
+                    path,
+                    nowMs = nowMs,
+                    growthPollMs = growthPollMs,
+                )
             } else {
                 true
             }
         }
-        val displayName = queryDisplayName(context, uri)
+        val displayName = queryDisplayName(
+            context,
+            uri,
+        )
         if (looksPartialFileName(displayName) || looksPartialFileName(uri.lastPathSegment)) {
             return true
         }
         return try {
-            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+            context.contentResolver.openAssetFileDescriptor(
+                uri,
+                "r",
+            )?.use { afd ->
                 val declared = declaredLengthOf(afd)
                 if (declared < 0L) return true
                 val fd = try {
@@ -208,9 +250,18 @@ object IncompleteLocalMedia {
                     declaredLength = declared,
                     fd = fd,
                     fileName = displayName,
-                    lastModifiedMs = queryLastModifiedMs(context, uri),
+                    lastModifiedMs = queryLastModifiedMs(
+                        context,
+                        uri,
+                    ),
                     nowMs = nowMs,
-                    growthCheck = { isGrowingAcrossPoll(context, uri, growthPollMs) },
+                    growthCheck = {
+                        isGrowingAcrossPoll(
+                            context,
+                            uri,
+                            growthPollMs,
+                        )
+                    },
                 )
             } ?: true
         } catch (_: Exception) {
@@ -233,7 +284,11 @@ object IncompleteLocalMedia {
         if (looksPartialFileName(fileName)) return true
         if (declaredLength < 0L) return true
         if (declaredLength == 0L) return true
-        val snapshot = inspect(declaredLength, fd, fileName)
+        val snapshot = inspect(
+            declaredLength,
+            fd,
+            fileName,
+        )
         if (snapshot.incomplete) return true
         val lastMod = lastModifiedMs ?: return false
         val age = nowMs - lastMod
@@ -246,30 +301,52 @@ object IncompleteLocalMedia {
 
     /** Inspect a `content://` URI via AFD/PFD. Missing / unreadable → declaredLength = -1. */
     fun inspect(context: Context, uri: Uri): Snapshot {
-        val displayName = queryDisplayName(context, uri)
+        val displayName = queryDisplayName(
+            context,
+            uri,
+        )
         val partial = looksPartialFileName(displayName) ||
             looksPartialFileName(uri.lastPathSegment)
         return try {
-            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+            context.contentResolver.openAssetFileDescriptor(
+                uri,
+                "r",
+            )?.use { afd ->
                 val declared = declaredLengthOf(afd)
                 if (declared < 0L) {
-                    Snapshot(declaredLength = -1L, readableEnd = -1L, partialName = partial)
+                    Snapshot(
+                        declaredLength = -1L,
+                        readableEnd = -1L,
+                        partialName = partial,
+                    )
                 } else {
                     val fd = try {
                         afd.parcelFileDescriptor?.fileDescriptor ?: afd.fileDescriptor
                     } catch (_: Exception) {
                         null
                     }
-                    val snap = inspect(declared, fd, displayName)
+                    val snap = inspect(
+                        declared,
+                        fd,
+                        displayName,
+                    )
                     if (partial && !snap.partialName) {
                         snap.copy(partialName = true)
                     } else {
                         snap
                     }
                 }
-            } ?: Snapshot(declaredLength = -1L, readableEnd = -1L, partialName = partial)
+            } ?: Snapshot(
+                declaredLength = -1L,
+                readableEnd = -1L,
+                partialName = partial,
+            )
         } catch (_: Exception) {
-            Snapshot(declaredLength = -1L, readableEnd = -1L, partialName = partial)
+            Snapshot(
+                declaredLength = -1L,
+                readableEnd = -1L,
+                partialName = partial,
+            )
         }
     }
 
@@ -278,14 +355,20 @@ object IncompleteLocalMedia {
         uri: Uri,
         pollMs: Long = DEFAULT_GROWTH_POLL_MS,
     ): Boolean {
-        val first = inspect(context, uri)
+        val first = inspect(
+            context,
+            uri,
+        )
         try {
             Thread.sleep(pollMs)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             return true
         }
-        val second = inspect(context, uri)
+        val second = inspect(
+            context,
+            uri,
+        )
         return second.declaredLength > first.declaredLength ||
             second.readableEnd > first.readableEnd
     }
@@ -311,25 +394,23 @@ object IncompleteLocalMedia {
         }
     }
 
-    internal fun queryDisplayName(context: Context, uri: Uri): String? {
-        return try {
-            context.contentResolver.query(
-                uri,
-                arrayOf(OpenableColumns.DISPLAY_NAME),
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (idx >= 0) cursor.getString(idx) else null
-                } else {
-                    uri.lastPathSegment
-                }
-            } ?: uri.lastPathSegment
-        } catch (_: Exception) {
-            uri.lastPathSegment
-        }
+    internal fun queryDisplayName(context: Context, uri: Uri): String? = try {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) cursor.getString(idx) else null
+            } else {
+                uri.lastPathSegment
+            }
+        } ?: uri.lastPathSegment
+    } catch (_: Exception) {
+        uri.lastPathSegment
     }
 
     internal fun queryLastModifiedMs(context: Context, uri: Uri): Long? {
@@ -341,7 +422,13 @@ object IncompleteLocalMedia {
         )
         for (column in candidates) {
             try {
-                context.contentResolver.query(uri, arrayOf(column), null, null, null)?.use { cursor ->
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(column),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
                     if (cursor.moveToFirst()) {
                         val idx = cursor.getColumnIndex(column)
                         if (idx >= 0 && !cursor.isNull(idx)) {
@@ -366,7 +453,7 @@ object IncompleteLocalMedia {
         return null
     }
 
-        const val DEFAULT_GROWTH_POLL_MS = 250L
+    const val DEFAULT_GROWTH_POLL_MS = 250L
 
     /** Only run the optional append-style growth poll when mtime is this fresh. */
     const val RECENT_MTIME_FOR_POLL_MS = 30_000L

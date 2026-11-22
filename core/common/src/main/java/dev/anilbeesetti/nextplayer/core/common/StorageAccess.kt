@@ -29,9 +29,8 @@ fun Context.hasAllFilesAccess(): Boolean {
 /**
  * True when the device is on API 30+ and All files access has not been granted.
  */
-fun Context.needsAllFilesAccess(): Boolean {
-    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !hasAllFilesAccess()
-}
+fun Context.needsAllFilesAccess(): Boolean =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !hasAllFilesAccess()
 
 /**
  * Builds an intent to the system All files access settings page for this app.
@@ -59,6 +58,5 @@ fun Context.createManageAllFilesIntent(): Intent? {
  * Whether we should prompt for All files access: needed, not TV, and settings
  * page is available. TVs often lack the manage-all-files settings UI.
  */
-fun Context.canRequestAllFilesAccess(): Boolean {
-    return needsAllFilesAccess() && !isTelevision && createManageAllFilesIntent() != null
-}
+fun Context.canRequestAllFilesAccess(): Boolean =
+    needsAllFilesAccess() && !isTelevision && createManageAllFilesIntent() != null

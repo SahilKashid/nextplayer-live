@@ -15,8 +15,8 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.1.1 if tagged,
-                   else v1.1.0, else v1.0.9, else latest Live tag, else origin/main)
+  live-source-ref  Live tree to copy features from (default: v1.2.0 if tagged,
+                   else v1.1.4, else v1.1.1, else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
 fetches tags, prints branding + copy paths + touchpoints + next commands.
@@ -110,8 +110,14 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.1.1, else v1.1.0 (Live on upstream v0.19.0), else v1.0.9, else newest v* tag, else origin/main.
-  if git rev-parse --verify -q "v1.1.1" >/dev/null 2>&1 || \
+  # Prefer v1.2.0 (Live on upstream v0.21.0), else v1.1.4, else v1.1.1, else newest v* tag.
+  if git rev-parse --verify -q "v1.2.0" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.2.0" >/dev/null 2>&1; then
+    LIVE_ARG="v1.2.0"
+  elif git rev-parse --verify -q "v1.1.4" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.1.4" >/dev/null 2>&1; then
+    LIVE_ARG="v1.1.4"
+  elif git rev-parse --verify -q "v1.1.1" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.1.1" >/dev/null 2>&1; then
     LIVE_ARG="v1.1.1"
   elif git rev-parse --verify -q "v1.1.0" >/dev/null 2>&1 || \
@@ -208,8 +214,13 @@ TOUCHPOINTS=(
   "core/ui/src/main/res/values/strings.xml"
   "core/media/src/main/java/dev/anilbeesetti/nextplayer/core/media/network/datasource/NextDataSourceFactory.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/service/PlayerService.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/service/ApiMediaSourceFactory.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/MediaPlayerScreen.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/PlayerContentFrame.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/PlayerActivity.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/SubtitleView.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/controls/ControlsTopView.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/controls/ControlsBottomView.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/buttons/RotateButton.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/ui/SubtitleSelectorView.kt"
   "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/PlayerViewModel.kt"
@@ -306,11 +317,19 @@ cat <<'TOUCH'
                              v1.1.2: remember pinch zoom globally (rememberPlayerZoom, default on),
                              same pattern as remember brightness. Resize mode stays playerVideoZoom.
                              Pan is a fraction of the player slot beside the live-subtitles panel.
-                             wrap GrowingAwareExtractorsFactory inside ExternalAudioMediaSourceFactory;
-                             wire the panel through MediaPlayerContent / PlayerControls / ControlsTopView;
-                             keep chapters, external audio, NEW badges, watch history, tunneled playback)
-  PlayerService: ExternalAudioMediaSourceFactory(DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory)
-                 + setDataSourceFactory + GrowingFileLoadErrorHandlingPolicy)
+                             v1.1.4: cue match via LiveSubtitleCueMatcher (no per-tick regex compile).
+                             v1.2.0 on upstream v0.21.0: put GrowingAwareExtractorsFactory inside
+                             ApiMediaSourceFactory only while shouldPlayAsGrowing; settled files keep
+                             FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles. Pass that factory
+                             to ExternalAudioMediaSourceFactory. Keep subtitle drag (subtitleOffsetY)
+                             and the Live vertical-position slider. onBeforeRotate on both RotateButtons
+                             (regular and compact). Keep settings import/export, URI grant retention,
+                             chapters, external audio, NEW badges, watch history, tunneled playback)
+  PlayerService: ExternalAudioMediaSourceFactory(ApiMediaSourceFactory)
+  ApiMediaSourceFactory: Growing* extractors + GrowingFileLoadErrorHandlingPolicy while incomplete;
+                         FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles when settled
+  PlayerContentFrame / SubtitleView: showOverlaySubtitles + SubtitleVerticalPosition on stock drag cues
+  ControlsBottomView: onBeforeRotate for both RotateButton call sites
   strings.xml: live_subtitles* + jump_to_current_cue + remember_zoom_level (+ app_name)
   Player preferences screen: Remember zoom switch immediately after Remember brightness
 TOUCH

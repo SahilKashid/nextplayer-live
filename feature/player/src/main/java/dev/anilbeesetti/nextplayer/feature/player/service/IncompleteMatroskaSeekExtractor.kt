@@ -52,29 +52,42 @@ class IncompleteMatroskaSeekExtractor(
         )
     }
 
-    override fun read(input: ExtractorInput, seekPosition: PositionHolder): Int =
-        delegate.read(input, seekPosition)
+    override fun read(input: ExtractorInput, seekPosition: PositionHolder): Int = delegate.read(
+        input,
+        seekPosition,
+    )
 
     override fun seek(position: Long, timeUs: Long) {
         val tip = resolveTip()
-        maybeRebuildIndex(tip, emit = true)
-        val snapped = snapAndClamp(position, tip)
-        delegate.seek(snapped, timeUs)
+        maybeRebuildIndex(
+            tip,
+            emit = true,
+        )
+        val snapped = snapAndClamp(
+            position,
+            tip,
+        )
+        delegate.seek(
+            snapped,
+            timeUs,
+        )
     }
 
     override fun release() {
         delegate.release()
     }
 
-    override fun getUnderlyingImplementation(): Extractor =
-        delegate.underlyingImplementation
+    override fun getUnderlyingImplementation(): Extractor = delegate.underlyingImplementation
 
     private fun replaceSeekMap(seekMap: SeekMap): SeekMap {
         if (seekMap.isSeekable) return seekMap
         val durationUs = seekMap.durationUs
         if (durationUs == C.TIME_UNSET || durationUs <= 0L) return seekMap
         lastDurationUs = durationUs
-        val built = maybeRebuildIndex(resolveTip(), emit = false)
+        val built = maybeRebuildIndex(
+            resolveTip(),
+            emit = false,
+        )
         return built ?: seekMap
     }
 
@@ -85,13 +98,19 @@ class IncompleteMatroskaSeekExtractor(
         }
         val file = File(path)
         if (!file.exists()) return null
-        val index = MatroskaClusterIndexer.indexFile(file, tip) ?: return null
+        val index = MatroskaClusterIndexer.indexFile(
+            file,
+            tip,
+        ) ?: return null
         indexedPositions = index.positions
         indexedTimesUs = index.timesUs
         lastIndexedTip = tip
         val durationUs = lastDurationUs
         val map = if (durationUs != C.TIME_UNSET && durationUs > 0L) {
-            MatroskaClusterIndexer.toSeekMap(index, durationUs)
+            MatroskaClusterIndexer.toSeekMap(
+                index,
+                durationUs,
+            )
         } else {
             null
         }
@@ -108,7 +127,11 @@ class IncompleteMatroskaSeekExtractor(
         if (positions.size < MatroskaClusterIndexer.MIN_CLUSTERS) return null
         if (positions.size != timesUs.size) return null
         if (durationUs == C.TIME_UNSET || durationUs <= 0L) return null
-        return IndexSeekMap(positions, timesUs, durationUs)
+        return IndexSeekMap(
+            positions,
+            timesUs,
+            durationUs,
+        )
     }
 
     private fun shouldRebuild(tip: Long): Boolean {
@@ -128,8 +151,16 @@ class IncompleteMatroskaSeekExtractor(
         return try {
             val snap = IncompleteLocalMedia.inspect(path)
             if (snap.readableEnd > 0L) {
-                ReadableTipTracker.update(path, snap.readableEnd, snap.declaredLength)
-                ReadableTipTracker.update("file://$path", snap.readableEnd, snap.declaredLength)
+                ReadableTipTracker.update(
+                    path,
+                    snap.readableEnd,
+                    snap.declaredLength,
+                )
+                ReadableTipTracker.update(
+                    "file://$path",
+                    snap.readableEnd,
+                    snap.declaredLength,
+                )
                 snap.readableEnd
             } else {
                 tracked
@@ -147,12 +178,26 @@ class IncompleteMatroskaSeekExtractor(
             else -> 0L
         }
         val clamped = when {
-            tip > 0L -> position.coerceIn(0L, clampLimit)
+            tip > 0L -> position.coerceIn(
+                0L,
+                clampLimit,
+            )
+
             else -> position.coerceAtLeast(0L)
         }
         val positions = indexedPositions
         if (positions == null || positions.isEmpty()) return clamped
-        val snapped = MatroskaClusterIndexer.nearestAtOrBefore(positions, clamped)
-        return if (clampLimit > 0L) snapped.coerceIn(0L, clampLimit) else snapped.coerceAtLeast(0L)
+        val snapped = MatroskaClusterIndexer.nearestAtOrBefore(
+            positions,
+            clamped,
+        )
+        return if (clampLimit > 0L) {
+            snapped.coerceIn(
+                0L,
+                clampLimit,
+            )
+        } else {
+            snapped.coerceAtLeast(0L)
+        }
     }
 }

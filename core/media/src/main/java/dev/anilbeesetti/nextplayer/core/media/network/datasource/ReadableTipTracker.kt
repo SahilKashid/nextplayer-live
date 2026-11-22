@@ -12,10 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object ReadableTipTracker {
 
-    data class TipInfo(
-        val readableEnd: Long,
-        val declaredLength: Long,
-    )
+    data class TipInfo(val readableEnd: Long, val declaredLength: Long)
 
     private val tips = ConcurrentHashMap<String, TipInfo>()
 

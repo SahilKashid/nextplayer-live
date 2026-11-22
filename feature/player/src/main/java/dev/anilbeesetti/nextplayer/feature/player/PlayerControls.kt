@@ -81,9 +81,11 @@ fun PlayerControls(
                     onBackClick = onBackClick,
                 )
             }
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(weight = 1f))
             AnimatedVisibility(
-                visible = controlsVisibilityState.controlsVisible && !controlsVisibilityState.controlsLocked,
+                visible =
+                    controlsVisibilityState.controlsVisible &&
+                        !controlsVisibilityState.controlsLocked,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
@@ -112,16 +114,29 @@ fun PlayerControls(
                         controlsVisibilityState.showControls()
                         videoZoomAndContentScaleState.switchToNextVideoContentScale()
                     },
-                    onVideoContentScaleLongClick = { onShowOverlay(OverlayView.VIDEO_CONTENT_SCALE) },
+                    onVideoContentScaleLongClick = {
+                        onShowOverlay(OverlayView.VIDEO_CONTENT_SCALE)
+                    },
                     onPictureInPictureClick = onPictureInPictureClick,
                     onBeforeRotate = onBeforeRotate,
                 )
             }
         }
         when {
-            seekGestureState.seekAmount != null -> InfoView(info = "${seekGestureState.seekAmountFormatted}\n[${seekGestureState.seekToPositionFormated}]")
-            videoZoomAndContentScaleState.isZooming -> InfoView(info = "${(videoZoomAndContentScaleState.zoom * 100).toInt()}%")
-            videoZoomAndContentScaleState.showContentScaleIndicator -> InfoView(info = stringResource(videoZoomAndContentScaleState.videoContentScale.nameRes()))
+            seekGestureState.seekAmount != null -> InfoView(
+                info =
+                    "${seekGestureState.seekAmountFormatted}\n" +
+                        "[${seekGestureState.seekToPositionFormated}]",
+            )
+
+            videoZoomAndContentScaleState.isZooming -> InfoView(
+                info = "${(videoZoomAndContentScaleState.zoom * 100).toInt()}%",
+            )
+
+            videoZoomAndContentScaleState.showContentScaleIndicator -> InfoView(
+                info = stringResource(videoZoomAndContentScaleState.videoContentScale.nameRes()),
+            )
+
             controlsVisibilityState.controlsVisible -> ControlsMiddleView(
                 player = player,
                 modifier = middleControlsModifier,

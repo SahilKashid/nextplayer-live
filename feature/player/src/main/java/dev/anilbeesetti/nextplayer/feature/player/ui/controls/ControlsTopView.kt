@@ -57,7 +57,9 @@ fun ControlsTopView(
     showLiveSubtitlesToggle: Boolean = true,
 ) {
     val firstControlFocusRequester = remember { FocusRequester() }
-    val systemBarsPadding = WindowInsets.systemBars.union(WindowInsets.displayCutout).asPaddingValues()
+    val systemBarsPadding = WindowInsets.systemBars.union(
+        WindowInsets.displayCutout,
+    ).asPaddingValues()
     val decoderDescription = stringResource(R.string.select_decoders)
     // Add top spacing only when the system bars don't already provide it (e.g. on TV / landscape).
     val extraTopPadding = if (systemBarsPadding.calculateTopPadding() == 0.dp) 16.dp else 0.dp
@@ -67,9 +69,7 @@ fun ControlsTopView(
             .padding(horizontal = 16.dp)
             .padding(bottom = 16.dp)
             .padding(top = extraTopPadding)
-            .focusProperties {
-                onEnter = { firstControlFocusRequester.requestFocus() }
-            }
+            .focusProperties { onEnter = { firstControlFocusRequester.requestFocus() } }
             .focusGroup(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -86,7 +86,7 @@ fun ControlsTopView(
             color = Color.White,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(weight = 1f),
         )
 
         Row(
@@ -96,7 +96,7 @@ fun ControlsTopView(
             PlayerButton(
                 modifier = Modifier
                     .semantics { contentDescription = decoderDescription }
-                    .focusRequester(firstControlFocusRequester),
+                    .focusRequester(focusRequester = firstControlFocusRequester),
                 onClick = onDecoderClick,
             ) {
                 Text(
@@ -134,7 +134,10 @@ fun ControlsTopView(
                                 else -> R.string.live_subtitles_on_right
                             },
                         ),
-                        modifier = Modifier.scale(scaleX = if (isLiveSubtitlesOnLeft) -1f else 1f, scaleY = 1f),
+                        modifier = Modifier.scale(
+                            scaleX = if (isLiveSubtitlesOnLeft) -1f else 1f,
+                            scaleY = 1f,
+                        ),
                         tint = if (isLiveSubtitlesVisible) {
                             MaterialTheme.colorScheme.primary
                         } else {

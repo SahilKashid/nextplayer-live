@@ -269,7 +269,7 @@
     <string name="no_results_found">Žádné výseldky nenalezeny</string>
     <string name="search_results">Výsledky hledání</string>
     <string name="now_playing">Právě hraje</string>
-    <string name="no_videos_in_queue">Žádné videa v frontě</string>
+    <string name="no_videos_in_queue">Žádné videa ve frontě</string>
     <string name="remove">Odebrat</string>
     <string name="unknown">Neznámé</string>
     <string name="search">Hledat</string>
@@ -360,10 +360,10 @@
         <item quantity="other">%1$d videí nešlo přesunout</item>
     </plurals>
     <plurals name="moved_videos_originals_remain">
-        <item quantity="one">Jedno video přesunuto, ale původní nešlo odebrat</item>
-        <item quantity="few">%1$d videa přesunuty, ale původní nešly odebrat</item>
-        <item quantity="many">%1$d videí přesunuty, ale původní nešly odebrat</item>
-        <item quantity="other">%1$d videí přesunuty, ale původní nešly odebrat</item>
+        <item quantity="one">Jedno video zkopírováno, ale původní nešlo odebrat</item>
+        <item quantity="few">%1$d videa zkopírovány, ale původní nešly odebrat</item>
+        <item quantity="many">%1$d videí zkopírovány, ale původní nešly odebrat</item>
+        <item quantity="other">%1$d videí zkopírovány, ale původní nešly odebrat</item>
     </plurals>
     <string name="cannot_move_to_same_folder">Nelze přesunout do stejné složky</string>
     <string name="folder_duration">Délka složky</string>
@@ -535,4 +535,36 @@
         <item quantity="other">%1$d nových videích</item>
     </plurals>
     <string name="new_label">NOVÉ</string>
+    <string name="tunneled_playback">Tunelované přehrávání</string>
+    <string name="tunneled_playback_description">Použít tunelované přehrávání podle podpory zařízení a videa. Možná zlepší přehrávání Dolby Vision a HDR10+ obsahu na Android televizích. Použije se pro nové přehrávací relace.</string>
+    <string name="network_watch_history_desc">Zaznamenat i videa přehrané přes síť ve historii sledování.</string>
+    <string name="network_watch_history">Síťová historie sledování</string>
+    <string name="watch_history">Historie sledování</string>
+    <string name="no_watch_history">Žádná historie sledování</string>
+    <string name="watch_history_turned_off">Historie sledování je vypnuta</string>
+    <string name="turn_on_watch_history_confirmation">Začít zaznamenávat zhlédnuté videa ve historii sledování?</string>
+    <string name="turn_off_watch_history_confirmation">Vypnutím historie sledování vymaže historii sledování a přestane zaznamenávat zhlédnuté videa.</string>
+    <string name="turn_on_watch_history">Zapnout historii sledování</string>
+    <string name="turn_off_watch_history">Vypnout historii sledování</string>
+    <string name="watch_history_desc">Zaznamenat videa, které sledujete</string>
+    <string name="add_to_home_screen">Přidat na domovskou obrazovku</string>
+    <string name="playlist_shortcut_failed">Nešlo přidat zástupce pro playlist. Zkuste to znovu.</string>
+    <string name="github_sponsors">GitHub Sponsors</string>
+    <string name="settings_export">Exportovat nastavení</string>
+    <string name="settings_export_description">Uložit nastavení do JSON souboru</string>
+    <string name="settings_import">Importovat nastavení</string>
+    <string name="settings_import_description">Obnovit nastavení z JSON souboru</string>
+    <string name="settings_export_confirmation">Exportovat nastavení aplikace a přehrávače do JSON souboru.</string>
+    <string name="settings_export_include_credentials">Zahrnout uložené síťové připojení a údaje</string>
+    <string name="settings_export_credentials_warning">JSON soubor není zašifrován. Možná bude obsahovat hesla a soukromé klíče SSH. Mějte ho v bezpečí.</string>
+    <string name="settings_import_confirmation">Nastavení v tomto souboru nahradí vaše aktuální nastavení. Chybějící, zastaralé, neznámé nebo neplatné nastavení budou ignorovány. Jestli byly zahrnuty síťové připojení a údaje, budou také importovány.</string>
+    <string name="export_action">Exportovat</string>
+    <string name="import_action">Importovat</string>
+    <string name="settings_export_success">Nastavení exportovány</string>
+    <string name="settings_export_failed">Nešlo exportovat nastavení</string>
+    <string name="settings_import_success">Nastavení importovány</string>
+    <string name="settings_import_failed">Nešlo dokončit importování nastavení. Zkuste to znovu.</string>
+    <string name="settings_import_invalid">Nešlo přečíst tento soubor nebo neobsahuje žádné podporované JSON nastavení</string>
+    <string name="reset_subtitle_position">Resetovat umístění titulek</string>
+    <string name="reset_subtitle_position_desc">Posuňte titulky nahoru nebo dolů při přehráváním pro jejich přesun</string>
 </resources>

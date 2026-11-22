@@ -7,11 +7,11 @@ import androidx.media3.common.Format
 import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.core.common.extensions.subtitleCacheDir
 import dev.anilbeesetti.nextplayer.feature.player.model.TimedCue
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
@@ -46,9 +46,14 @@ object LiveSubtitleCueCache {
     private const val MAGIC = 0x4C534342 // 'LSCB'
 
     private val lock = ReentrantLock()
-    private val memory = object : LinkedHashMap<String, List<TimedCue>>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<TimedCue>>?): Boolean =
-            size > MEMORY_CAPACITY
+    private val memory = object : LinkedHashMap<String, List<TimedCue>>(
+        16,
+        0.75f,
+        true,
+    ) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<String, List<TimedCue>>?,
+        ): Boolean = size > MEMORY_CAPACITY
     }
 
     /** Debug counters (optional; not shown in UI). */
@@ -66,7 +71,10 @@ object LiveSubtitleCueCache {
         context: Context,
     ): String {
         val uriForMeta = externalUri ?: mediaUri
-        val size = uriFileSize(context, uriForMeta)
+        val size = uriFileSize(
+            context,
+            uriForMeta,
+        )
         return listOf(
             mediaId.orEmpty(),
             normalizeUriString(mediaUri),
@@ -90,15 +98,28 @@ object LiveSubtitleCueCache {
                 return it
             }
         }
-        val disk = readDisk(context, key) ?: run {
+        val disk = readDisk(
+            context,
+            key,
+        ) ?: run {
             misses.incrementAndGet()
             logStats("miss")
             return null
         }
         // Legacy empty files (from failed loads) must not stick as permanent misses.
         if (disk.isEmpty()) {
-            runCatching { cacheFileBin(context, key).delete() }
-            runCatching { cacheFileJson(context, key).delete() }
+            runCatching {
+                cacheFileBin(
+                    context,
+                    key,
+                ).delete()
+            }
+            runCatching {
+                cacheFileJson(
+                    context,
+                    key,
+                ).delete()
+            }
             misses.incrementAndGet()
             logStats("miss-empty-disk")
             return null
@@ -121,17 +142,20 @@ object LiveSubtitleCueCache {
         lock.withLock {
             memory[key] = cues
         }
-        writeDisk(context, key, cues)
+        writeDisk(
+            context,
+            key,
+            cues,
+        )
         puts.incrementAndGet()
         logStats("put")
     }
 
-    fun getMemoryOnly(key: String): List<TimedCue>? =
-        lock.withLock {
-            memory[key]?.takeIf { it.isNotEmpty() }?.also {
-                memoryHits.incrementAndGet()
-            }
+    fun getMemoryOnly(key: String): List<TimedCue>? = lock.withLock {
+        memory[key]?.takeIf { it.isNotEmpty() }?.also {
+            memoryHits.incrementAndGet()
         }
+    }
 
     /** Test helper: drop the in-memory LRU so the next [get] must hit disk. */
     internal fun clearMemory() {
@@ -169,7 +193,13 @@ object LiveSubtitleCueCache {
     }
 
     private fun logStats(event: String) {
-        if (!Log.isLoggable(TAG, Log.DEBUG)) return
+        if (!Log.isLoggable(
+                TAG,
+                Log.DEBUG,
+            )
+        ) {
+            return
+        }
         Log.d(
             TAG,
             "$event memHits=${memoryHits.get()} diskHits=${diskHits.get()} " +
@@ -178,13 +208,19 @@ object LiveSubtitleCueCache {
     }
 
     private fun readDisk(context: Context, key: String): List<TimedCue>? {
-        val bin = cacheFileBin(context, key)
+        val bin = cacheFileBin(
+            context,
+            key,
+        )
         if (bin.exists() && bin.isFile) {
             readBinary(bin)?.let { return it }
             // Corrupt / wrong magic-version: delete so the next extract can rewrite.
             runCatching { bin.delete() }
         }
-        val json = cacheFileJson(context, key)
+        val json = cacheFileJson(
+            context,
+            key,
+        )
         if (json.exists() && json.isFile) {
             val legacy = readJson(json)
             if (legacy == null) {
@@ -192,7 +228,10 @@ object LiveSubtitleCueCache {
                 return null
             }
             // Migrate to binary for faster subsequent loads.
-            writeBinary(bin, legacy)
+            writeBinary(
+                bin,
+                legacy,
+            )
             runCatching { json.delete() }
             return legacy
         }
@@ -201,16 +240,30 @@ object LiveSubtitleCueCache {
 
     private fun writeDisk(context: Context, key: String, cues: List<TimedCue>) {
         runCatching {
-            val bin = cacheFileBin(context, key)
+            val bin = cacheFileBin(
+                context,
+                key,
+            )
             bin.parentFile?.mkdirs()
-            writeBinary(bin, cues)
+            writeBinary(
+                bin,
+                cues,
+            )
             // Remove legacy JSON if present.
-            runCatching { cacheFileJson(context, key).delete() }
+            runCatching {
+                cacheFileJson(
+                    context,
+                    key,
+                ).delete()
+            }
         }
     }
 
     private fun writeBinary(file: File, cues: List<TimedCue>) {
-        val tmp = File(file.parentFile, "${file.name}.tmp")
+        val tmp = File(
+            file.parentFile,
+            "${file.name}.tmp",
+        )
         FileOutputStream(tmp).use { fos ->
             val bos = BufferedOutputStream(fos)
             val out = DataOutputStream(bos)
@@ -230,7 +283,10 @@ object LiveSubtitleCueCache {
             runCatching { fos.fd.sync() }
         }
         if (!tmp.renameTo(file)) {
-            tmp.copyTo(file, overwrite = true)
+            tmp.copyTo(
+                file,
+                overwrite = true,
+            )
             tmp.delete()
         }
     }
@@ -249,7 +305,16 @@ object LiveSubtitleCueCache {
                     if (len < 0 || len > 1_000_000) return null
                     val bytes = ByteArray(len)
                     input.readFully(bytes)
-                    add(TimedCue(startMs = start, endMs = end, text = String(bytes, Charsets.UTF_8)))
+                    add(
+                        TimedCue(
+                            startMs = start,
+                            endMs = end,
+                            text = String(
+                                bytes,
+                                Charsets.UTF_8,
+                            ),
+                        ),
+                    )
                 }
             }
         }
@@ -274,17 +339,20 @@ object LiveSubtitleCueCache {
         }
     }.getOrNull()
 
-    private fun cacheFileBin(context: Context, key: String): File =
-        File(context.subtitleCacheDir, "$FILE_PREFIX${digest(key)}.bin")
+    private fun cacheFileBin(context: Context, key: String): File = File(
+        context.subtitleCacheDir,
+        "$FILE_PREFIX${digest(key)}.bin",
+    )
 
-    private fun cacheFileJson(context: Context, key: String): File =
-        File(context.subtitleCacheDir, "$FILE_PREFIX${digest(key)}.json")
+    private fun cacheFileJson(context: Context, key: String): File = File(
+        context.subtitleCacheDir,
+        "$FILE_PREFIX${digest(key)}.json",
+    )
 
-    private fun digest(key: String): String =
-        MessageDigest.getInstance("SHA-256")
-            .digest(key.toByteArray(Charsets.UTF_8))
-            .joinToString("") { b -> "%02x".format(b) }
-            .take(40)
+    private fun digest(key: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(key.toByteArray(Charsets.UTF_8))
+        .joinToString("") { b -> "%02x".format(b) }
+        .take(40)
 
     /**
      * Stable file size for cache keying. Returns null when size is unknown so the key
@@ -300,6 +368,7 @@ object LiveSubtitleCueCache {
                     if (!f.exists()) return null
                     f.length().takeIf { it >= 0L }
                 }
+
                 "content" -> {
                     context.contentResolver.query(
                         uri,
@@ -314,11 +383,15 @@ object LiveSubtitleCueCache {
                         cursor.getLong(sizeIdx).takeIf { it >= 0L }
                     }
                 }
+
                 else -> null
             }
         }.getOrNull()
     }
 
     /** Exposed for tests that need the on-disk path for a key. */
-    internal fun cacheFileForKey(context: Context, key: String): File = cacheFileBin(context, key)
+    internal fun cacheFileForKey(context: Context, key: String): File = cacheFileBin(
+        context,
+        key,
+    )
 }

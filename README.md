@@ -4,7 +4,7 @@
 
 > **Next Player Live** — this repository is the [Next Player Live](https://github.com/SahilKashid/nextplayer-live) fork
 > (`dev.sahilkashid.nextplayer`), installable beside stock Next Player. See [Releases](https://github.com/SahilKashid/nextplayer-live/releases)
-> for APKs (play-while-download + finished-open / Open-with `content://` through **v1.0.2**; live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position in **v1.0.3**; panel persist across pause/lock + no auto-follow while paused in **v1.0.4**; expanding-window progressive cue fill + hardened final-only cue cache in **v1.0.5**; defaults SYSTEM+high-contrast, sidecar all-files discovery/rescan/auto-select + decoded labels in **v1.0.6**; media-change panel snap to playhead cue zone in **v1.0.7**; Previous→previous media item in **v1.0.8**; **v1.0.9** is those Live features on upstream **v0.18.0**; **v1.1.0** is those Live features on upstream **v0.19.0**; **v1.1.1** cycles the landscape live-subtitles panel right, then left, then off, closes that panel from the rotate button, keeps on-video subtitles independent of the panel; **v1.1.2** remembers pinch zoom the same way brightness is remembered). To port Live
+> for APKs (play-while-download + finished-open / Open-with `content://` through **v1.0.2**; live-subtitles false-unsupported + VTT panel + overlay-with-panel + vertical position in **v1.0.3**; panel persist across pause/lock + no auto-follow while paused in **v1.0.4**; expanding-window progressive cue fill + hardened final-only cue cache in **v1.0.5**; defaults SYSTEM+high-contrast, sidecar all-files discovery/rescan/auto-select + decoded labels in **v1.0.6**; media-change panel snap to playhead cue zone in **v1.0.7**; Previous→previous media item in **v1.0.8**; **v1.0.9** is those Live features on upstream **v0.18.0**; **v1.1.0** is those Live features on upstream **v0.19.0**; **v1.1.1** cycles the landscape live-subtitles panel right, then left, then off, closes that panel from the rotate button, keeps on-video subtitles independent of the panel; **v1.1.2** remembers pinch zoom the same way brightness is remembered; **v1.1.4** fixes live-subtitle cue-match allocation; **v1.2.0** is those Live features on upstream **v0.21.0**). To port Live
 > features onto a newer upstream Next Player version, see
 > [`docs/porting-from-upstream.md`](docs/porting-from-upstream.md) and
 > [`scripts/port-from-upstream.sh`](scripts/port-from-upstream.sh).
@@ -61,6 +61,13 @@ the [Issues](https://github.com/anilbeesetti/nextplayer/issues) section.**
 [<img src="fastlane/metadata/android/en-US/images/tvScreenshots/2.png" width=49% alt="TV demo folder videos">](fastlane/metadata/android/en-US/images/tvScreenshots/2.png)
 [<img src="fastlane/metadata/android/en-US/images/tvScreenshots/4.png" width=49% alt="TV appearance settings">](fastlane/metadata/android/en-US/images/tvScreenshots/4.png)
 </div>
+
+## Player intent API
+
+Next Player supports MX Player-compatible VIEW intents, with additional playback
+speed and direct background-play options. See the [Player intent API reference](PLAYER_API.md)
+for integration examples, supported extras, URI permissions, playback results,
+and compatibility details.
 
 ## Supported formats
 

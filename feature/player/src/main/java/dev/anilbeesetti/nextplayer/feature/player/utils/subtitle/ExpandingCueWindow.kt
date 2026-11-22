@@ -32,10 +32,7 @@ internal object ExpandingCueWindow {
     /** Grow the expand step by this much after each earlier+later pair. */
     const val EXPAND_STEP_INCREMENT_MS = 30_000L
 
-    data class Window(
-        val startMs: Long,
-        val endMs: Long,
-    ) {
+    data class Window(val startMs: Long, val endMs: Long) {
         init {
             require(endMs >= startMs) { "endMs ($endMs) < startMs ($startMs)" }
         }
@@ -57,7 +54,10 @@ internal object ExpandingCueWindow {
         val center = playbackPositionMs.coerceAtLeast(0L)
         val startMs = (center - NEAR_SEEK_LEAD_MS).coerceAtLeast(0L)
         val endMs = center + SEED_HALF_WINDOW_MS
-        return Window(startMs = startMs, endMs = endMs)
+        return Window(
+            startMs = startMs,
+            endMs = endMs,
+        )
     }
 
     fun shouldUseExpandingWindow(playbackPositionMs: Long, seekable: Boolean): Boolean =
@@ -72,7 +72,10 @@ internal object ExpandingCueWindow {
         val step = stepMs.coerceAtLeast(1L)
         val startMs = (coveredStartMs - step).coerceAtLeast(0L)
         if (startMs >= coveredStartMs) return null
-        return Window(startMs = startMs, endMs = coveredStartMs)
+        return Window(
+            startMs = startMs,
+            endMs = coveredStartMs,
+        )
     }
 
     /**
@@ -82,14 +85,16 @@ internal object ExpandingCueWindow {
     fun nextLaterWindow(coveredEndMs: Long, stepMs: Long, reachedEof: Boolean): Window? {
         if (reachedEof) return null
         val step = stepMs.coerceAtLeast(1L)
-        return Window(startMs = coveredEndMs, endMs = coveredEndMs + step)
+        return Window(
+            startMs = coveredEndMs,
+            endMs = coveredEndMs + step,
+        )
     }
 
     fun growStep(stepMs: Long): Long =
         (stepMs + EXPAND_STEP_INCREMENT_MS).coerceAtMost(MAX_EXPAND_STEP_MS)
 
-    fun cueIdentityKey(cue: TimedCue): String =
-        "${cue.startMs}|${cue.endMs}|${cue.text}"
+    fun cueIdentityKey(cue: TimedCue): String = "${cue.startMs}|${cue.endMs}|${cue.text}"
 
     /**
      * Append [incoming] into [into] using cue-identity dedupe. Never removes existing
@@ -132,7 +137,10 @@ internal object ExpandingCueWindow {
         val out = ArrayList<Window>()
         var i = 0
         while (!coverage.isComplete && i < maxSteps) {
-            val earlier = nextEarlierWindow(coverage.startMs, step)
+            val earlier = nextEarlierWindow(
+                coverage.startMs,
+                step,
+            )
             if (earlier != null) {
                 out += earlier
                 coverage = coverage.copy(
@@ -143,7 +151,11 @@ internal object ExpandingCueWindow {
                 coverage = coverage.copy(reachedStart = true)
             }
 
-            val later = nextLaterWindow(coverage.endMs, step, coverage.reachedEof)
+            val later = nextLaterWindow(
+                coverage.endMs,
+                step,
+                coverage.reachedEof,
+            )
             if (later != null) {
                 out += later
                 // Planner cannot observe EOF; assume the planned end is scanned.

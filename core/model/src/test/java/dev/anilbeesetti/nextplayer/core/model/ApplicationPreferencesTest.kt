@@ -13,7 +13,10 @@ class ApplicationPreferencesTest {
     fun appearanceDefaultsAreSystemThemeWithHighContrast() {
         val preferences = ApplicationPreferences()
 
-        assertEquals(ThemeConfig.SYSTEM, preferences.themeConfig)
+        assertEquals(
+            ThemeConfig.SYSTEM,
+            preferences.themeConfig,
+        )
         assertTrue(preferences.useHighContrastDarkTheme)
     }
 
@@ -21,7 +24,10 @@ class ApplicationPreferencesTest {
     fun missingKeysUseAppearanceDefaults() {
         val decoded = json.decodeFromString<ApplicationPreferences>("{}")
 
-        assertEquals(ThemeConfig.SYSTEM, decoded.themeConfig)
+        assertEquals(
+            ThemeConfig.SYSTEM,
+            decoded.themeConfig,
+        )
         assertTrue(decoded.useHighContrastDarkTheme)
     }
 }

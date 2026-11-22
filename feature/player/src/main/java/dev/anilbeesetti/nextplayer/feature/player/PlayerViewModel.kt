@@ -42,7 +42,7 @@ class PlayerViewModel(
     )
 
     private val stateInternal = MutableStateFlow(
-        PlayerUiState(
+        value = PlayerUiState(
             playerPreferences = preferencesRepository.playerPreferences.value,
         ),
     )
@@ -59,31 +59,56 @@ class PlayerViewModel(
     override fun onAction(action: PlayerAction) {
         when (action) {
             is PlayerAction.NavigateUp -> output.navigateUp()
+
             is PlayerAction.SelectSubtitle -> output.selectSubtitle()
+
             is PlayerAction.SelectAudio -> output.selectAudio()
+
             is PlayerAction.PlayInBackground -> output.playInBackground()
+
             is PlayerAction.SetVideoDecoderMode -> output.setVideoDecoderMode(action.mode)
+
             is PlayerAction.SetAudioDecoderMode -> output.setAudioDecoderMode(action.mode)
+
             is PlayerAction.TryDecoderFallback -> output.tryDecoderFallback()
-            is PlayerAction.UpdateDecoderServiceState -> stateInternal.update { it.copy(decoderServiceState = action.state) }
-            is PlayerAction.UpdatePlayWhenReady -> stateInternal.update { it.copy(playWhenReady = action.playWhenReady) }
+
+            is PlayerAction.UpdateDecoderServiceState -> stateInternal.update {
+                it.copy(decoderServiceState = action.state)
+            }
+
+            is PlayerAction.UpdatePlayWhenReady -> stateInternal.update {
+                it.copy(playWhenReady = action.playWhenReady)
+            }
+
             is PlayerAction.UpdatePlayerBrightness -> updatePlayerBrightness(action.value)
+
+            is PlayerAction.UpdateSubtitleOffset -> updateSubtitleOffset(action.y)
+
             is PlayerAction.SetLoopMode -> setLoopMode(action.loopMode)
+
             is PlayerAction.ToggleTimeDisplay -> toggleTimeDisplay()
+
             is PlayerAction.OnVideoZoomEvent -> onVideoZoomEvent(action.event)
+
             is PlayerAction.OnSubtitleOptionEvent -> onSubtitleOptionEvent(action.event)
-            is PlayerAction.SetLiveSubtitlesPanelOpen -> setLiveSubtitlesPanelOpen(action.open, action.onLeft)
+
+            is PlayerAction.SetLiveSubtitlesPanelOpen -> setLiveSubtitlesPanelOpen(
+                action.open,
+                action.onLeft,
+            )
+
             is PlayerAction.SetShowOnVideoSubtitles -> setShowOnVideoSubtitles(action.show)
         }
     }
 
-    suspend fun getPlaylistFromUri(uri: Uri): List<Video> {
-        return getSortedPlaylistUseCase.invoke(uri)
-    }
+    suspend fun getPlaylistFromUri(uri: Uri): List<Video> = getSortedPlaylistUseCase.invoke(uri)
 
     private fun updateVideoZoom(uri: String, zoom: Float) {
         viewModelScope.launch {
-            mediaRepository.updateMediumZoom(uri, zoom)
+            mediaRepository.updateMediumZoom(
+                uri = uri,
+                zoom = zoom,
+            )
         }
     }
 
@@ -113,14 +138,26 @@ class PlayerViewModel(
     private fun updateRememberedZoom(zoom: Float, panX: Float, panY: Float) {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
-                it.copy(playerZoom = zoom, playerZoomPanX = panX, playerZoomPanY = panY)
+                it.copy(
+                    playerZoom = zoom,
+                    playerZoomPanX = panX,
+                    playerZoomPanY = panY,
+                )
             }
+        }
+    }
+
+    private fun updateSubtitleOffset(y: Float) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(subtitleOffsetY = y) }
         }
     }
 
     private fun updateVideoContentScale(contentScale: VideoContentScale) {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences { it.copy(playerVideoZoom = contentScale) }
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(playerVideoZoom = contentScale)
+            }
         }
     }
 
@@ -132,7 +169,9 @@ class PlayerViewModel(
 
     private fun toggleTimeDisplay() {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences { it.copy(showRemainingTime = !it.showRemainingTime) }
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(showRemainingTime = !it.showRemainingTime)
+            }
         }
     }
 
@@ -141,10 +180,18 @@ class PlayerViewModel(
             is VideoZoomEvent.ContentScaleChanged -> {
                 updateVideoContentScale(event.contentScale)
             }
+
             is VideoZoomEvent.ZoomChanged -> {
-                updateVideoZoom(event.mediaItem.mediaId, event.zoom)
+                updateVideoZoom(
+                    event.mediaItem.mediaId,
+                    event.zoom,
+                )
                 if (state.value.playerPreferences.rememberPlayerZoom) {
-                    updateRememberedZoom(event.zoom, event.panX, event.panY)
+                    updateRememberedZoom(
+                        event.zoom,
+                        event.panX,
+                        event.panY,
+                    )
                 }
             }
         }
@@ -153,23 +200,36 @@ class PlayerViewModel(
     private fun onSubtitleOptionEvent(event: SubtitleOptionsEvent) {
         when (event) {
             is SubtitleOptionsEvent.DelayChanged -> {
-                updateSubtitleDelay(event.mediaItem.mediaId, event.delay)
+                updateSubtitleDelay(
+                    event.mediaItem.mediaId,
+                    event.delay,
+                )
             }
+
             is SubtitleOptionsEvent.SpeedChanged -> {
-                updateSubtitleSpeed(event.mediaItem.mediaId, event.speed)
+                updateSubtitleSpeed(
+                    event.mediaItem.mediaId,
+                    event.speed,
+                )
             }
         }
     }
 
     private fun updateSubtitleDelay(uri: String, delay: Long) {
         viewModelScope.launch {
-            mediaRepository.updateSubtitleDelay(uri, delay)
+            mediaRepository.updateSubtitleDelay(
+                uri = uri,
+                delay = delay,
+            )
         }
     }
 
     private fun updateSubtitleSpeed(uri: String, speed: Float) {
         viewModelScope.launch {
-            mediaRepository.updateSubtitleSpeed(uri, speed)
+            mediaRepository.updateSubtitleSpeed(
+                uri = uri,
+                speed = speed,
+            )
         }
     }
 }
@@ -192,10 +252,12 @@ sealed interface PlayerAction {
     data class UpdateDecoderServiceState(val state: DecoderServiceState) : PlayerAction
     data class UpdatePlayWhenReady(val playWhenReady: Boolean) : PlayerAction
     data class UpdatePlayerBrightness(val value: Float) : PlayerAction
+    data class UpdateSubtitleOffset(val y: Float) : PlayerAction
     data class SetLoopMode(val loopMode: LoopMode) : PlayerAction
     data object ToggleTimeDisplay : PlayerAction
     data class OnVideoZoomEvent(val event: VideoZoomEvent) : PlayerAction
     data class OnSubtitleOptionEvent(val event: SubtitleOptionsEvent) : PlayerAction
-    data class SetLiveSubtitlesPanelOpen(val open: Boolean, val onLeft: Boolean = false) : PlayerAction
+    data class SetLiveSubtitlesPanelOpen(val open: Boolean, val onLeft: Boolean = false) :
+        PlayerAction
     data class SetShowOnVideoSubtitles(val show: Boolean) : PlayerAction
 }

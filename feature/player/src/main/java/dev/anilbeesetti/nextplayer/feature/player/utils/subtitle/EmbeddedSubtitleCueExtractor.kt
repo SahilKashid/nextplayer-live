@@ -14,7 +14,6 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.extractor.DefaultExtractorInput
 import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.DiscardingTrackOutput
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorInput
@@ -22,6 +21,7 @@ import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
+import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.CueDecoder
 import androidx.media3.extractor.text.CuesWithTiming
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
@@ -47,6 +47,7 @@ object EmbeddedSubtitleCueExtractor {
 
     /** Emit a partial list at least this often while demuxing (tight for steady UI growth). */
     private const val PARTIAL_EMIT_MIN_INTERVAL_MS = 120L
+
     /** Or whenever at least this many new cues have been decoded since the last emit. */
     private const val PARTIAL_EMIT_CUE_BATCH = 25
 
@@ -80,10 +81,9 @@ object EmbeddedSubtitleCueExtractor {
     fun isBitmapSubtitle(format: Format): Boolean =
         isBitmapMime(format.sampleMimeType) || isBitmapMime(format.codecs)
 
-    fun isBitmapMime(mimeOrCodec: String?): Boolean =
-        mimeOrCodec == MimeTypes.APPLICATION_PGS ||
-            mimeOrCodec == MimeTypes.APPLICATION_VOBSUB ||
-            mimeOrCodec == MimeTypes.APPLICATION_DVBSUBS
+    fun isBitmapMime(mimeOrCodec: String?): Boolean = mimeOrCodec == MimeTypes.APPLICATION_PGS ||
+        mimeOrCodec == MimeTypes.APPLICATION_VOBSUB ||
+        mimeOrCodec == MimeTypes.APPLICATION_DVBSUBS
 
     /** Original container mime when the player already exposed Media3-cues. */
     fun originalSubtitleMime(format: Format): String? {
@@ -104,7 +104,12 @@ object EmbeddedSubtitleCueExtractor {
         var best: CollectedTextTrack? = null
         var bestScore = Int.MIN_VALUE
         tracks.forEachIndexed { index, track ->
-            val score = scoreTrack(track.format, selectedFormat, index, preferredTextTrackIndex)
+            val score = scoreTrack(
+                track.format,
+                selectedFormat,
+                index,
+                preferredTextTrackIndex,
+            )
             if (score > bestScore) {
                 bestScore = score
                 best = track
@@ -123,7 +128,11 @@ object EmbeddedSubtitleCueExtractor {
         if (!selected.id.isNullOrBlank() && selected.id == candidate.id) score += 100
         if (!selected.language.isNullOrBlank() && selected.language == candidate.language) {
             score += 40
-        } else if (languagesLooselyMatch(selected.language, candidate.language)) {
+        } else if (languagesLooselyMatch(
+                selected.language,
+                candidate.language,
+            )
+        ) {
             score += 30
         }
         if (!selected.label.isNullOrBlank() && selected.label == candidate.label) score += 30
@@ -139,7 +148,13 @@ object EmbeddedSubtitleCueExtractor {
     /** Match en↔eng style codes when Format normalization did not already equate them. */
     private fun languagesLooselyMatch(a: String?, b: String?): Boolean {
         if (a.isNullOrBlank() || b.isNullOrBlank()) return false
-        if (a.equals(b, ignoreCase = true)) return true
+        if (a.equals(
+                b,
+                ignoreCase = true,
+            )
+        ) {
+            return true
+        }
         val a2 = a.lowercase()
         val b2 = b.lowercase()
         return a2.startsWith(b2) || b2.startsWith(a2)
@@ -149,8 +164,10 @@ object EmbeddedSubtitleCueExtractor {
         val startMs = timeUsToMsOrUnset(cuesWithTiming.startTimeUs)
         val endMs = when {
             cuesWithTiming.endTimeUs != C.TIME_UNSET -> Util.usToMs(cuesWithTiming.endTimeUs)
+
             startMs != null && cuesWithTiming.durationUs != C.TIME_UNSET ->
                 startMs + Util.usToMs(cuesWithTiming.durationUs)
+
             else -> null
         }
         if (startMs == null || endMs == null || endMs < startMs) return emptyList()
@@ -161,7 +178,13 @@ object EmbeddedSubtitleCueExtractor {
             .stripSimpleMarkup()
             .trim()
         if (text.isEmpty()) return emptyList()
-        return listOf(TimedCue(startMs = startMs, endMs = endMs, text = text))
+        return listOf(
+            TimedCue(
+                startMs = startMs,
+                endMs = endMs,
+                text = text,
+            ),
+        )
     }
 
     private fun demuxAndConvert(
@@ -211,19 +234,32 @@ object EmbeddedSubtitleCueExtractor {
         emitRawSubtitleData: Boolean,
         disableSeekForCues: Boolean,
     ): List<TimedCue> {
-        val output = CollectingExtractorOutput(selectedFormat, preferredTextTrackIndex)
+        val output = CollectingExtractorOutput(
+            selectedFormat,
+            preferredTextTrackIndex,
+        )
         val matroskaFlags =
             if (disableSeekForCues) MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES else 0
         val extractorsFactory = DefaultExtractorsFactory()
             .setSubtitleParserFactory(subtitleParserFactory)
             .setMatroskaExtractorFlags(matroskaFlags)
             .setTextTrackTranscodingEnabled(!emitRawSubtitleData)
-        val extractors = extractorsFactory.createExtractors(mediaUri, emptyMap())
+        val extractors = extractorsFactory.createExtractors(
+            mediaUri,
+            emptyMap(),
+        )
         if (extractors.isEmpty()) return emptyList()
 
         runCatching { dataSource.close() }
-        var input: ExtractorInput = openInput(dataSource, mediaUri, position = 0L)
-        val extractor = sniffExtractor(extractors, input) ?: return emptyList()
+        var input: ExtractorInput = openInput(
+            dataSource,
+            mediaUri,
+            position = 0L,
+        )
+        val extractor = sniffExtractor(
+            extractors,
+            input,
+        ) ?: return emptyList()
         input.resetPeekPosition()
         extractor.init(output)
 
@@ -236,25 +272,45 @@ object EmbeddedSubtitleCueExtractor {
 
         fun reopenAt(position: Long, timeUs: Long) {
             runCatching { dataSource.close() }
-            input = openInput(dataSource, mediaUri, position = position)
-            extractor.seek(position, timeUs)
+            input = openInput(
+                dataSource,
+                mediaUri,
+                position = position,
+            )
+            extractor.seek(
+                position,
+                timeUs,
+            )
         }
 
-        fun readOnce(): Int {
-            return when (extractor.read(input, positionHolder)) {
-                Extractor.RESULT_CONTINUE -> Extractor.RESULT_CONTINUE
-                Extractor.RESULT_END_OF_INPUT -> Extractor.RESULT_END_OF_INPUT
-                Extractor.RESULT_SEEK -> {
-                    reopenAt(positionHolder.position, timeUs = 0L)
-                    Extractor.RESULT_CONTINUE
-                }
-                else -> Extractor.RESULT_END_OF_INPUT
+        fun readOnce(): Int = when (
+            extractor.read(
+                input,
+                positionHolder,
+            )
+        ) {
+            Extractor.RESULT_CONTINUE -> Extractor.RESULT_CONTINUE
+
+            Extractor.RESULT_END_OF_INPUT -> Extractor.RESULT_END_OF_INPUT
+
+            Extractor.RESULT_SEEK -> {
+                reopenAt(
+                    positionHolder.position,
+                    timeUs = 0L,
+                )
+                Extractor.RESULT_CONTINUE
             }
+
+            else -> Extractor.RESULT_END_OF_INPUT
         }
 
         fun selectedTrackOrNull(): CollectedTextTrack? {
             val tracks = output.textTracksInOrder()
-            return selectBestTextTrack(tracks, selectedFormat, preferredTextTrackIndex)
+            return selectBestTextTrack(
+                tracks,
+                selectedFormat,
+                preferredTextTrackIndex,
+            )
                 ?.takeUnless { isBitmapSubtitle(it.format) }
         }
 
@@ -264,7 +320,12 @@ object EmbeddedSubtitleCueExtractor {
                 // Sample list was trimmed between windows; reset decode cursor.
                 decodedSampleCount = 0
             }
-            appendNewSamples(track, decodedSampleCount, seen, merged)
+            appendNewSamples(
+                track,
+                decodedSampleCount,
+                seen,
+                merged,
+            )
             decodedSampleCount = track.samples.size
             val snapshot = merged.sortedBy { it.startMs }
             emitter.maybeEmit(snapshot)
@@ -273,7 +334,10 @@ object EmbeddedSubtitleCueExtractor {
 
         fun seekToTimeUs(timeUs: Long, seekMap: SeekMap) {
             val seekPoints = seekMap.getSeekPoints(timeUs)
-            reopenAt(seekPoints.first.position, timeUs)
+            reopenAt(
+                seekPoints.first.position,
+                timeUs,
+            )
             output.clearAllSamples()
             decodedSampleCount = 0
         }
@@ -293,7 +357,10 @@ object EmbeddedSubtitleCueExtractor {
             val endUs = Util.msToUs(window.endMs)
             val dropUs = dropAtOrAfterMs?.let { Util.msToUs(it) }
             val cuesBefore = merged.size
-            seekToTimeUs(startUs, seekMap)
+            seekToTimeUs(
+                startUs,
+                seekMap,
+            )
             var hitEof = false
             while (true) {
                 val result = readOnce()
@@ -315,7 +382,10 @@ object EmbeddedSubtitleCueExtractor {
                     break
                 }
             }
-            emitter.maybeEmit(merged.sortedBy { it.startMs }, force = true)
+            emitter.maybeEmit(
+                merged.sortedBy { it.startMs },
+                force = true,
+            )
             return hitEof
         }
 
@@ -362,7 +432,8 @@ object EmbeddedSubtitleCueExtractor {
                     if (newest != C.TIME_UNSET) {
                         val newestMs = Util.usToMs(newest)
                         if (newestMs < coverage.endMs) {
-                            coverage = coverage.copy(endMs = newestMs.coerceAtLeast(coverage.startMs))
+                            coverage =
+                                coverage.copy(endMs = newestMs.coerceAtLeast(coverage.startMs))
                         }
                     }
                 }
@@ -372,7 +443,10 @@ object EmbeddedSubtitleCueExtractor {
                 while (!coverage.isComplete && guard < 64) {
                     guard++
 
-                    val earlier = ExpandingCueWindow.nextEarlierWindow(coverage.startMs, stepMs)
+                    val earlier = ExpandingCueWindow.nextEarlierWindow(
+                        coverage.startMs,
+                        stepMs,
+                    )
                     if (earlier != null) {
                         readWindow(
                             window = earlier,
@@ -396,12 +470,17 @@ object EmbeddedSubtitleCueExtractor {
                         )
                         if (later != null) {
                             val sizeBefore = merged.size
-                            val laterEof = readWindow(window = later, seekMap = seekMap)
+                            val laterEof = readWindow(
+                                window = later,
+                                seekMap = seekMap,
+                            )
                             val newest = output.newestSampleTimeUs()
                             val scannedEndMs = when {
                                 laterEof -> later.endMs
+
                                 newest != C.TIME_UNSET ->
                                     Util.usToMs(newest).coerceAtLeast(coverage.endMs)
+
                                 else -> later.endMs
                             }
                             // No forward progress and no EOF flag → treat as done (seek stuck at end).
@@ -427,7 +506,10 @@ object EmbeddedSubtitleCueExtractor {
                         // Large bound; EOF is the real stop.
                         endMs = coverage.endMs + 24 * 60 * 60 * 1000L,
                     )
-                    readWindow(window = finish, seekMap = seekMap)
+                    readWindow(
+                        window = finish,
+                        seekMap = seekMap,
+                    )
                 }
             } else {
                 // Non-seekable / early playback: single forward pass with frequent partials.
@@ -439,7 +521,10 @@ object EmbeddedSubtitleCueExtractor {
             }
 
             val finalCues = refreshMergedFromSelected()
-            emitter.maybeEmit(finalCues, force = true)
+            emitter.maybeEmit(
+                finalCues,
+                force = true,
+            )
             return finalCues
         } finally {
             extractor.release()
@@ -467,7 +552,11 @@ object EmbeddedSubtitleCueExtractor {
             .setPosition(position)
             .build()
         val length = dataSource.open(dataSpec)
-        return DefaultExtractorInput(dataSource, position, length)
+        return DefaultExtractorInput(
+            dataSource,
+            position,
+            length,
+        )
     }
 
     private fun appendNewSamples(
@@ -477,13 +566,21 @@ object EmbeddedSubtitleCueExtractor {
         into: MutableList<TimedCue>,
     ): List<TimedCue> {
         val format = track.format
-        val startIndex = alreadyDecoded.coerceIn(0, track.samples.size)
+        val startIndex = alreadyDecoded.coerceIn(
+            0,
+            track.samples.size,
+        )
 
         if (format.sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) {
             for (i in startIndex until track.samples.size) {
                 val sample = track.samples[i]
                 val decoded = runCatching {
-                    cueDecoder.decode(sample.timeUs, sample.data, 0, sample.data.size)
+                    cueDecoder.decode(
+                        sample.timeUs,
+                        sample.data,
+                        0,
+                        sample.data.size,
+                    )
                 }.getOrNull() ?: continue
                 for (timed in cuesWithTimingToTimedCues(decoded)) {
                     val key = "${timed.startMs}|${timed.endMs}|${timed.text}"
@@ -509,7 +606,10 @@ object EmbeddedSubtitleCueExtractor {
                 ) { parsed += it }
             }
             for (cuesWithTiming in parsed) {
-                val adjusted = adjustTiming(cuesWithTiming, sample.timeUs)
+                val adjusted = adjustTiming(
+                    cuesWithTiming,
+                    sample.timeUs,
+                )
                 for (timed in cuesWithTimingToTimedCues(adjusted)) {
                     val key = "${timed.startMs}|${timed.endMs}|${timed.text}"
                     if (seen.add(key)) into += timed
@@ -528,24 +628,34 @@ object EmbeddedSubtitleCueExtractor {
             cues.endTimeUs != C.TIME_UNSET -> cues.endTimeUs - sampleTimeUs
             else -> C.TIME_UNSET
         }
-        return CuesWithTiming(cues.cues, sampleTimeUs, durationUs)
+        return CuesWithTiming(
+            cues.cues,
+            sampleTimeUs,
+            durationUs,
+        )
     }
 
     private fun timeUsToMsOrUnset(timeUs: Long): Long? =
         if (timeUs == C.TIME_UNSET) null else Util.usToMs(timeUs)
 
-    private fun String.stripSimpleMarkup(): String =
-        replace(HTML_TAG, "")
-            .replace(ASS_OVERRIDE_TAG, "")
-            .replace(SRT_POSITION_TAG, "")
+    private fun String.stripSimpleMarkup(): String = replace(
+        HTML_TAG,
+        "",
+    )
+        .replace(
+            ASS_OVERRIDE_TAG,
+            "",
+        )
+        .replace(
+            SRT_POSITION_TAG,
+            "",
+        )
 
     private val HTML_TAG = Regex("""</?[^>]+>""")
     private val ASS_OVERRIDE_TAG = Regex("""\{[^}]*\}""")
     private val SRT_POSITION_TAG = Regex("""\{\\an\d\}""")
 
-    private class ProgressiveEmitter(
-        private val onPartialCues: ((List<TimedCue>) -> Unit)?,
-    ) {
+    private class ProgressiveEmitter(private val onPartialCues: ((List<TimedCue>) -> Unit)?) {
         private var lastEmitElapsedMs = 0L
         private var lastEmitSize = 0
 
@@ -566,15 +676,9 @@ object EmbeddedSubtitleCueExtractor {
         }
     }
 
-    internal data class CollectedTextTrack(
-        val format: Format,
-        val samples: List<Sample>,
-    )
+    internal data class CollectedTextTrack(val format: Format, val samples: List<Sample>)
 
-    internal data class Sample(
-        val timeUs: Long,
-        val data: ByteArray,
-    )
+    internal data class Sample(val timeUs: Long, val data: ByteArray)
 
     private class CollectingExtractorOutput(
         private val selectedFormat: Format,
@@ -608,7 +712,10 @@ object EmbeddedSubtitleCueExtractor {
                 val output = textTrackOutputs[id] ?: return@mapNotNull null
                 if (output.discardSamples) return@mapNotNull null
                 val format = output.format ?: return@mapNotNull null
-                CollectedTextTrack(format = format, samples = output.samples)
+                CollectedTextTrack(
+                    format = format,
+                    samples = output.samples,
+                )
             }
         }
 
@@ -646,7 +753,12 @@ object EmbeddedSubtitleCueExtractor {
             val scored = textOrder.mapIndexedNotNull { index, id ->
                 val output = textTrackOutputs[id] ?: return@mapIndexedNotNull null
                 val format = output.format ?: return@mapIndexedNotNull null
-                id to scoreTrack(format, selectedFormat, index, preferredTextTrackIndex)
+                id to scoreTrack(
+                    format,
+                    selectedFormat,
+                    index,
+                    preferredTextTrackIndex,
+                )
             }
             if (scored.isEmpty()) return
             val bestId = scored.maxBy { it.second }.first
@@ -688,7 +800,11 @@ object EmbeddedSubtitleCueExtractor {
             sampleDataPart: Int,
         ): Int {
             ensureCapacity(sampleDataBytes + length)
-            val read = input.read(sampleData, sampleDataBytes, length)
+            val read = input.read(
+                sampleData,
+                sampleDataBytes,
+                length,
+            )
             if (read == C.RESULT_END_OF_INPUT) {
                 if (allowEndOfInput) return C.RESULT_END_OF_INPUT
                 throw EOFException()
@@ -699,7 +815,11 @@ object EmbeddedSubtitleCueExtractor {
 
         override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
             ensureCapacity(sampleDataBytes + length)
-            data.readBytes(sampleData, sampleDataBytes, length)
+            data.readBytes(
+                sampleData,
+                sampleDataBytes,
+                length,
+            )
             sampleDataBytes += length
         }
 
@@ -720,14 +840,25 @@ object EmbeddedSubtitleCueExtractor {
                 sampleDataBytes = 0
                 return
             }
-            val bytes = sampleData.copyOfRange(start, end)
-            samples += Sample(timeUs = timeUs, data = bytes)
+            val bytes = sampleData.copyOfRange(
+                start,
+                end,
+            )
+            samples += Sample(
+                timeUs = timeUs,
+                data = bytes,
+            )
             sampleDataBytes = 0
         }
 
         private fun ensureCapacity(required: Int) {
             if (sampleData.size >= required) return
-            sampleData = sampleData.copyOf(maxOf(required, sampleData.size * 2).coerceAtLeast(4096))
+            sampleData = sampleData.copyOf(
+                maxOf(
+                    required,
+                    sampleData.size * 2,
+                ).coerceAtLeast(4096),
+            )
         }
     }
 }

@@ -3,21 +3,42 @@ package dev.anilbeesetti.nextplayer.feature.player.ui
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
+import androidx.compose.foundation.layout.systemGestures
+import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.feature.player.extensions.detectCustomHorizontalDragGestures
 import dev.anilbeesetti.nextplayer.feature.player.extensions.detectCustomTransformGestures
 import dev.anilbeesetti.nextplayer.feature.player.extensions.detectCustomVerticalDragGestures
+import dev.anilbeesetti.nextplayer.feature.player.extensions.detectSubtitleDragGestures
 import dev.anilbeesetti.nextplayer.feature.player.state.ControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.state.PictureInPictureState
 import dev.anilbeesetti.nextplayer.feature.player.state.SeekGestureState
+import dev.anilbeesetti.nextplayer.feature.player.state.SubtitlePositionState
 import dev.anilbeesetti.nextplayer.feature.player.state.TapGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.VideoZoomAndContentScaleState
 import dev.anilbeesetti.nextplayer.feature.player.state.VolumeAndBrightnessGestureState
 
+// Extra reach around the drawn subtitle text so a fingertip does not have to be pixel-exact.
+private val SUBTITLE_TOUCH_PADDING = 16.dp
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PlayerGestures(
     modifier: Modifier = Modifier,
@@ -27,16 +48,59 @@ fun PlayerGestures(
     seekGestureState: SeekGestureState,
     videoZoomAndContentScaleState: VideoZoomAndContentScaleState,
     volumeAndBrightnessGestureState: VolumeAndBrightnessGestureState,
+    subtitlePositionState: SubtitlePositionState,
+    hasSubtitles: Boolean,
+    canRepositionSubtitles: Boolean,
 ) {
+    // Read lazily: the cue can end mid-drag and must not restart the gesture handlers.
+    val currentHasSubtitles by rememberUpdatedState(hasSubtitles)
+    val currentCanReposition by rememberUpdatedState(canRepositionSubtitles)
+
+    // Keep the system's swipe-to-reveal areas reserved even while the bars are hidden.
+    val gestureInsets = WindowInsets.systemGestures.union(WindowInsets.systemBarsIgnoringVisibility)
+    val density = LocalDensity.current
+    val subtitleTouchPaddingPx = with(density) { SUBTITLE_TOUCH_PADDING.toPx() }
+
+    fun isOnSubtitle(position: Offset) = currentCanReposition && currentHasSubtitles &&
+        subtitlePositionState.isOnSubtitle(
+            position,
+            subtitleTouchPaddingPx,
+        )
+
+    val layoutDirection = LocalLayoutDirection.current
     BoxWithConstraints {
         val playerAreaWidth = constraints.maxWidth
         val playerAreaHeight = constraints.maxHeight
-        LaunchedEffect(playerAreaWidth, playerAreaHeight) {
-            videoZoomAndContentScaleState.onPlayerAreaConstraints(playerAreaWidth, playerAreaHeight)
+        LaunchedEffect(
+            playerAreaWidth,
+            playerAreaHeight,
+        ) {
+            videoZoomAndContentScaleState.onPlayerAreaConstraints(
+                playerAreaWidth,
+                playerAreaHeight,
+            )
         }
         Box(
             modifier = modifier
                 .fillMaxSize()
+                .onSizeChanged { subtitlePositionState.containerSize = it }
+                .pointerInput(
+                    canRepositionSubtitles,
+                    controlsVisibilityState.controlsLocked,
+                    pictureInPictureState.isInPictureInPictureMode,
+                ) {
+                    if (controlsVisibilityState.controlsLocked) return@pointerInput
+                    if (pictureInPictureState.isInPictureInPictureMode) return@pointerInput
+
+                    detectSubtitleDragGestures(
+                        shouldStartGesture = ::isOnSubtitle,
+                        onPressChange = subtitlePositionState::onPressChange,
+                        onDragStart = subtitlePositionState::onDragStart,
+                        onDrag = { subtitlePositionState.onDrag(it.y) },
+                        onDragEnd = subtitlePositionState::onDragEnd,
+                        onDragCancel = subtitlePositionState::onDragCancel,
+                    )
+                }
                 .pointerInput(pictureInPictureState.isInPictureInPictureMode) {
                     if (pictureInPictureState.isInPictureInPictureMode) return@pointerInput
 
@@ -47,7 +111,10 @@ fun PlayerGestures(
                         },
                         onDoubleTap = {
                             if (controlsVisibilityState.controlsLocked) return@detectTapGestures
-                            tapGestureState.handleDoubleTap(offset = it, size = size)
+                            tapGestureState.handleDoubleTap(
+                                offset = it,
+                                size = size,
+                            )
                         },
                         onPress = {
                             tryAwaitRelease()
@@ -55,11 +122,16 @@ fun PlayerGestures(
                         },
                         onLongPress = {
                             if (controlsVisibilityState.controlsLocked) return@detectTapGestures
+                            if (isOnSubtitle(it)) return@detectTapGestures
                             tapGestureState.handleLongPress(offset = it)
                         },
                     )
                 }
                 .pointerInput(
+                    seekGestureState,
+                    gestureInsets,
+                    density,
+                    layoutDirection,
                     controlsVisibilityState.controlsLocked,
                     pictureInPictureState.isInPictureInPictureMode,
                 ) {
@@ -67,6 +139,14 @@ fun PlayerGestures(
                     if (pictureInPictureState.isInPictureInPictureMode) return@pointerInput
 
                     detectCustomHorizontalDragGestures(
+                        shouldStartGesture = {
+                            gestureInsets.isPlayerGestureStart(
+                                it,
+                                size,
+                                density,
+                                layoutDirection,
+                            )
+                        },
                         onDragStart = seekGestureState::onDragStart,
                         onHorizontalDrag = seekGestureState::onDrag,
                         onDragCancel = seekGestureState::onDragEnd,
@@ -74,6 +154,9 @@ fun PlayerGestures(
                     )
                 }
                 .pointerInput(
+                    gestureInsets,
+                    density,
+                    layoutDirection,
                     controlsVisibilityState.controlsLocked,
                     pictureInPictureState.isInPictureInPictureMode,
                 ) {
@@ -81,13 +164,27 @@ fun PlayerGestures(
                     if (pictureInPictureState.isInPictureInPictureMode) return@pointerInput
 
                     detectCustomVerticalDragGestures(
-                        onDragStart = { volumeAndBrightnessGestureState.onDragStart(it, size) },
+                        shouldStartGesture = {
+                            gestureInsets.isPlayerGestureStart(
+                                it,
+                                size,
+                                density,
+                                layoutDirection,
+                            )
+                        },
+                        onDragStart = {
+                            volumeAndBrightnessGestureState.onDragStart(
+                                offset = it,
+                                size = size,
+                            )
+                        },
                         onVerticalDrag = volumeAndBrightnessGestureState::onDrag,
                         onDragCancel = volumeAndBrightnessGestureState::onDragEnd,
                         onDragEnd = volumeAndBrightnessGestureState::onDragEnd,
                     )
                 }
                 .pointerInput(
+                    videoZoomAndContentScaleState,
                     controlsVisibilityState.controlsLocked,
                     pictureInPictureState.isInPictureInPictureMode,
                 ) {
@@ -96,18 +193,34 @@ fun PlayerGestures(
 
                     detectCustomTransformGestures(
                         onGesture = { _, panChange, zoomChange, _ ->
-                            if (tapGestureState.isLongPressGestureInAction) return@detectCustomTransformGestures
+                            if (tapGestureState.isLongPressGestureInAction) {
+                                return@detectCustomTransformGestures
+                            }
                             videoZoomAndContentScaleState.onZoomPanGesture(
                                 constraints = this@BoxWithConstraints.constraints,
                                 panChange = panChange,
                                 zoomChange = zoomChange,
                             )
                         },
-                        onGestureEnd = {
-                            videoZoomAndContentScaleState.onZoomPanGestureEnd()
-                        },
+                        onGestureEnd = { videoZoomAndContentScaleState.onZoomPanGestureEnd() },
                     )
                 },
         )
     }
 }
+
+internal fun WindowInsets.isPlayerGestureStart(
+    position: Offset,
+    size: IntSize,
+    density: Density,
+    layoutDirection: LayoutDirection,
+): Boolean = position.x >= getLeft(
+    density,
+    layoutDirection,
+) &&
+    position.x < size.width - getRight(
+        density,
+        layoutDirection,
+    ) &&
+    position.y >= getTop(density) &&
+    position.y < size.height - getBottom(density)

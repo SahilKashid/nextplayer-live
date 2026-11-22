@@ -57,9 +57,8 @@ internal object LiveSubtitlesTrackChange {
         val isUnsupportedTrack: Boolean = false,
     )
 
-    fun resetSnapshotForSignature(signature: String): ResetSnapshot =
-        ResetSnapshot(
-            listResetKey = signature,
-            isLoading = signature != "none",
-        )
+    fun resetSnapshotForSignature(signature: String): ResetSnapshot = ResetSnapshot(
+        listResetKey = signature,
+        isLoading = signature != "none",
+    )
 }

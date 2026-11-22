@@ -24,7 +24,8 @@ Related deep-dives (keep in sync when behavior changes):
 Side-by-side install is intentional: Live uses a different `applicationId` so it does **not**
 overwrite the original Next Player package.
 
-Baseline: Live **v1.1.0** is based on upstream **v0.19.0**. Live **v1.0.9** was based on upstream
+Baseline: Live **v1.2.0** is based on upstream **v0.21.0**. Live **v1.1.0** through **v1.1.4**
+were based on upstream **v0.19.0**. Live **v1.0.9** was based on upstream
 **v0.18.0**. Earlier Live releases through **v1.0.8** were based around the upstream **~v0.17.5**
 lineage (the tree just before upstream’s 0.18.0 version bump). Origin tag
 `v1.0.0` is the first Live release; **v1.0.1** adds finished-download settled-complete handoff;
@@ -42,7 +43,13 @@ local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 audio, NEW badges, watch-history settings, tunneled playback, PiP/SMB fixes);
 **v1.1.1** cycles the landscape panel off → right → left → off, closes it from the rotate
 button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` once tagged, else latest Live tag / `origin/main`);
-**v1.1.2** remembers pinch zoom globally, the same way brightness is remembered.
+**v1.1.2** remembers pinch zoom globally, the same way brightness is remembered;
+**v1.1.3** kept the 50ms cue-tracking path; **v1.1.4** stops that path from reallocating regexes
+and normalized cue text on every tick;
+**v1.2.0** re-applies the Live features onto upstream **v0.21.0** (FFmpeg/libass subtitles for
+settled files, drag-to-reposition via `subtitleOffsetY`, settings import/export, URI read-grant
+handoff, narrow-player chapters). Prefer tag `v1.2.0` as the Live source once it exists, else
+`v1.1.4` / latest Live tag / `origin/main`.
 
 ---
 
@@ -69,7 +76,7 @@ git fetch origin --tags
    - Prefer a release tag: `upstream/vX.Y.Z`
    - Or tip: `upstream/main`
 3. Re-apply **branding** (see [Branding](#branding-must-keep)).
-4. Bring Live-only source trees from origin tag `v1.1.0` (or latest Live tag / `main`), then
+4. Bring Live-only source trees from origin tag `v1.2.0` (or `v1.1.4` / latest Live tag / `main`), then
    **re-wire touchpoints** in shared upstream files.
 5. Prefer history when clean:
    - Cherry-pick / merge Live feature commits if they apply cleanly.
@@ -82,7 +89,7 @@ git fetch origin --tags
 9. Shortcut for steps 1–5 scaffolding: `./scripts/port-from-upstream.sh <upstream-ref> [live-ref]`
 
 Do **not** force-push `main` unless explicitly requested. Prefer a branch like
-`live/port-v0-19-0`, validate, then PR or fast-forward merge.
+`live/port-v0-21-0`, validate, then PR or fast-forward merge.
 
 ---
 
@@ -94,7 +101,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, `v1.0.2` / `102`, `v1.0.3` / `103`, `v1.0.4` / `104`, `v1.0.5` / `105`, `v1.0.6` / `106`, `v1.0.7` / `107`, `v1.0.8` / `108`, `v1.0.9` / `109`, `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, … `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, `v1.1.3` / `113`, `v1.1.4` / `114`, `v1.2.0` / `120`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -134,15 +141,16 @@ Also keep `docs/live-subtitles.md` when present.
 
 | File | What to restore |
 |------|-----------------|
-| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); `LiveSubtitlesSplit` (panel fraction **0.35**, video the rest, physical left or right). `showOverlaySubtitles = shouldShowOnVideoSubtitles()` (not the old overlay-with-panel helper); `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. Pass side + rotate props through `MediaPlayerControls` → `PlayerControls` → `ControlsBottomView` |
+| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); `LiveSubtitlesSplit` around the stock player slot (panel fraction **0.35**, video the rest, physical left or right). Keep stock 0.21 subtitle drag (`rememberCuesState`, `rememberSubtitlePositionState`, haptic), `api` video visibility / aspect ratio, and `suppressErrorMessage`. `showOverlaySubtitles = shouldShowOnVideoSubtitles()`; `verticalPosition = subtitleVerticalPosition`; `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. `useRememberedZoom` + restore pinch zoom on `ON_START` |
+| `feature/player/.../PlayerContentFrame.kt` | Keep stock zoom `graphicsLayer`, shutter, and subtitle scrim. Add `showOverlaySubtitles` and skip `SubtitleView` when it is false. Pass `cuesState` and `subtitlePositionState` through |
+| `feature/player/.../ui/SubtitleView.kt` | Keep stock 0.21 cue delivery, drag highlight, and bitmap placement. Apply `SubtitleVerticalPosition` (`setBottomPaddingFraction` + `applyToCues`) before `setCues`. `SubtitleConfiguration.verticalPosition` defaults to 0 |
+| `feature/player/.../ui/controls/ControlsBottomView.kt` | `onBeforeRotate` on **both** `RotateButton` sites (regular and compact / narrow player) |
 | `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `isLiveSubtitlesOnLeft` / `showLiveSubtitlesToggle`. Mirror `ic_live_subtitles` when on the left. Content description follows the cycle state (do not duplicate `onBackClick`; 0.19 already defaults it) |
 | `feature/player/.../buttons/RotateButton.kt` | `onBeforeRotate()` then `rotationState.rotate()`. Only this button closes the panel; `PlayerOrientationEffect` must not |
 | `feature/player/.../ui/SubtitleSelectorView.kt` | Track row: set `showOnVideoSubtitles` true and `switchTrack(index)`. **Off**: set the flag false and do **not** `switchTrack(-1)` |
 | `feature/player/.../PlayerViewModel.kt` | `SetLiveSubtitlesPanelOpen(open, onLeft)` persists both flags. `SetShowOnVideoSubtitles` persists `showOnVideoSubtitles`. `VideoZoomEvent.ZoomChanged` still writes per-video `videoScale`; when `rememberPlayerZoom` is on it also writes the global pinch scale and pan fractions |
-| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay. `rememberPlayerZoom` / `playerZoom` / `playerZoomPanX` / `playerZoomPanY` (default remember **on**, zoom **1**, pan **0**). Leave stock `playerVideoZoom` (resize mode) always saved |
-| `feature/player/.../PlayerContentFrame.kt` | Pass `verticalPosition`; skip `SubtitleView` when `showOverlaySubtitles` is false |
-| `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles` |
-| `feature/player/.../ui/SubtitleView.kt` | Keep 0.19 `currentCues?.cues`; apply `SubtitleVerticalPosition` |
+| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`, `subtitleVerticalPosition`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay. `rememberPlayerZoom` / `playerZoom` / `playerZoomPanX` / `playerZoomPanY` (default remember **on**, zoom **1**, pan **0**). Leave stock `playerVideoZoom` (resize mode) always saved. Keep stock `subtitleOffsetY` (drag-to-reposition); it is separate from the Live vertical-position slider |
+| `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles`. Keep the Live vertical-position slider and stock reset-subtitle-position (`subtitleOffsetY = 0`) |
 
 ### Hard-won behavior (do not “simplify” away)
 
@@ -168,7 +176,8 @@ Also keep `docs/live-subtitles.md` when present.
 - **Expanding-window fill:** seed near playhead then grow earlier/later bands with frequent partials (v1.0.5).
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).
 - **Defaults:** theme SYSTEM + high-contrast dark; remember brightness; double-tap play/pause; long-press 2x; subtitle vertical 20%; preferred subtitle language English (v1.0.6).
-- **Remember zoom (v1.1.2):** `rememberPlayerZoom` defaults **on**, next to remember brightness. Saved value is global (`playerZoom` default **1**, `playerZoomPanX` / `playerZoomPanY` default **0**), restored on `ON_START`, and written when the pinch changes. Resize mode stays stock `playerVideoZoom` and is always saved. Per-video `videoScale` stays for when the toggle is off. Pan is a fraction of the player-slot range, applied on `PlayerSurface` inside the live-subtitles player slot, not on the split layout. Touchpoints: `PlayerPreferences`, `MediaPlayerScreen`, `PlayerViewModel`, `VideoZoomAndContentScaleState`, `PlayerGestures`, `PlayerPreferencesScreen` / `PlayerPreferencesViewModel`, `strings.xml` (`remember_zoom_level`).
+- **Remember zoom (v1.1.2):** `rememberPlayerZoom` defaults **on**, next to remember brightness. Saved value is global (`playerZoom` default **1**, `playerZoomPanX` / `playerZoomPanY` default **0**), restored on `ON_START`, and written when the pinch changes. Resize mode stays stock `playerVideoZoom` and is always saved. Per-video `videoScale` stays for when the toggle is off. Pan is a fraction of the player-slot range, applied on `PlayerSurface` inside the live-subtitles player slot, not on the split layout. On **v0.21.0** the surface zoom still lives in `PlayerContentFrame`’s `graphicsLayer`; `useRememberedZoom` must skip the metadata listener so a content-scale change does not fight the global pinch. Touchpoints: `PlayerPreferences`, `MediaPlayerScreen`, `PlayerViewModel`, `VideoZoomAndContentScaleState`, `PlayerGestures`, `PlayerPreferencesScreen` / `PlayerPreferencesViewModel`, `strings.xml` (`remember_zoom_level`).
+- **Stock subtitle drag (v0.21.0):** keep `subtitleOffsetY`, `SubtitlePositionState`, and drag gestures. The Live vertical-position slider (`subtitleVerticalPosition`, default **0.2**) still lifts bottom-anchored cues. Do not delete either.
 - **Sidecar discovery:** all-files access + path probe for `.vtt/.srt/.ass/.ssa/.ttml`; rescan every open; auto-select when tracks exist (prefer eng); never leave Disable; decode `%20` in labels (v1.0.6).
 - **Media-change snap:** on next/prev, drop previous-video list offset (`listResetKey`) and re-anchor to playhead nearest-cue immediately, even with empty currentCues (v1.0.7).
 - **Cue-matching allocation (OOM fix, v1.1.4):** highlight matching must go through `LiveSubtitleCueMatcher` — regexes compiled once, normalized timeline cached once per cue-list instance in `LiveSubtitlesState`. Never re-normalize / re-compile regexes for every cue on the ~50 ms tick; that allocation storm OOM'd the main thread in 1.1.3 (retraced: `normalizeCueText:605 -> matchCuesToIndex`). The 50 ms tick / `EVENT_CUES` fast tracking (rapid cues <1 s apart, from `e44d2557` + rapid-burst fixes) is unchanged — only regex compilation and normalization caching changed. Unit tests: `LiveSubtitleCueMatcherTest` (incl. rapid-cue order), `LiveSubtitlesTrackChangeTest`.
@@ -203,10 +212,12 @@ core/media/src/main/java/dev/anilbeesetti/nextplayer/core/media/network/datasour
 | `.../datasource/NextDataSourceFactory.kt` | Keep Koin `@Single`. Route local `file` / resolvable `content` → Growing* **only** while `shouldPlayAsGrowing`; **settled-complete → DefaultDataSource**; keep network / http paths |
 | `feature/player/.../service/GrowingAwareExtractorsFactory.kt` | Live-only — copy whole file |
 | `feature/player/.../service/GrowingFileLoadErrorHandlingPolicy.kt` | Live-only — copy whole file |
-| `feature/player/.../service/PlayerService.kt` | Wrap `DefaultMediaSourceFactory(context, GrowingAwareExtractorsFactory)` + `setDataSourceFactory` + `GrowingFileLoadErrorHandlingPolicy` **inside** `ExternalAudioMediaSourceFactory`. Keep external-audio pending selection, `ADD_AUDIO_TRACK`, tunneled playback, and decoder restore. Subtitle remember goes through `applySubtitleSelection` (do not persist Disable `-1` when no text tracks). Sidecar path is a real file path, never `content://` |
+| `feature/player/.../service/ApiMediaSourceFactory.kt` | **v0.21 touchpoint.** Keep per-item API headers and, for settled files, `FfmpegSubtitleExtractorsFactory` + `withFfmpegSubtitles`. When `GrowingAwareExtractorsFactory.isLikelyGrowing` is true, use `GrowingAwareExtractorsFactory` instead of the FFmpeg extractor factory and skip `withFfmpegSubtitles` for that item. Always `setLoadErrorHandlingPolicy(GrowingFileLoadErrorHandlingPolicy)` on the factory returned to `createMediaSource` |
+| `feature/player/.../service/PlayerService.kt` | Pass `ApiMediaSourceFactory` into `ExternalAudioMediaSourceFactory` (do not replace it with a bare `DefaultMediaSourceFactory`). Keep `setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)`, external-audio pending selection, `ADD_AUDIO_TRACK`, tunneled playback, decoder restore, and URI grant retention. Subtitle remember goes through `applySubtitleSelection` (do not persist Disable `-1`). Sidecar path is a real file path, never `content://` |
 
 **Media3 1.11 note:** extractors go through the **`DefaultMediaSourceFactory` constructor**, not
-`setExtractorsFactory`.
+`setExtractorsFactory`. On **v0.21.0** that constructor call lives inside
+`ApiMediaSourceFactory.createMediaSource`, which also applies FFmpeg subtitles for settled files.
 
 Also keep `docs/play-while-downloading.md` when present.
 
@@ -324,17 +335,18 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.1.2` / latest Live tag / Live main (includes
-   `LiveSubtitlesPanelPlacement` and `LiveSubtitlesFollowController`).
-4. Manually merge touchpoints: `NextDataSourceFactory`, `PlayerService`, `MediaPlayerScreen`,
-   `ControlsTopView`, `RotateButton`, `SubtitleSelectorView`, `PlayerViewModel`,
-   `VideoZoomAndContentScaleState`, `PlayerGestures`, player settings screen,
-   `PlayerPreferences`, strings, `app/build.gradle.kts`. On **v0.19.0**, upstream replaced Hilt
-   with Koin and split the player screen (`MediaPlayerContent`, `PlayerControls`,
-   `PlayerContentFrame`). Keep Koin, chapters, external audio, NEW badges, watch-history
-   settings, tunneled playback, and PiP/SMB fixes, and re-apply Live on top. Do not
-   drop `applicationIdSuffix` removal: Live APKs must stay `dev.sahilkashid.nextplayer`
-   (no `.debug` / `.release` suffix). Keep upstream `gradle/libs.versions.toml`.
+3. Checkout Live-only paths from `v1.2.0` / `v1.1.4` / latest Live tag / Live main (includes
+   `LiveSubtitlesPanelPlacement`, `LiveSubtitlesFollowController`, and `LiveSubtitleCueMatcher`).
+4. Manually merge touchpoints: `NextDataSourceFactory`, `ApiMediaSourceFactory`, `PlayerService`,
+   `MediaPlayerScreen`, `PlayerContentFrame`, `SubtitleView`, `ControlsTopView`,
+   `ControlsBottomView`, `RotateButton`, `SubtitleSelectorView`, `PlayerViewModel`,
+   `VideoZoomAndContentScaleState`, `PlayerGestures`, player and subtitle settings screens,
+   `PlayerPreferences`, strings, `app/build.gradle.kts`. On **v0.21.0**, keep Koin, FFmpeg
+   subtitles, subtitle drag, settings import/export, URI grant retention, chapters, external
+   audio, NEW badges, watch-history settings, tunneled playback, and PiP/SMB fixes, and
+   re-apply Live on top. Do not drop `applicationIdSuffix` removal: Live APKs must stay
+   `dev.sahilkashid.nextplayer` (no `.debug` / `.release` suffix). Keep upstream
+   `gradle/libs.versions.toml`.
 5. Tests → assemble → smoke verification matrix → release.
 
 If something “looks simpler” but contradicts a **Hard-won** bullet above, keep Live behavior.

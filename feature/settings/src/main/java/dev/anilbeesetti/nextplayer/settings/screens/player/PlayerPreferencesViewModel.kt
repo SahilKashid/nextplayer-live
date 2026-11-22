@@ -23,12 +23,10 @@ class PlayerPreferencesViewModel(
     @InjectedParam internal var output: Output,
 ) : MviViewModel<PlayerPreferencesUiState, PlayerPreferencesUiEvent>() {
 
-    data class Output(
-        val navigateUp: () -> Unit,
-    )
+    data class Output(val navigateUp: () -> Unit)
 
     private val stateInternal = MutableStateFlow(
-        PlayerPreferencesUiState(
+        value = PlayerPreferencesUiState(
             preferences = preferencesRepository.playerPreferences.value,
         ),
     )
@@ -47,26 +45,48 @@ class PlayerPreferencesViewModel(
             is PlayerPreferencesUiEvent.NavigateUp -> output.navigateUp()
 
             is PlayerPreferencesUiEvent.ShowDialog -> showDialog(action.value)
+
             is PlayerPreferencesUiEvent.UpdatePlaybackResume -> updatePlaybackResume(action.resume)
+
             is PlayerPreferencesUiEvent.ToggleAutoplay -> toggleAutoplay()
+
             is PlayerPreferencesUiEvent.ToggleTunneledPlayback -> toggleTunneledPlayback()
+
             is PlayerPreferencesUiEvent.ToggleAutoPip -> toggleAutoPip()
+
             is PlayerPreferencesUiEvent.ToggleAutoBackgroundPlay -> toggleAutoBackgroundPlay()
-            is PlayerPreferencesUiEvent.ToggleRememberBrightnessLevel -> toggleRememberBrightnessLevel()
+            is PlayerPreferencesUiEvent.ToggleRememberBrightnessLevel ->
+                toggleRememberBrightnessLevel()
+
             is PlayerPreferencesUiEvent.ToggleRememberZoomLevel -> toggleRememberZoomLevel()
             is PlayerPreferencesUiEvent.ToggleRememberSelections -> toggleRememberSelections()
-            is PlayerPreferencesUiEvent.UpdatePreferredPlayerOrientation -> updatePreferredPlayerOrientation(action.value)
-            is PlayerPreferencesUiEvent.UpdatePreferredControlButtonsPosition -> updatePreferredControlButtonsPosition(action.value)
-            is PlayerPreferencesUiEvent.UpdateDefaultPlaybackSpeed -> updateDefaultPlaybackSpeed(action.value)
-            is PlayerPreferencesUiEvent.UpdateControlAutoHideTimeout -> updateControlAutoHideTimeout(action.value)
-            is PlayerPreferencesUiEvent.ToggleUseMaterialYouControls -> toggleUseMaterialYouControls()
+
+            is PlayerPreferencesUiEvent.UpdatePreferredPlayerOrientation ->
+                updatePreferredPlayerOrientation(
+                    action.value,
+                )
+
+            is PlayerPreferencesUiEvent.UpdatePreferredControlButtonsPosition ->
+                updatePreferredControlButtonsPosition(
+                    action.value,
+                )
+
+            is PlayerPreferencesUiEvent.UpdateDefaultPlaybackSpeed -> updateDefaultPlaybackSpeed(
+                action.value,
+            )
+
+            is PlayerPreferencesUiEvent.UpdateControlAutoHideTimeout ->
+                updateControlAutoHideTimeout(
+                    action.value,
+                )
+
+            is PlayerPreferencesUiEvent.ToggleUseMaterialYouControls ->
+                toggleUseMaterialYouControls()
         }
     }
 
     private fun showDialog(value: PlayerPreferenceDialog?) {
-        stateInternal.update {
-            it.copy(showDialog = value)
-        }
+        stateInternal.update { it.copy(showDialog = value) }
     }
 
     private fun updatePlaybackResume(resume: Resume) {
@@ -81,17 +101,13 @@ class PlayerPreferencesViewModel(
 
     private fun toggleAutoplay() {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences {
-                it.copy(autoplay = !it.autoplay)
-            }
+            preferencesRepository.updatePlayerPreferences { it.copy(autoplay = !it.autoplay) }
         }
     }
 
     private fun toggleAutoPip() {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences {
-                it.copy(autoPip = !it.autoPip)
-            }
+            preferencesRepository.updatePlayerPreferences { it.copy(autoPip = !it.autoPip) }
         }
     }
 
@@ -154,7 +170,7 @@ class PlayerPreferencesViewModel(
     private fun updateDefaultPlaybackSpeed(value: Float) {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
-                it.copy(defaultPlaybackSpeed = value.round(1))
+                it.copy(defaultPlaybackSpeed = value.round(decimalPlaces = 1))
             }
         }
     }
@@ -200,8 +216,10 @@ sealed interface PlayerPreferencesUiEvent {
     data object ToggleRememberBrightnessLevel : PlayerPreferencesUiEvent
     data object ToggleRememberZoomLevel : PlayerPreferencesUiEvent
     data object ToggleRememberSelections : PlayerPreferencesUiEvent
-    data class UpdatePreferredPlayerOrientation(val value: ScreenOrientation) : PlayerPreferencesUiEvent
-    data class UpdatePreferredControlButtonsPosition(val value: ControlButtonsPosition) : PlayerPreferencesUiEvent
+    data class UpdatePreferredPlayerOrientation(val value: ScreenOrientation) :
+        PlayerPreferencesUiEvent
+    data class UpdatePreferredControlButtonsPosition(val value: ControlButtonsPosition) :
+        PlayerPreferencesUiEvent
     data class UpdateDefaultPlaybackSpeed(val value: Float) : PlayerPreferencesUiEvent
     data class UpdateControlAutoHideTimeout(val value: Int) : PlayerPreferencesUiEvent
     data object ToggleUseMaterialYouControls : PlayerPreferencesUiEvent

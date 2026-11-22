@@ -288,7 +288,7 @@
     <string name="thumbnail_generation_strategy">Estrategia de generación de miniaturas</string>
     <string name="first_frame">Primer cuadro</string>
     <string name="first_frame_desc">Utiliza el primer fotograma del vídeo</string>
-    <string name="frame_at_position">Posición del fotograma</string>
+    <string name="frame_at_position">Fotograma en la posición</string>
     <string name="frame_at_position_desc">Utilizar el fotograma en una posición específica del vídeo</string>
     <string name="hybrid">Híbrido (inteligente)</string>
     <string name="hybrid_desc">Intenta usar el primer fotograma. Si es mayormente un color sólido, utiliza un fotograma desde una posición específica en el vídeo en su lugar</string>
@@ -365,9 +365,9 @@
         <item quantity="other">No se pudieron mover %1$d vídeos</item>
     </plurals>
     <plurals name="moved_videos_originals_remain">
-        <item quantity="one">Se movió 1 vídeo, pero no se pudo eliminar el original</item>
-        <item quantity="many">Se movieron %1$d vídeos, pero no se pudieron eliminar los originales</item>
-        <item quantity="other">Se movieron %1$d vídeos, pero no se pudieron eliminar los originales</item>
+        <item quantity="one">Se copió 1 vídeo, pero no se pudo eliminar el original</item>
+        <item quantity="many">Se copiaron %1$d vídeos, pero no se pudieron eliminar los originales</item>
+        <item quantity="other">Se copiaron %1$d vídeos, pero no se pudieron eliminar los originales</item>
     </plurals>
     <string name="cannot_move_to_same_folder">No se puede mover a la misma carpeta</string>
     <string name="home">Inicio</string>
@@ -545,4 +545,24 @@
     <string name="watch_history_desc">Guardar un registro de los videos que ves</string>
     <string name="network_watch_history">Historial de reproducciones en red</string>
     <string name="network_watch_history_desc">Incluir en el historial los videos reproducidos en red.</string>
+    <string name="add_to_home_screen">Añadir a la pantalla de inicio</string>
+    <string name="playlist_shortcut_failed">No se pudo añadir el acceso directo a la lista de reproducción. Inténtalo de nuevo.</string>
+    <string name="github_sponsors">Patrocinadores de GitHub</string>
+    <string name="settings_export_description">Guardar configuración en un archivo JSON</string>
+    <string name="settings_import">Importar configuración</string>
+    <string name="settings_export">Exportar configuración</string>
+    <string name="settings_import_description">Restaurar configuración desde un archivo JSON</string>
+    <string name="settings_export_confirmation">Exportar la configuración de la aplicación y del reproductor a un archivo JSON.</string>
+    <string name="settings_export_include_credentials">Incluir conexiones de red y credenciales</string>
+    <string name="settings_export_credentials_warning">El archivo JSON no está cifrado. Puede contener contraseñas y claves privadas SSH. Manténgalo a salvo.</string>
+    <string name="settings_import_confirmation">La configuración de este archivo sobrescribirá tu configuración actual. Se ignorarán los elementos faltantes, obsoletos, desconocidos o no válidos. Las conexiones de red y las credenciales también se importarán si están incluidas.</string>
+    <string name="export_action">Exportar</string>
+    <string name="import_action">Importar</string>
+    <string name="settings_export_success">Configuración exportada</string>
+    <string name="settings_export_failed">Error al exportar la configuración</string>
+    <string name="settings_import_success">Configuración importada</string>
+    <string name="settings_import_failed">No se pudo completar la importación de la configuración. Inténtalo de nuevo.</string>
+    <string name="settings_import_invalid">No se pudo leer este archivo o no contiene una configuración JSON compatible</string>
+    <string name="reset_subtitle_position">Restablecer la posición de los subtítulos</string>
+    <string name="reset_subtitle_position_desc">Arrastra los subtítulos hacia arriba o hacia abajo durante la reproducción para moverlos</string>
 </resources>

@@ -30,13 +30,19 @@ object SubtitleVerticalPosition {
         if (lift == PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION) {
             return cues
         }
-        val lineFromTop = (1f - bottomPaddingFraction(lift)).coerceIn(0f, 1f)
+        val lineFromTop = (1f - bottomPaddingFraction(lift)).coerceIn(
+            0f,
+            1f,
+        )
         return cues.map { cue ->
             if (cue.bitmap != null || !isBottomAnchored(cue)) {
                 cue
             } else {
                 cue.buildUpon()
-                    .setLine(lineFromTop, Cue.LINE_TYPE_FRACTION)
+                    .setLine(
+                        lineFromTop,
+                        Cue.LINE_TYPE_FRACTION,
+                    )
                     .setLineAnchor(Cue.ANCHOR_TYPE_END)
                     .build()
             }
@@ -46,7 +52,11 @@ object SubtitleVerticalPosition {
     fun isBottomAnchored(cue: Cue): Boolean {
         if (cue.line == Cue.DIMEN_UNSET) return true
         if (cue.lineType == Cue.LINE_TYPE_NUMBER && cue.line < 0f) return true
-        if (cue.lineType == Cue.LINE_TYPE_FRACTION && cue.line >= BOTTOM_FRACTION_THRESHOLD) return true
+        if (cue.lineType == Cue.LINE_TYPE_FRACTION &&
+            cue.line >= BOTTOM_FRACTION_THRESHOLD
+        ) {
+            return true
+        }
         return false
     }
 
