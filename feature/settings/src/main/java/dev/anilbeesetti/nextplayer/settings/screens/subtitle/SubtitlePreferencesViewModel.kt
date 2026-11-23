@@ -67,9 +67,6 @@ class SubtitlePreferencesViewModel(
             is SubtitlePreferencesUiEvent.ToggleUseSystemCaptionStyle ->
                 toggleUseSystemCaptionStyle()
 
-            is SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition ->
-                updateSubtitleVerticalPosition(action.value)
-
             is SubtitlePreferencesUiEvent.ToggleShowOnVideoSubtitles -> toggleShowOnVideoSubtitles()
 
             is SubtitlePreferencesUiEvent.ResetSubtitlePosition -> resetSubtitlePosition()
@@ -132,7 +129,9 @@ class SubtitlePreferencesViewModel(
 
     private fun resetSubtitlePosition() {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences { it.copy(subtitleOffsetY = 0f) }
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(subtitleOffsetY = PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y)
+            }
         }
     }
 
@@ -140,19 +139,6 @@ class SubtitlePreferencesViewModel(
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
                 it.copy(useSystemCaptionStyle = !it.useSystemCaptionStyle)
-            }
-        }
-    }
-
-    private fun updateSubtitleVerticalPosition(value: Float) {
-        viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences {
-                it.copy(
-                    subtitleVerticalPosition = value.coerceIn(
-                        PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION,
-                        PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
-                    ),
-                )
             }
         }
     }
@@ -190,7 +176,6 @@ sealed interface SubtitlePreferencesUiEvent {
     data object ToggleApplyEmbeddedStyles : SubtitlePreferencesUiEvent
     data class UpdateSubtitleEncoding(val value: String) : SubtitlePreferencesUiEvent
     data object ToggleUseSystemCaptionStyle : SubtitlePreferencesUiEvent
-    data class UpdateSubtitleVerticalPosition(val value: Float) : SubtitlePreferencesUiEvent
     data object ToggleShowOnVideoSubtitles : SubtitlePreferencesUiEvent
     data object ResetSubtitlePosition : SubtitlePreferencesUiEvent
 }

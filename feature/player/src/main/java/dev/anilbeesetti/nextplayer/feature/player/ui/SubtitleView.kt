@@ -141,17 +141,7 @@ fun SubtitleView(
                 ),
             )
             subtitleView.setApplyEmbeddedStyles(configuration.applyEmbeddedStyles)
-            subtitleView.setBottomPaddingFraction(
-                SubtitleVerticalPosition.bottomPaddingFraction(configuration.verticalPosition),
-            )
-            subtitleView.setCues(
-                displayedCues?.let { cues ->
-                    SubtitleVerticalPosition.applyToCues(
-                        cues = cues,
-                        verticalPosition = configuration.verticalPosition,
-                    )
-                },
-            )
+            subtitleView.setCues(displayedCues)
             if (isInPictureInPictureMode) {
                 subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION)
             } else {
@@ -270,5 +260,4 @@ data class SubtitleConfiguration(
     val applyEmbeddedStyles: Boolean,
     val useMaterialYouControls: Boolean,
     val controlsVisible: Boolean,
-    val verticalPosition: Float = 0f,
 )

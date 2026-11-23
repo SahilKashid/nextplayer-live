@@ -251,7 +251,6 @@ internal fun MediaPlayerContent(
                             useMaterialYouControls = playerPreferences.useMaterialYouControls,
                             controlsVisible = controlsVisibilityState.controlsVisible &&
                                 !controlsVisibilityState.controlsLocked,
-                            verticalPosition = playerPreferences.subtitleVerticalPosition,
                         ),
                         showOverlaySubtitles = playerPreferences.shouldShowOnVideoSubtitles(),
                     )

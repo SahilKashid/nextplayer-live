@@ -15,8 +15,8 @@ Usage: ./scripts/port-from-upstream.sh [upstream-ref] [live-source-ref]
 
   upstream-ref     Tag or branch on upstream (default: prompt, or upstream/main)
                    Examples: v0.18.0  upstream/v0.18.0  upstream/main
-  live-source-ref  Live tree to copy features from (default: v1.2.0 if tagged,
-                   else v1.1.4, else v1.1.1, else latest Live tag, else origin/main)
+  live-source-ref  Live tree to copy features from (default: v1.2.1 if tagged,
+                   else v1.2.0, else v1.1.4, else latest Live tag, else origin/main)
 
 Creates branch live/port-<sanitized-ref> from the upstream ref, ensures remotes,
 fetches tags, prints branding + copy paths + touchpoints + next commands.
@@ -110,8 +110,11 @@ if [[ -z "$UPSTREAM_ARG" ]]; then
 fi
 
 if [[ -z "$LIVE_ARG" ]]; then
-  # Prefer v1.2.0 (Live on upstream v0.21.0), else v1.1.4, else v1.1.1, else newest v* tag.
-  if git rev-parse --verify -q "v1.2.0" >/dev/null 2>&1 || \
+  # Prefer v1.2.1 (stock subtitle drag only), else v1.2.0, else v1.1.4, else newest v* tag.
+  if git rev-parse --verify -q "v1.2.1" >/dev/null 2>&1 || \
+     git rev-parse --verify -q "refs/tags/v1.2.1" >/dev/null 2>&1; then
+    LIVE_ARG="v1.2.1"
+  elif git rev-parse --verify -q "v1.2.0" >/dev/null 2>&1 || \
      git rev-parse --verify -q "refs/tags/v1.2.0" >/dev/null 2>&1; then
     LIVE_ARG="v1.2.0"
   elif git rev-parse --verify -q "v1.1.4" >/dev/null 2>&1 || \
@@ -299,7 +302,8 @@ cat <<'TOUCH'
   RotateButton: onBeforeRotate then rotate (does not run for PlayerOrientationEffect)
   SubtitleSelectorView: Off sets showOnVideoSubtitles false and does not switchTrack(-1)
   PlayerPreferences: liveSubtitlesPanelOnLeft, showOnVideoSubtitles (showOverlaySubtitlesWithLivePanel is legacy JSON only);
-                    rememberPlayerZoom, playerZoom, playerZoomPanX, playerZoomPanY (v1.1.2; leave stock playerVideoZoom)
+                    rememberPlayerZoom, playerZoom, playerZoomPanX, playerZoomPanY (v1.1.2; leave stock playerVideoZoom);
+                    subtitleOffsetY default -0.2 (v1.2.1; stock drag units, negative = up)
   NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
@@ -321,14 +325,18 @@ cat <<'TOUCH'
                              v1.2.0 on upstream v0.21.0: put GrowingAwareExtractorsFactory inside
                              ApiMediaSourceFactory only while shouldPlayAsGrowing; settled files keep
                              FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles. Pass that factory
-                             to ExternalAudioMediaSourceFactory. Keep subtitle drag (subtitleOffsetY)
-                             and the Live vertical-position slider. onBeforeRotate on both RotateButtons
+                             to ExternalAudioMediaSourceFactory. Keep stock subtitle drag
+                             (subtitleOffsetY) only; Live default is -0.2 (20% up) and Reset
+                             subtitle position returns to that, not stock 0. Do not restore the
+                             Live vertical-position slider (removed in v1.2.1). decodeStored
+                             migrates a leftover subtitleVerticalPosition when offset is still 0.
+                             onBeforeRotate on both RotateButtons
                              (regular and compact). Keep settings import/export, URI grant retention,
                              chapters, external audio, NEW badges, watch history, tunneled playback)
   PlayerService: ExternalAudioMediaSourceFactory(ApiMediaSourceFactory)
   ApiMediaSourceFactory: Growing* extractors + GrowingFileLoadErrorHandlingPolicy while incomplete;
                          FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles when settled
-  PlayerContentFrame / SubtitleView: showOverlaySubtitles + SubtitleVerticalPosition on stock drag cues
+  PlayerContentFrame / SubtitleView: showOverlaySubtitles; keep stock setCues / subtitle drag (no SubtitleVerticalPosition)
   ControlsBottomView: onBeforeRotate for both RotateButton call sites
   strings.xml: live_subtitles* + jump_to_current_cue + remember_zoom_level (+ app_name)
   Player preferences screen: Remember zoom switch immediately after Remember brightness

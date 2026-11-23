@@ -24,7 +24,7 @@ Related deep-dives (keep in sync when behavior changes):
 Side-by-side install is intentional: Live uses a different `applicationId` so it does **not**
 overwrite the original Next Player package.
 
-Baseline: Live **v1.2.0** is based on upstream **v0.21.0**. Live **v1.1.0** through **v1.1.4**
+Baseline: Live **v1.2.1** (and **v1.2.0**) is based on upstream **v0.21.0**. Live **v1.1.0** through **v1.1.4**
 were based on upstream **v0.19.0**. Live **v1.0.9** was based on upstream
 **v0.18.0**. Earlier Live releases through **v1.0.8** were based around the upstream **~v0.17.5**
 lineage (the tree just before upstream’s 0.18.0 version bump). Origin tag
@@ -48,8 +48,13 @@ button, and keeps on-video subtitles independent of the panel (prefer `v1.1.1` o
 and normalized cue text on every tick;
 **v1.2.0** re-applies the Live features onto upstream **v0.21.0** (FFmpeg/libass subtitles for
 settled files, drag-to-reposition via `subtitleOffsetY`, settings import/export, URI read-grant
-handoff, narrow-player chapters). Prefer tag `v1.2.0` as the Live source once it exists, else
-`v1.1.4` / latest Live tag / `origin/main`.
+handoff, narrow-player chapters).
+**v1.2.1** drops the Live-only subtitle vertical-position slider (`subtitleVerticalPosition`)
+so positioning is stock drag-to-reposition (`subtitleOffsetY`) plus **Reset subtitle
+position**. Live’s preferred default is `subtitleOffsetY = -0.2` (20% of the player height
+up from the stock default cue spot; negative = up). Reset returns to that default, not
+stock 0. Prefer tag `v1.2.1` as the Live source once it exists, else `v1.2.0` / latest
+Live tag / `origin/main`.
 
 ---
 
@@ -101,7 +106,7 @@ Do **not** force-push `main` unless explicitly requested. Prefer a branch like
 | `app/build.gradle.kts` | `namespace` **may** stay `dev.anilbeesetti.nextplayer` |
 | `core/ui/.../strings.xml` | `app_name` = `Next Player Live` |
 | Same strings / manifests | Permission / player activity labels that say **Next Player Live** |
-| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, … `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, `v1.1.3` / `113`, `v1.1.4` / `114`, `v1.2.0` / `120`, … — **not** upstream’s |
+| Version line | Live’s own: `v1.0.0` / `100`, `v1.0.1` / `101`, … `v1.1.0` / `110`, `v1.1.1` / `111`, `v1.1.2` / `112`, `v1.1.3` / `113`, `v1.1.4` / `114`, `v1.2.0` / `120`, `v1.2.1` / `121`, … — **not** upstream’s |
 
 If upstream bumped versions in `app/build.gradle.kts`, keep Live’s numbers (or continue the Live
 sequence). Never publish Live under upstream’s `applicationId`.
@@ -141,16 +146,16 @@ Also keep `docs/live-subtitles.md` when present.
 
 | File | What to restore |
 |------|-----------------|
-| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); `LiveSubtitlesSplit` around the stock player slot (panel fraction **0.35**, video the rest, physical left or right). Keep stock 0.21 subtitle drag (`rememberCuesState`, `rememberSubtitlePositionState`, haptic), `api` video visibility / aspect ratio, and `suppressErrorMessage`. `showOverlaySubtitles = shouldShowOnVideoSubtitles()`; `verticalPosition = subtitleVerticalPosition`; `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. `useRememberedZoom` + restore pinch zoom on `ON_START` |
+| `feature/player/.../MediaPlayerScreen.kt` | In `MediaPlayerContent`: `rememberLiveSubtitlesState` (`initialPanelOnLeft`, `onPanelPlacementChanged`); `LiveSubtitlesSplit` around the stock player slot (panel fraction **0.35**, video the rest, physical left or right). Keep stock 0.21 subtitle drag (`rememberCuesState`, `rememberSubtitlePositionState`, haptic), `api` video visibility / aspect ratio, and `suppressErrorMessage`. `showOverlaySubtitles = shouldShowOnVideoSubtitles()`; `cyclePanel()` on the button; `closePanel()` in `onBeforeRotate`. `useRememberedZoom` + restore pinch zoom on `ON_START` |
 | `feature/player/.../PlayerContentFrame.kt` | Keep stock zoom `graphicsLayer`, shutter, and subtitle scrim. Add `showOverlaySubtitles` and skip `SubtitleView` when it is false. Pass `cuesState` and `subtitlePositionState` through |
-| `feature/player/.../ui/SubtitleView.kt` | Keep stock 0.21 cue delivery, drag highlight, and bitmap placement. Apply `SubtitleVerticalPosition` (`setBottomPaddingFraction` + `applyToCues`) before `setCues`. `SubtitleConfiguration.verticalPosition` defaults to 0 |
+| `feature/player/.../ui/SubtitleView.kt` | Keep stock 0.21 cue delivery (`setCues(displayedCues)`), drag highlight, and bitmap placement. Do not reintroduce `SubtitleVerticalPosition` or `SubtitleConfiguration.verticalPosition` |
 | `feature/player/.../ui/controls/ControlsBottomView.kt` | `onBeforeRotate` on **both** `RotateButton` sites (regular and compact / narrow player) |
 | `feature/player/.../ui/controls/ControlsTopView.kt` | `onLiveSubtitlesClick` / `isLiveSubtitlesVisible` / `isLiveSubtitlesOnLeft` / `showLiveSubtitlesToggle`. Mirror `ic_live_subtitles` when on the left. Content description follows the cycle state (do not duplicate `onBackClick`; 0.19 already defaults it) |
 | `feature/player/.../buttons/RotateButton.kt` | `onBeforeRotate()` then `rotationState.rotate()`. Only this button closes the panel; `PlayerOrientationEffect` must not |
 | `feature/player/.../ui/SubtitleSelectorView.kt` | Track row: set `showOnVideoSubtitles` true and `switchTrack(index)`. **Off**: set the flag false and do **not** `switchTrack(-1)` |
 | `feature/player/.../PlayerViewModel.kt` | `SetLiveSubtitlesPanelOpen(open, onLeft)` persists both flags. `SetShowOnVideoSubtitles` persists `showOnVideoSubtitles`. `VideoZoomEvent.ZoomChanged` still writes per-video `videoScale`; when `rememberPlayerZoom` is on it also writes the global pinch scale and pan fractions |
-| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`, `subtitleVerticalPosition`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay. `rememberPlayerZoom` / `playerZoom` / `playerZoomPanX` / `playerZoomPanY` (default remember **on**, zoom **1**, pan **0**). Leave stock `playerVideoZoom` (resize mode) always saved. Keep stock `subtitleOffsetY` (drag-to-reposition); it is separate from the Live vertical-position slider |
-| `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles`. Keep the Live vertical-position slider and stock reset-subtitle-position (`subtitleOffsetY = 0`) |
+| `core/model/.../PlayerPreferences.kt` | `liveSubtitlesPanelOpen`, `liveSubtitlesPanelOnLeft`, `showOnVideoSubtitles`. Keep `showOverlaySubtitlesWithLivePanel` so old JSON decodes; do not wire it back to the overlay. `rememberPlayerZoom` / `playerZoom` / `playerZoomPanX` / `playerZoomPanY` (default remember **on**, zoom **1**, pan **0**). Leave stock `playerVideoZoom` (resize mode) always saved. Keep stock `subtitleOffsetY` (drag-to-reposition) with Live default **`-0.2`** (`DEFAULT_SUBTITLE_OFFSET_Y`, 20% up). Do not bring back `subtitleVerticalPosition` as a live field; `PlayerPreferences.decodeStored` converts that leftover key into `subtitleOffsetY` when the saved offset is still 0, then the next write drops it |
+| `feature/settings/.../subtitle/SubtitlePreferencesScreen.kt` | Settings switch reads/writes `showOnVideoSubtitles`. **Reset subtitle position** writes `DEFAULT_SUBTITLE_OFFSET_Y` (`-0.2`), not stock 0, and is enabled when the offset is not that default. Do not restore the Live vertical-position slider |
 
 ### Hard-won behavior (do not “simplify” away)
 
@@ -167,7 +172,7 @@ Also keep `docs/live-subtitles.md` when present.
 - **Empty cache:** never cache empty cue lists; ASS/SSA may need a raw-sample retry demux (v1.0.3).
 - **WebVTT panel:** resolve sideloaded `.vtt` via MEDIA3_CUES / codecs → external file (v1.0.3).
 - **Overlay + panel (v1.0.3, changed in v1.1.1):** on-video text and the panel are independent. `showOnVideoSubtitles` default **on**. Picker Off hides only `SubtitleView` and keeps the text track selected so the panel still loads cues. Do not restore `switchTrack(-1)` on Off, and do not hide the overlay just because the panel is open (`showOverlaySubtitlesWithLivePanel` is legacy JSON only).
-- **Vertical position:** overlay slider + bottom-anchored VTT lift (v1.0.3).
+- **Vertical position (removed v1.2.1):** the Live overlay slider + bottom-anchored VTT lift shipped in v1.0.3. Do not restore it. Stock drag-to-reposition (`subtitleOffsetY`) is the only position control. Live’s preferred default is `-0.2` (20% up).
 - **Panel persist:** `liveSubtitlesPanelOpen` across pause / lock / recreate; portrait hides only via predicate (v1.0.4).
 - **Panel cycle (v1.1.1):** button cycles off → right → left → off (`LiveSubtitlesPanelPlacement`). A closed panel’s next open is always the right. `liveSubtitlesPanelOnLeft` restores only while the panel is still open.
 - **Rotate closes the panel (v1.1.1):** `RotateButton` `onBeforeRotate` calls `closePanel()` before changing orientation. Automatic / video-size orientation does not.
@@ -175,9 +180,9 @@ Also keep `docs/live-subtitles.md` when present.
 - **Pause auto-follow:** cue scroll auto-follow resumes only while playing; jump-to-current always works (v1.0.4).
 - **Expanding-window fill:** seed near playhead then grow earlier/later bands with frequent partials (v1.0.5).
 - **Hardened cue cache:** final-only put, stable keys (no flaky mtime), larger LRU, fsync+rename, corrupt delete (v1.0.5).
-- **Defaults:** theme SYSTEM + high-contrast dark; remember brightness; double-tap play/pause; long-press 2x; subtitle vertical 20%; preferred subtitle language English (v1.0.6).
+- **Defaults:** theme SYSTEM + high-contrast dark; remember brightness; double-tap play/pause; long-press 2x; preferred subtitle language English (v1.0.6). Subtitle position default is stock `subtitleOffsetY = -0.2` (20% of player height up; v1.2.1). Reset settings and Reset subtitle position both return to this value.
 - **Remember zoom (v1.1.2):** `rememberPlayerZoom` defaults **on**, next to remember brightness. Saved value is global (`playerZoom` default **1**, `playerZoomPanX` / `playerZoomPanY` default **0**), restored on `ON_START`, and written when the pinch changes. Resize mode stays stock `playerVideoZoom` and is always saved. Per-video `videoScale` stays for when the toggle is off. Pan is a fraction of the player-slot range, applied on `PlayerSurface` inside the live-subtitles player slot, not on the split layout. On **v0.21.0** the surface zoom still lives in `PlayerContentFrame`’s `graphicsLayer`; `useRememberedZoom` must skip the metadata listener so a content-scale change does not fight the global pinch. Touchpoints: `PlayerPreferences`, `MediaPlayerScreen`, `PlayerViewModel`, `VideoZoomAndContentScaleState`, `PlayerGestures`, `PlayerPreferencesScreen` / `PlayerPreferencesViewModel`, `strings.xml` (`remember_zoom_level`).
-- **Stock subtitle drag (v0.21.0):** keep `subtitleOffsetY`, `SubtitlePositionState`, and drag gestures. The Live vertical-position slider (`subtitleVerticalPosition`, default **0.2**) still lifts bottom-anchored cues. Do not delete either.
+- **Stock subtitle drag (v0.21.0, Live v1.2.1):** keep `subtitleOffsetY`, `SubtitlePositionState`, and drag gestures as stock. Units are a fraction of the player height, negative = up, so the same value works on every screen size and orientation. Live only changes the default to `DEFAULT_SUBTITLE_OFFSET_Y = -0.2` and makes **Reset subtitle position** (and full Reset settings) return to that default instead of stock 0. Do not reintroduce `subtitleVerticalPosition`, `SubtitleVerticalPosition.kt`, or a vertical-position slider. On upgrade from 1.2.0, `decodeStored` reads the leftover slider key: if `subtitleOffsetY` is still 0 (never dragged), it becomes `-legacySlider` (the old 0.2 default → `-0.2`); a non-zero saved drag is kept. The leftover key is dropped on the next write.
 - **Sidecar discovery:** all-files access + path probe for `.vtt/.srt/.ass/.ssa/.ttml`; rescan every open; auto-select when tracks exist (prefer eng); never leave Disable; decode `%20` in labels (v1.0.6).
 - **Media-change snap:** on next/prev, drop previous-video list offset (`listResetKey`) and re-anchor to playhead nearest-cue immediately, even with empty currentCues (v1.0.7).
 - **Cue-matching allocation (OOM fix, v1.1.4):** highlight matching must go through `LiveSubtitleCueMatcher` — regexes compiled once, normalized timeline cached once per cue-list instance in `LiveSubtitlesState`. Never re-normalize / re-compile regexes for every cue on the ~50 ms tick; that allocation storm OOM'd the main thread in 1.1.3 (retraced: `normalizeCueText:605 -> matchCuesToIndex`). The 50 ms tick / `EVENT_CUES` fast tracking (rapid cues <1 s apart, from `e44d2557` + rapid-burst fixes) is unchanged — only regex compilation and normalization caching changed. Unit tests: `LiveSubtitleCueMatcherTest` (incl. rapid-cue order), `LiveSubtitlesTrackChangeTest`.
@@ -335,7 +340,7 @@ When porting, work in this order:
 
 1. Remotes + fetch + branch from upstream ref (`./scripts/port-from-upstream.sh` helps).
 2. Branding (`applicationId`, `app_name`, Live version).
-3. Checkout Live-only paths from `v1.2.0` / `v1.1.4` / latest Live tag / Live main (includes
+3. Checkout Live-only paths from `v1.2.1` / `v1.2.0` / latest Live tag / Live main (includes
    `LiveSubtitlesPanelPlacement`, `LiveSubtitlesFollowController`, and `LiveSubtitleCueMatcher`).
 4. Manually merge touchpoints: `NextDataSourceFactory`, `ApiMediaSourceFactory`, `PlayerService`,
    `MediaPlayerScreen`, `PlayerContentFrame`, `SubtitleView`, `ControlsTopView`,

@@ -17,9 +17,9 @@ object PlayerPreferencesSerializer : Serializer<PlayerPreferences> {
 
     override suspend fun readFrom(input: InputStream): PlayerPreferences {
         try {
-            return jsonFormat.decodeFromString(
-                deserializer = PlayerPreferences.serializer(),
-                string = input.readBytes().decodeToString(),
+            return PlayerPreferences.decodeStored(
+                text = input.readBytes().decodeToString(),
+                json = jsonFormat,
             )
         } catch (exception: SerializationException) {
             throw CorruptionException(

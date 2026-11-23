@@ -81,23 +81,14 @@ class PlayerPreferencesTest {
         )
         assertFalse(preferences.liveSubtitlesPanelOpen)
         assertEquals(
-            0f,
-            PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION,
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
+            preferences.subtitleOffsetY,
             0.0001f,
         )
         assertEquals(
-            0.2f,
-            PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
+            -0.2f,
+            preferences.subtitleOffsetY,
             0.0001f,
-        )
-        assertEquals(
-            0.5f,
-            PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
-            0.0001f,
-        )
-        assertEquals(
-            PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
-            preferences.subtitleVerticalPosition,
         )
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = false))
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = true))
@@ -117,7 +108,7 @@ class PlayerPreferencesTest {
     }
 
     @Test
-    fun missingKeysUseOverlayAndVerticalDefaults() {
+    fun missingKeysUseOverlayAndLiveSubtitleDefaults() {
         val decoded = Json.decodeFromString<PlayerPreferences>("{}")
 
         assertTrue(decoded.rememberPlayerBrightness)
@@ -157,27 +148,73 @@ class PlayerPreferencesTest {
         assertTrue(decoded.showOnVideoSubtitles)
         assertTrue(decoded.shouldShowOnVideoSubtitles())
         assertEquals(
-            0.2f,
-            decoded.subtitleVerticalPosition,
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
+            decoded.subtitleOffsetY,
+            0.0001f,
         )
         assertFalse(decoded.enableTunneledPlayback)
     }
 
     @Test
-    fun serializationRoundTripPreservesOverlayAndVerticalPosition() {
+    fun serializationRoundTripPreservesOverlayPreference() {
         val original = PlayerPreferences(
             showOverlaySubtitlesWithLivePanel = false,
-            subtitleVerticalPosition = 0.25f,
         )
 
         val decoded = Json.decodeFromString<PlayerPreferences>(Json.encodeToString(original))
 
         assertFalse(decoded.showOverlaySubtitlesWithLivePanel)
         assertEquals(
-            0.25f,
-            decoded.subtitleVerticalPosition,
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
+            decoded.subtitleOffsetY,
             0.0001f,
         )
+    }
+
+    @Test
+    fun storedJsonFromLegacySliderAtDefaultBecomesTwentyPercentUp() {
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.2,"subtitleOffsetY":0.0}""",
+        )
+
+        assertEquals(-0.2f, decoded.subtitleOffsetY, 0.0001f)
+        assertFalse("subtitleVerticalPosition" in Json.encodeToString(decoded))
+    }
+
+    @Test
+    fun storedJsonWithLegacySliderAtBottomStaysAtStockZero() {
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.0,"subtitleOffsetY":0.0}""",
+        )
+
+        assertEquals(0f, decoded.subtitleOffsetY, 0.0001f)
+    }
+
+    @Test
+    fun storedJsonKeepsANonZeroStockDragAndDropsTheSliderKey() {
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.2,"subtitleOffsetY":-0.1}""",
+        )
+
+        assertEquals(-0.1f, decoded.subtitleOffsetY, 0.0001f)
+        assertFalse("subtitleVerticalPosition" in Json.encodeToString(decoded))
+    }
+
+    @Test
+    fun preOffsetInstallsUseTheLegacySliderAsTheOffset() {
+        // 1.1.x wrote the slider but not subtitleOffsetY.
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.2}""",
+        )
+
+        assertEquals(-0.2f, decoded.subtitleOffsetY, 0.0001f)
+    }
+
+    @Test
+    fun storedJsonWithoutLegacyKeyKeepsAnExplicitZeroOffset() {
+        val decoded = PlayerPreferences.decodeStored("""{"subtitleOffsetY":0.0}""")
+
+        assertEquals(0f, decoded.subtitleOffsetY, 0.0001f)
     }
 
     @Test
