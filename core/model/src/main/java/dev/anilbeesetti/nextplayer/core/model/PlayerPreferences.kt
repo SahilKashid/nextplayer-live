@@ -85,8 +85,10 @@ data class PlayerPreferences(
     val showOnVideoSubtitles: Boolean = true,
     /**
      * Vertical distance from the default subtitle spot, as a fraction of the player height
-     * (stock coordinate system: negative is up). Live defaults to 20% up so the position
-     * holds across rotation and screen sizes; drag still saves through this same field.
+     * (stock coordinate system: negative is up). The default cue spot already includes
+     * Media3's [MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION] (0.08). Live's default offset
+     * is [DEFAULT_SUBTITLE_OFFSET_Y] (-0.12) so cues sit about 20% from the bottom.
+     * Drag still saves through this same field.
      */
     val subtitleOffsetY: Float = DEFAULT_SUBTITLE_OFFSET_Y,
 ) {
@@ -101,11 +103,13 @@ data class PlayerPreferences(
     fun shouldShowOnVideoSubtitles(): Boolean = showOnVideoSubtitles
 
     /**
-     * Live 1.2.0 and earlier stored a separate slider ([legacySubtitleVerticalPosition]:
-     * 0 at the default spot, positive toward the center, default 0.2). When that key is
-     * still in stored JSON and the stock drag offset is still 0 (or was never written),
-     * convert the slider into [subtitleOffsetY] so upgrades keep the ~20% lift.
-     * A non-zero saved drag is left alone. The leftover key is dropped on the next write.
+     * Live 1.2.0 and earlier stored a separate slider ([legacySubtitleVerticalPosition]),
+     * a desired bottom-padding fraction (default 0.2, 0 = Bottom). When that key is still
+     * in stored JSON and the stock drag offset is still 0 (or was never written), convert
+     * it with [offsetFromLegacySubtitleVerticalPosition] so the old 0.2 default becomes
+     * [DEFAULT_SUBTITLE_OFFSET_Y] (-0.12, about 20% from the bottom after Media3's 0.08
+     * padding). A non-zero saved drag is left alone. The leftover key is dropped on the
+     * next write.
      */
     fun applyLegacySubtitleVerticalPosition(
         legacySubtitleVerticalPosition: Float?,
@@ -113,7 +117,11 @@ data class PlayerPreferences(
     ): PlayerPreferences {
         if (legacySubtitleVerticalPosition == null) return this
         if (subtitleOffsetYExplicit && subtitleOffsetY != 0f) return this
-        return copy(subtitleOffsetY = -legacySubtitleVerticalPosition)
+        return copy(
+            subtitleOffsetY = offsetFromLegacySubtitleVerticalPosition(
+                legacySubtitleVerticalPosition,
+            ),
+        )
     }
 
     companion object {
@@ -145,9 +153,37 @@ data class PlayerPreferences(
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
 
         /**
-         * 20% of the player height above the stock default cue spot. Same units as
-         * stock drag (`subtitleOffsetY`): a fraction of player height, negative = up.
+         * [androidx.media3.ui.SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION] in
+         * `androidx.media3:media3-ui:1.11.1` (verified 0.08f). Stock does not call
+         * `setBottomPaddingFraction`, so this is the default cue spot: about 8% up
+         * from the bottom of the player.
          */
-        const val DEFAULT_SUBTITLE_OFFSET_Y = -0.2f
+        const val MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION = 0.08f
+
+        /** Desired cue position from the bottom of the player, as a height fraction. */
+        const val DEFAULT_SUBTITLE_BOTTOM_FRACTION = 0.20f
+
+        /**
+         * Live default for stock drag: [MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION] minus
+         * [DEFAULT_SUBTITLE_BOTTOM_FRACTION], i.e. 0.08 - 0.20 = -0.12. Combined with
+         * Media3's unchanged 0.08 padding, cues sit about 20% from the bottom. Same
+         * units as stock `subtitleOffsetY`: a fraction of player height, negative = up.
+         */
+        const val DEFAULT_SUBTITLE_OFFSET_Y =
+            MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION - DEFAULT_SUBTITLE_BOTTOM_FRACTION
+
+        /**
+         * Maps a leftover Live slider value (a bottom-padding fraction) to stock
+         * [subtitleOffsetY]. Values at or below [MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION]
+         * (including Bottom = 0) become stock 0 so cues are not pushed below the default
+         * spot. The old default 0.2 becomes [DEFAULT_SUBTITLE_OFFSET_Y] (-0.12).
+         */
+        fun offsetFromLegacySubtitleVerticalPosition(
+            legacySubtitleVerticalPosition: Float,
+        ): Float {
+            val lift = legacySubtitleVerticalPosition - MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION
+            if (lift <= 0f) return 0f
+            return -lift
+        }
     }
 }

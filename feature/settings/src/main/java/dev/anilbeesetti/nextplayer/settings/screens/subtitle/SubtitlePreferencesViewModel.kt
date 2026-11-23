@@ -129,9 +129,7 @@ class SubtitlePreferencesViewModel(
 
     private fun resetSubtitlePosition() {
         viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences {
-                it.copy(subtitleOffsetY = PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y)
-            }
+            preferencesRepository.updatePlayerPreferences { it.copy(subtitleOffsetY = 0f) }
         }
     }
 

@@ -81,13 +81,29 @@ class PlayerPreferencesTest {
         )
         assertFalse(preferences.liveSubtitlesPanelOpen)
         assertEquals(
+            0.08f,
+            PlayerPreferences.MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION,
+            0.0001f,
+        )
+        assertEquals(
+            0.20f,
+            PlayerPreferences.DEFAULT_SUBTITLE_BOTTOM_FRACTION,
+            0.0001f,
+        )
+        assertEquals(
             PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
             preferences.subtitleOffsetY,
             0.0001f,
         )
         assertEquals(
-            -0.2f,
+            -0.12f,
             preferences.subtitleOffsetY,
+            0.0001f,
+        )
+        assertEquals(
+            0.20f,
+            PlayerPreferences.MEDIA3_SUBTITLE_BOTTOM_PADDING_FRACTION -
+                preferences.subtitleOffsetY,
             0.0001f,
         )
         assertTrue(preferences.shouldShowOverlaySubtitles(livePanelVisible = false))
@@ -172,12 +188,17 @@ class PlayerPreferencesTest {
     }
 
     @Test
-    fun storedJsonFromLegacySliderAtDefaultBecomesTwentyPercentUp() {
+    fun storedJsonFromLegacySliderAtDefaultBecomesTwentyPercentFromBottom() {
         val decoded = PlayerPreferences.decodeStored(
             """{"subtitleVerticalPosition":0.2,"subtitleOffsetY":0.0}""",
         )
 
-        assertEquals(-0.2f, decoded.subtitleOffsetY, 0.0001f)
+        assertEquals(-0.12f, decoded.subtitleOffsetY, 0.0001f)
+        assertEquals(
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
+            decoded.subtitleOffsetY,
+            0.0001f,
+        )
         assertFalse("subtitleVerticalPosition" in Json.encodeToString(decoded))
     }
 
@@ -188,6 +209,43 @@ class PlayerPreferencesTest {
         )
 
         assertEquals(0f, decoded.subtitleOffsetY, 0.0001f)
+    }
+
+    @Test
+    fun legacySliderAtOrBelowMedia3PaddingMapsToStockZero() {
+        assertEquals(
+            0f,
+            PlayerPreferences.offsetFromLegacySubtitleVerticalPosition(0f),
+            0.0001f,
+        )
+        assertEquals(
+            0f,
+            PlayerPreferences.offsetFromLegacySubtitleVerticalPosition(0.08f),
+            0.0001f,
+        )
+        assertEquals(
+            0f,
+            PlayerPreferences.offsetFromLegacySubtitleVerticalPosition(0.05f),
+            0.0001f,
+        )
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.08,"subtitleOffsetY":0.0}""",
+        )
+        assertEquals(0f, decoded.subtitleOffsetY, 0.0001f)
+    }
+
+    @Test
+    fun offsetFromLegacySliderSubtractsMedia3Padding() {
+        assertEquals(
+            -0.12f,
+            PlayerPreferences.offsetFromLegacySubtitleVerticalPosition(0.2f),
+            0.0001f,
+        )
+        assertEquals(
+            -0.22f,
+            PlayerPreferences.offsetFromLegacySubtitleVerticalPosition(0.3f),
+            0.0001f,
+        )
     }
 
     @Test
@@ -207,7 +265,7 @@ class PlayerPreferencesTest {
             """{"subtitleVerticalPosition":0.2}""",
         )
 
-        assertEquals(-0.2f, decoded.subtitleOffsetY, 0.0001f)
+        assertEquals(-0.12f, decoded.subtitleOffsetY, 0.0001f)
     }
 
     @Test

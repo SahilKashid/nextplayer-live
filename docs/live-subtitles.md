@@ -36,9 +36,10 @@ chosen physical side, and the video, on-video subtitles, and controls use the re
 
 Shipped in **v1.2.1**: the Live-only **Subtitle vertical position** slider is removed.
 On-video subtitle placement now uses only stock Next Player drag-to-reposition
-(`subtitleOffsetY`, persisted globally). The Live default — and **Reset subtitle
-position** — is **20% up** from the stock default cue spot (`subtitleOffsetY = -0.2`,
-a fraction of the player height, negative = up). The live panel’s cue list is unchanged.
+(`subtitleOffsetY`, persisted globally). The Live default is **about 20% from the
+bottom** (`subtitleOffsetY = -0.12`: Media3's 0.08 default padding plus a 0.12 lift).
+**Reset subtitle position** stays stock (`subtitleOffsetY = 0`, about 8% from the
+bottom). The live panel’s cue list is unchanged.
 
 ## Sources
 
@@ -136,14 +137,15 @@ The subtitle track picker is the control. Choosing a track sets `showOnVideoSubt
 
 Live no longer has its own vertical-position slider (removed in **v1.2.1**; it shipped in v1.0.3 with a 20% default from v1.0.6). Placement is the stock v0.21.0 drag path, with Live’s preferred default:
 
-- `subtitleOffsetY` is a fraction of the **player height**, negative = up, from the default cue spot. That is why 20% is `-0.2` and stays consistent across screen sizes and orientations (`SubtitlePositionState.translationYPx = offsetY * height`).
-- Fresh installs and **Reset settings** use `DEFAULT_SUBTITLE_OFFSET_Y = -0.2` (about 20% up from the stock default spot).
+- `subtitleOffsetY` is a fraction of the **player height**, negative = up, from the default cue spot (`SubtitlePositionState.translationYPx = offsetY * height`). That spot already includes Media3 `SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION`, which is **0.08f** in `androidx.media3:media3-ui:1.11.1`. Stock does not call `setBottomPaddingFraction`.
+- An offset of `-0.2` would therefore land at about 28% from the bottom (0.08 + 0.20). The Live default is `DEFAULT_SUBTITLE_OFFSET_Y = -0.12` (0.08 − 0.20), so cues sit about **20% from the bottom**. The value stays consistent across screen sizes and orientations.
+- Fresh installs and **Reset settings** use that `-0.12` default.
 - Drag still saves through the same stock field and is global across videos.
-- **Settings → Subtitle → Reset subtitle position** writes `DEFAULT_SUBTITLE_OFFSET_Y`, not stock 0.
+- **Settings → Subtitle → Reset subtitle position** is stock: it writes `subtitleOffsetY = 0` (about 8% from the bottom).
 
 `SubtitleView` must stay on stock cue delivery (`setCues(displayedCues)`). Do not reapply `SubtitleVerticalPosition` or add `SubtitleConfiguration.verticalPosition`. The live panel’s cue list is not affected.
 
-Upgrades from 1.2.0 (and earlier Live builds that still have `subtitleVerticalPosition` in preference JSON): if the saved stock offset is still 0 (the user never dragged), `PlayerPreferences.decodeStored` sets `subtitleOffsetY = -legacySlider`. The old slider default of 0.2 therefore becomes `-0.2`. A slider that had been set to Bottom (0) stays at 0. A non-zero saved drag is kept as-is. The leftover slider key is dropped on the next write.
+Upgrades from 1.2.0 (and earlier Live builds that still have `subtitleVerticalPosition` in preference JSON): if the saved stock offset is still 0 (the user never dragged), `PlayerPreferences.decodeStored` maps the leftover slider value `s` (a bottom-padding fraction) with `offsetFromLegacySubtitleVerticalPosition`. That is `-(s − 0.08)` when `s > 0.08`, or stock 0 when `s` is Bottom (0) or otherwise ≤ 0.08. The old slider default of 0.2 therefore becomes `-0.12`. A non-zero saved drag is kept as-is. The leftover slider key is dropped on the next write.
 
 ## Panel open persistence
 

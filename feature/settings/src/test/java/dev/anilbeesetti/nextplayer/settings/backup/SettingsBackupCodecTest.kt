@@ -358,7 +358,7 @@ class SettingsBackupCodecTest {
         )
 
         assertEquals(
-            -0.2f,
+            -0.12f,
             restored.playerPreferences.subtitleOffsetY,
             0.0001f,
         )
