@@ -36,8 +36,9 @@ chosen physical side, and the video, on-video subtitles, and controls use the re
 
 Shipped in **v1.2.1**: the Live-only **Subtitle vertical position** slider is removed.
 On-video subtitle placement now uses only stock Next Player drag-to-reposition
-(`subtitleOffsetY`, persisted globally) and **Settings → Subtitle → Reset subtitle
-position**. The live panel’s cue list is unchanged.
+(`subtitleOffsetY`, persisted globally). The Live default — and **Reset subtitle
+position** — is **20% up** from the stock default cue spot (`subtitleOffsetY = -0.2`,
+a fraction of the player height, negative = up). The live panel’s cue list is unchanged.
 
 ## Sources
 
@@ -133,12 +134,16 @@ The subtitle track picker is the control. Choosing a track sets `showOnVideoSubt
 
 ## On-video subtitle position
 
-Live no longer has its own vertical-position slider (removed in **v1.2.1**; it shipped in v1.0.3 with a 20% default from v1.0.6). Placement is the stock v0.21.0 path:
+Live no longer has its own vertical-position slider (removed in **v1.2.1**; it shipped in v1.0.3 with a 20% default from v1.0.6). Placement is the stock v0.21.0 drag path, with Live’s preferred default:
 
-- Drag an on-video subtitle to move it. The offset is saved globally as `PlayerPreferences.subtitleOffsetY` and applies to every video.
-- **Settings → Subtitle → Reset subtitle position** writes `subtitleOffsetY = 0`.
+- `subtitleOffsetY` is a fraction of the **player height**, negative = up, from the default cue spot. That is why 20% is `-0.2` and stays consistent across screen sizes and orientations (`SubtitlePositionState.translationYPx = offsetY * height`).
+- Fresh installs and **Reset settings** use `DEFAULT_SUBTITLE_OFFSET_Y = -0.2` (about 20% up from the stock default spot).
+- Drag still saves through the same stock field and is global across videos.
+- **Settings → Subtitle → Reset subtitle position** writes `DEFAULT_SUBTITLE_OFFSET_Y`, not stock 0.
 
-`SubtitleView` must stay on stock cue delivery (`setCues(displayedCues)`). Do not reapply `SubtitleVerticalPosition` or add `SubtitleConfiguration.verticalPosition`. The live panel’s cue list is not affected. Preference JSON from older Live installs may still contain `subtitleVerticalPosition`; DataStore decodes with `ignoreUnknownKeys = true`, so that key is ignored and dropped on the next write.
+`SubtitleView` must stay on stock cue delivery (`setCues(displayedCues)`). Do not reapply `SubtitleVerticalPosition` or add `SubtitleConfiguration.verticalPosition`. The live panel’s cue list is not affected.
+
+Upgrades from 1.2.0 (and earlier Live builds that still have `subtitleVerticalPosition` in preference JSON): if the saved stock offset is still 0 (the user never dragged), `PlayerPreferences.decodeStored` sets `subtitleOffsetY = -legacySlider`. The old slider default of 0.2 therefore becomes `-0.2`. A slider that had been set to Bottom (0) stays at 0. A non-zero saved drag is kept as-is. The leftover slider key is dropped on the next write.
 
 ## Panel open persistence
 

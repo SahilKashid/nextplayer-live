@@ -351,6 +351,32 @@ class SettingsBackupCodecTest {
         }
     }
 
+    @Test
+    fun importedLegacySliderAtDefaultBecomesTwentyPercentUp() {
+        val restored = decode(
+            """{"playerPreferences":{"subtitleVerticalPosition":0.2,"subtitleOffsetY":0.0}}""",
+        )
+
+        assertEquals(
+            -0.2f,
+            restored.playerPreferences.subtitleOffsetY,
+            0.0001f,
+        )
+    }
+
+    @Test
+    fun importedNonZeroDragIsKeptWhenLegacySliderIsPresent() {
+        val restored = decode(
+            """{"playerPreferences":{"subtitleVerticalPosition":0.2,"subtitleOffsetY":-0.1}}""",
+        )
+
+        assertEquals(
+            -0.1f,
+            restored.playerPreferences.subtitleOffsetY,
+            0.0001f,
+        )
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun malformedJsonIsRejected() {
         codec.parse("{broken")

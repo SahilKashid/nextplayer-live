@@ -81,7 +81,12 @@ class PlayerPreferencesTest {
         )
         assertFalse(preferences.liveSubtitlesPanelOpen)
         assertEquals(
-            0f,
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
+            preferences.subtitleOffsetY,
+            0.0001f,
+        )
+        assertEquals(
+            -0.2f,
             preferences.subtitleOffsetY,
             0.0001f,
         )
@@ -143,7 +148,7 @@ class PlayerPreferencesTest {
         assertTrue(decoded.showOnVideoSubtitles)
         assertTrue(decoded.shouldShowOnVideoSubtitles())
         assertEquals(
-            0f,
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
             decoded.subtitleOffsetY,
             0.0001f,
         )
@@ -160,24 +165,56 @@ class PlayerPreferencesTest {
 
         assertFalse(decoded.showOverlaySubtitlesWithLivePanel)
         assertEquals(
-            0f,
+            PlayerPreferences.DEFAULT_SUBTITLE_OFFSET_Y,
             decoded.subtitleOffsetY,
             0.0001f,
         )
     }
 
     @Test
-    fun legacySubtitleVerticalPositionJsonStillDecodes() {
-        // DataStore uses Json { ignoreUnknownKeys = true }. Existing installs may still
-        // have the removed Live slider field in player preferences JSON.
-        val json = Json { ignoreUnknownKeys = true }
-        val decoded = json.decodeFromString<PlayerPreferences>(
-            """{"subtitleVerticalPosition":0.25,"subtitleOffsetY":0.1}""",
+    fun storedJsonFromLegacySliderAtDefaultBecomesTwentyPercentUp() {
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.2,"subtitleOffsetY":0.0}""",
         )
 
-        assertEquals(0.1f, decoded.subtitleOffsetY, 0.0001f)
-        assertTrue(decoded.showOnVideoSubtitles)
-        assertFalse("subtitleVerticalPosition" in json.encodeToString(decoded))
+        assertEquals(-0.2f, decoded.subtitleOffsetY, 0.0001f)
+        assertFalse("subtitleVerticalPosition" in Json.encodeToString(decoded))
+    }
+
+    @Test
+    fun storedJsonWithLegacySliderAtBottomStaysAtStockZero() {
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.0,"subtitleOffsetY":0.0}""",
+        )
+
+        assertEquals(0f, decoded.subtitleOffsetY, 0.0001f)
+    }
+
+    @Test
+    fun storedJsonKeepsANonZeroStockDragAndDropsTheSliderKey() {
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.2,"subtitleOffsetY":-0.1}""",
+        )
+
+        assertEquals(-0.1f, decoded.subtitleOffsetY, 0.0001f)
+        assertFalse("subtitleVerticalPosition" in Json.encodeToString(decoded))
+    }
+
+    @Test
+    fun preOffsetInstallsUseTheLegacySliderAsTheOffset() {
+        // 1.1.x wrote the slider but not subtitleOffsetY.
+        val decoded = PlayerPreferences.decodeStored(
+            """{"subtitleVerticalPosition":0.2}""",
+        )
+
+        assertEquals(-0.2f, decoded.subtitleOffsetY, 0.0001f)
+    }
+
+    @Test
+    fun storedJsonWithoutLegacyKeyKeepsAnExplicitZeroOffset() {
+        val decoded = PlayerPreferences.decodeStored("""{"subtitleOffsetY":0.0}""")
+
+        assertEquals(0f, decoded.subtitleOffsetY, 0.0001f)
     }
 
     @Test

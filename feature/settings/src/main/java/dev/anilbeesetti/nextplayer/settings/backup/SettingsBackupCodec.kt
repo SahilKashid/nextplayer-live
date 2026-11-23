@@ -20,6 +20,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
@@ -105,7 +106,14 @@ internal class SettingsBackupCodec(private val subtitleEncodings: Set<String>) {
         playerPreferences = merge(
             playerPreferences,
             content["playerPreferences"],
-        ),
+        ).let { merged ->
+            val imported = content["playerPreferences"] as? JsonObject
+            merged.applyLegacySubtitleVerticalPosition(
+                legacySubtitleVerticalPosition =
+                    (imported?.get("subtitleVerticalPosition") as? JsonPrimitive)?.floatOrNull,
+                subtitleOffsetYExplicit = imported?.containsKey("subtitleOffsetY") == true,
+            )
+        },
         networkConnections = mergeConnections(
             content["networkConnections"],
             networkConnections,

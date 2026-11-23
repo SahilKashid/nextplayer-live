@@ -302,7 +302,8 @@ cat <<'TOUCH'
   RotateButton: onBeforeRotate then rotate (does not run for PlayerOrientationEffect)
   SubtitleSelectorView: Off sets showOnVideoSubtitles false and does not switchTrack(-1)
   PlayerPreferences: liveSubtitlesPanelOnLeft, showOnVideoSubtitles (showOverlaySubtitlesWithLivePanel is legacy JSON only);
-                    rememberPlayerZoom, playerZoom, playerZoomPanX, playerZoomPanY (v1.1.2; leave stock playerVideoZoom)
+                    rememberPlayerZoom, playerZoom, playerZoomPanX, playerZoomPanY (v1.1.2; leave stock playerVideoZoom);
+                    subtitleOffsetY default -0.2 (v1.2.1; stock drag units, negative = up)
   NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
@@ -325,8 +326,11 @@ cat <<'TOUCH'
                              ApiMediaSourceFactory only while shouldPlayAsGrowing; settled files keep
                              FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles. Pass that factory
                              to ExternalAudioMediaSourceFactory. Keep stock subtitle drag
-                             (subtitleOffsetY) only; do not restore the Live vertical-position slider
-                             (removed in v1.2.1). onBeforeRotate on both RotateButtons
+                             (subtitleOffsetY) only; Live default is -0.2 (20% up) and Reset
+                             subtitle position returns to that, not stock 0. Do not restore the
+                             Live vertical-position slider (removed in v1.2.1). decodeStored
+                             migrates a leftover subtitleVerticalPosition when offset is still 0.
+                             onBeforeRotate on both RotateButtons
                              (regular and compact). Keep settings import/export, URI grant retention,
                              chapters, external audio, NEW badges, watch history, tunneled playback)
   PlayerService: ExternalAudioMediaSourceFactory(ApiMediaSourceFactory)

@@ -1,6 +1,11 @@
 package dev.anilbeesetti.nextplayer.core.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.floatOrNull
 
 @Serializable
 data class PlayerPreferences(
@@ -78,8 +83,12 @@ data class PlayerPreferences(
      * track selected so the panel can still list cues when this is false.
      */
     val showOnVideoSubtitles: Boolean = true,
-    // Vertical distance from the default subtitle spot, as a fraction of the player height.
-    val subtitleOffsetY: Float = 0f,
+    /**
+     * Vertical distance from the default subtitle spot, as a fraction of the player height
+     * (stock coordinate system: negative is up). Live defaults to 20% up so the position
+     * holds across rotation and screen sizes; drag still saves through this same field.
+     */
+    val subtitleOffsetY: Float = DEFAULT_SUBTITLE_OFFSET_Y,
 ) {
     /**
      * Legacy helper for [showOverlaySubtitlesWithLivePanel]. Playback uses
@@ -91,7 +100,40 @@ data class PlayerPreferences(
     /** On-video subtitle view. Ignores whether the live panel is open. */
     fun shouldShowOnVideoSubtitles(): Boolean = showOnVideoSubtitles
 
+    /**
+     * Live 1.2.0 and earlier stored a separate slider ([legacySubtitleVerticalPosition]:
+     * 0 at the default spot, positive toward the center, default 0.2). When that key is
+     * still in stored JSON and the stock drag offset is still 0 (or was never written),
+     * convert the slider into [subtitleOffsetY] so upgrades keep the ~20% lift.
+     * A non-zero saved drag is left alone. The leftover key is dropped on the next write.
+     */
+    fun applyLegacySubtitleVerticalPosition(
+        legacySubtitleVerticalPosition: Float?,
+        subtitleOffsetYExplicit: Boolean,
+    ): PlayerPreferences {
+        if (legacySubtitleVerticalPosition == null) return this
+        if (subtitleOffsetYExplicit && subtitleOffsetY != 0f) return this
+        return copy(subtitleOffsetY = -legacySubtitleVerticalPosition)
+    }
+
     companion object {
+        private val storedJson = Json { ignoreUnknownKeys = true }
+
+        /**
+         * Decode DataStore / backup JSON, applying [applyLegacySubtitleVerticalPosition]
+         * when the removed Live slider key is present.
+         */
+        fun decodeStored(text: String, json: Json = storedJson): PlayerPreferences {
+            val element = json.parseToJsonElement(text)
+            val obj = element as? JsonObject
+            val decoded = json.decodeFromJsonElement(serializer(), element)
+            return decoded.applyLegacySubtitleVerticalPosition(
+                legacySubtitleVerticalPosition =
+                    (obj?.get("subtitleVerticalPosition") as? JsonPrimitive)?.floatOrNull,
+                subtitleOffsetYExplicit = obj?.containsKey("subtitleOffsetY") == true,
+            )
+        }
+
         const val DEFAULT_SEEK_INCREMENT = 10
         const val DEFAULT_SEEK_SENSITIVITY = 0.50f
         const val DEFAULT_VOLUME_GESTURE_SENSITIVITY = 0.50f
@@ -101,5 +143,11 @@ data class PlayerPreferences(
         const val DEFAULT_PREFERRED_SUBTITLE_LANGUAGE = "eng"
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
+
+        /**
+         * 20% of the player height above the stock default cue spot. Same units as
+         * stock drag (`subtitleOffsetY`): a fraction of player height, negative = up.
+         */
+        const val DEFAULT_SUBTITLE_OFFSET_Y = -0.2f
     }
 }
