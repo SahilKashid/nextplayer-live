@@ -34,6 +34,11 @@ the selected text track enabled so the panel can still list its cues. Left and r
 docks share one layout (`LiveSubtitlesSplit`): the panel is 35% of the width on the
 chosen physical side, and the video, on-video subtitles, and controls use the rest.
 
+Shipped in **v1.2.1**: the Live-only **Subtitle vertical position** slider is removed.
+On-video subtitle placement now uses only stock Next Player drag-to-reposition
+(`subtitleOffsetY`, persisted globally) and **Settings → Subtitle → Reset subtitle
+position**. The live panel’s cue list is unchanged.
+
 ## Sources
 
 - **External** subtitle files attached as `SubtitleConfiguration` URIs: SubRip (SRT) and **WebVTT (`.vtt`)** are parsed by `SubtitleCueParser` (including headerless VTT, NOTE/STYLE/REGION blocks, optional hours, multiline cues, `<v>` voice spans, and settings after `-->`). ASS/SSA and TTML fall back to Media3 `DefaultSubtitleParserFactory` when present as standalone files. MIME is taken from the URI extension when possible (`text/vtt` for `.vtt`), with content sniffing and `Format.codecs` fallbacks when `content://` paths omit the extension.
@@ -126,16 +131,14 @@ The subtitle track picker is the control. Choosing a track sets `showOnVideoSubt
 
 `applySubtitleSelection` still selects a real text track when any exist (never leave Disable). That keeps panel cues available after Off.
 
-## Overlay vertical position
+## On-video subtitle position
 
-On-screen (overlay) subtitles default to **20% toward center** (`subtitleVerticalPosition = 0.2`, plus Media3's 8% `DEFAULT_BOTTOM_PADDING_FRACTION` for cues without a line). Fresh installs and **Reset settings** use this default; existing installs keep saved values until reset.
+Live no longer has its own vertical-position slider (removed in **v1.2.1**; it shipped in v1.0.3 with a 20% default from v1.0.6). Placement is the stock v0.21.0 path:
 
-**Settings → Subtitle → Subtitle vertical position** is a slider from **Bottom** (`0`) toward the center (`0.5`); the reset control restores the **0.2** default. The player:
+- Drag an on-video subtitle to move it. The offset is saved globally as `PlayerPreferences.subtitleOffsetY` and applies to every video.
+- **Settings → Subtitle → Reset subtitle position** writes `subtitleOffsetY = 0`.
 
-1. Calls `SubtitleView.setBottomPaddingFraction(0.08 + position)` so SRT / unset-line cues lift immediately.
-2. Rewrites WebVTT automatic / bottom-anchored cues (`line = -1` number, or a fraction ≥ 0.85) to a matching fractional line with `ANCHOR_TYPE_END`. Media3 ignores bottom padding for spec-defined VTT lines, so this is what actually moves `.vtt` overlay text.
-
-Intentionally high VTT lines (for example `line:10%`) and bitmap cues are left alone. Changing the slider updates the overlay live through `SubtitleConfiguration.verticalPosition`. The live panel's own cue list is not affected.
+`SubtitleView` must stay on stock cue delivery (`setCues(displayedCues)`). Do not reapply `SubtitleVerticalPosition` or add `SubtitleConfiguration.verticalPosition`. The live panel’s cue list is not affected. Preference JSON from older Live installs may still contain `subtitleVerticalPosition`; DataStore decodes with `ignoreUnknownKeys = true`, so that key is ignored and dropped on the next write.
 
 ## Panel open persistence
 

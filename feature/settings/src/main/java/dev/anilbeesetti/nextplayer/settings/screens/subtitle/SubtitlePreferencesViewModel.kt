@@ -67,9 +67,6 @@ class SubtitlePreferencesViewModel(
             is SubtitlePreferencesUiEvent.ToggleUseSystemCaptionStyle ->
                 toggleUseSystemCaptionStyle()
 
-            is SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition ->
-                updateSubtitleVerticalPosition(action.value)
-
             is SubtitlePreferencesUiEvent.ToggleShowOnVideoSubtitles -> toggleShowOnVideoSubtitles()
 
             is SubtitlePreferencesUiEvent.ResetSubtitlePosition -> resetSubtitlePosition()
@@ -144,19 +141,6 @@ class SubtitlePreferencesViewModel(
         }
     }
 
-    private fun updateSubtitleVerticalPosition(value: Float) {
-        viewModelScope.launch {
-            preferencesRepository.updatePlayerPreferences {
-                it.copy(
-                    subtitleVerticalPosition = value.coerceIn(
-                        PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION,
-                        PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
-                    ),
-                )
-            }
-        }
-    }
-
     private fun toggleShowOnVideoSubtitles() {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
@@ -190,7 +174,6 @@ sealed interface SubtitlePreferencesUiEvent {
     data object ToggleApplyEmbeddedStyles : SubtitlePreferencesUiEvent
     data class UpdateSubtitleEncoding(val value: String) : SubtitlePreferencesUiEvent
     data object ToggleUseSystemCaptionStyle : SubtitlePreferencesUiEvent
-    data class UpdateSubtitleVerticalPosition(val value: Float) : SubtitlePreferencesUiEvent
     data object ToggleShowOnVideoSubtitles : SubtitlePreferencesUiEvent
     data object ResetSubtitlePosition : SubtitlePreferencesUiEvent
 }

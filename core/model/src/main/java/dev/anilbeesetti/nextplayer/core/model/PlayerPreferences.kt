@@ -78,7 +78,6 @@ data class PlayerPreferences(
      * track selected so the panel can still list cues when this is false.
      */
     val showOnVideoSubtitles: Boolean = true,
-    val subtitleVerticalPosition: Float = DEFAULT_SUBTITLE_VERTICAL_POSITION,
     // Vertical distance from the default subtitle spot, as a fraction of the player height.
     val subtitleOffsetY: Float = 0f,
 ) {
@@ -102,8 +101,5 @@ data class PlayerPreferences(
         const val DEFAULT_PREFERRED_SUBTITLE_LANGUAGE = "eng"
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
-        const val MIN_SUBTITLE_VERTICAL_POSITION = 0f
-        const val DEFAULT_SUBTITLE_VERTICAL_POSITION = 0.2f
-        const val MAX_SUBTITLE_VERTICAL_POSITION = 0.5f
     }
 }

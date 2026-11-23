@@ -47,7 +47,6 @@ import dev.anilbeesetti.nextplayer.settings.composables.OptionsDialog
 import dev.anilbeesetti.nextplayer.settings.extensions.name
 import dev.anilbeesetti.nextplayer.settings.utils.LocalesHelper
 import java.nio.charset.Charset
-import kotlin.math.roundToInt
 
 @Composable
 fun SubtitlePreferencesScreen(viewModel: SubtitlePreferencesViewModel) {
@@ -216,30 +215,6 @@ private fun SubtitlePreferencesScreenContent(
                         }
                     },
                 )
-                PreferenceSlider(
-                    title = stringResource(id = R.string.subtitle_vertical_position),
-                    description = subtitleVerticalPositionLabel(state.preferences.subtitleVerticalPosition),
-                    icon = NextIcons.Reorder,
-                    value = state.preferences.subtitleVerticalPosition,
-                    valueRange = PlayerPreferences.MIN_SUBTITLE_VERTICAL_POSITION..PlayerPreferences.MAX_SUBTITLE_VERTICAL_POSITION,
-                    onValueChange = { onAction(SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition(it)) },
-                    trailingContent = {
-                        FilledIconButton(
-                            onClick = {
-                                onAction(
-                                    SubtitlePreferencesUiEvent.UpdateSubtitleVerticalPosition(
-                                        PlayerPreferences.DEFAULT_SUBTITLE_VERTICAL_POSITION,
-                                    ),
-                                )
-                            },
-                        ) {
-                            Icon(
-                                imageVector = NextIcons.History,
-                                contentDescription = stringResource(id = R.string.reset_seek_increment),
-                            )
-                        }
-                    },
-                )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.subtitle_background),
                     description = stringResource(id = R.string.subtitle_background_desc),
@@ -362,16 +337,6 @@ private fun SubtitlePreferencesScreenContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun subtitleVerticalPositionLabel(verticalPosition: Float): String {
-    val percent = (verticalPosition * 100).roundToInt()
-    return if (percent == 0) {
-        stringResource(id = R.string.subtitle_vertical_position_bottom)
-    } else {
-        stringResource(id = R.string.subtitle_vertical_position_value, percent)
     }
 }
 
