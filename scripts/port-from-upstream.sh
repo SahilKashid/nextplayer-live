@@ -303,7 +303,7 @@ cat <<'TOUCH'
   SubtitleSelectorView: Off sets showOnVideoSubtitles false and does not switchTrack(-1)
   PlayerPreferences: liveSubtitlesPanelOnLeft, showOnVideoSubtitles (showOverlaySubtitlesWithLivePanel is legacy JSON only);
                     rememberPlayerZoom, playerZoom, playerZoomPanX, playerZoomPanY (v1.1.2; leave stock playerVideoZoom);
-                    subtitleOffsetY default -0.2 (v1.2.1; stock drag units, negative = up)
+                    subtitleOffsetY default -0.12 (v1.2.1; 20% from bottom after Media3 0.08 padding)
   NextDataSourceFactory: Growing* ONLY while shouldPlayAsGrowing; settled-complete -> DefaultDataSource
   Finished-download handoff: IncompleteLocalMedia / SparseAwareFileLength / Growing* /
                              GrowingAwareExtractorsFactory — DefaultDataSource when settled-complete
@@ -326,10 +326,12 @@ cat <<'TOUCH'
                              ApiMediaSourceFactory only while shouldPlayAsGrowing; settled files keep
                              FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles. Pass that factory
                              to ExternalAudioMediaSourceFactory. Keep stock subtitle drag
-                             (subtitleOffsetY) only; Live default is -0.2 (20% up) and Reset
-                             subtitle position returns to that, not stock 0. Do not restore the
-                             Live vertical-position slider (removed in v1.2.1). decodeStored
-                             migrates a leftover subtitleVerticalPosition when offset is still 0.
+                             (subtitleOffsetY) only; Live default is -0.12 (20% from the bottom
+                             after Media3's 0.08 padding). Reset subtitle position stays stock
+                             (offset 0, about 8% from the bottom). Do not restore the Live
+                             vertical-position slider (removed in v1.2.1). decodeStored maps a
+                             leftover subtitleVerticalPosition s to -(s-0.08) when s>0.08, or 0
+                             at or below 0.08, when offset is still 0.
                              onBeforeRotate on both RotateButtons
                              (regular and compact). Keep settings import/export, URI grant retention,
                              chapters, external audio, NEW badges, watch history, tunneled playback)
