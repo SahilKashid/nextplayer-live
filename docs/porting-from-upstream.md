@@ -36,7 +36,8 @@ lineage (the tree just before upstream’s 0.18.0 version bump). Origin tag
 **v1.0.6** adds SYSTEM+high-contrast defaults, all-files sidecar discovery with rescan/auto-select
 and decoded labels;
 **v1.0.7** snaps the live panel to the new playhead’s cue zone on media change;
-**v1.0.8** makes Previous switch to the previous playlist item instead of restarting the current video;
+**v1.0.8** made Previous switch to the previous playlist item instead of restarting the current video
+(reverted to stock Previous in **v1.2.1**, with a resume-position catch);
 **v1.0.9** re-applies those Live features onto upstream **v0.18.0** (decoder choices survive adding
 local subtitles, nextlib `1.11.1-0.16.0`, Media3 `1.11.1`);
 **v1.1.0** re-applies them onto upstream **v0.19.0** (Koin instead of Hilt, chapters, external/local
@@ -193,10 +194,11 @@ See `docs/live-subtitles.md`.
 
 ---
 
-## Player controls — Previous media item (v1.0.8)
+## Player controls — Previous (stock as of v1.2.1)
 
-- Previous (in-app button, `Key.MediaPrevious`, PiP action, and media-session Previous) switches to the **previous playlist item** when one exists, instead of Media3’s default `seekToPrevious()` restart-current-when-past-~3s behavior.
-- Implementation: `seekToPreviousMediaItem()` at UI/PiP/key call sites; `ExoPlayer.Builder.setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)` so session/notification Previous matches.
+- Revert the v1.0.8 “always previous item” behavior. Previous is stock `seekToPrevious()` again: the in-app button uses `rememberPreviousButtonState` / `state.onClick()`, `Key.MediaPrevious` and PiP Previous call `player.seekToPrevious()`, and `ExoPlayer.Builder` does **not** set `setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)` (stock default is Media3’s 3000 ms). The first press after ~3s restarts the current video; a second press inside that window goes to the previous item. D-pad down-to-previous-item (`seekToPreviousMediaItem()` when controls are hidden) stays stock.
+- Catch: if that second press leaves the current video, persist the **pre-restart** position, not ~0, so Next later resumes where the user was. `PreviousRestartResumeStore` records the position in `MediaSession.Callback.onPlayerCommandRequest` for `COMMAND_SEEK_TO_PREVIOUS` (covers the in-app button, media keys, PiP, and notification/session, all of which go through `seekToPrevious()`). The SEEK leave path in `onPositionDiscontinuity` uses `consumeLeavePosition`. A normal in-item seek (`COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM` and the other in-item seek commands) clears the memory so scrubs are saved as-is.
+- Carry `feature/player/.../service/PreviousRestartResumeStore.kt` and `PreviousRestartResumeStoreTest.kt`.
 
 ---
 
@@ -220,7 +222,7 @@ core/media/src/main/java/dev/anilbeesetti/nextplayer/core/media/network/datasour
 | `feature/player/.../service/GrowingAwareExtractorsFactory.kt` | Live-only — copy whole file |
 | `feature/player/.../service/GrowingFileLoadErrorHandlingPolicy.kt` | Live-only — copy whole file |
 | `feature/player/.../service/ApiMediaSourceFactory.kt` | **v0.21 touchpoint.** Keep per-item API headers and, for settled files, `FfmpegSubtitleExtractorsFactory` + `withFfmpegSubtitles`. When `GrowingAwareExtractorsFactory.isLikelyGrowing` is true, use `GrowingAwareExtractorsFactory` instead of the FFmpeg extractor factory and skip `withFfmpegSubtitles` for that item. Always `setLoadErrorHandlingPolicy(GrowingFileLoadErrorHandlingPolicy)` on the factory returned to `createMediaSource` |
-| `feature/player/.../service/PlayerService.kt` | Pass `ApiMediaSourceFactory` into `ExternalAudioMediaSourceFactory` (do not replace it with a bare `DefaultMediaSourceFactory`). Keep `setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)`, external-audio pending selection, `ADD_AUDIO_TRACK`, tunneled playback, decoder restore, and URI grant retention. Subtitle remember goes through `applySubtitleSelection` (do not persist Disable `-1`). Sidecar path is a real file path, never `content://` |
+| `feature/player/.../service/PlayerService.kt` | Pass `ApiMediaSourceFactory` into `ExternalAudioMediaSourceFactory` (do not replace it with a bare `DefaultMediaSourceFactory`). Do **not** set `setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)`. Keep `PreviousRestartResumeStore` (command-request record + SEEK leave consume). Keep external-audio pending selection, `ADD_AUDIO_TRACK`, tunneled playback, decoder restore, and URI grant retention. Subtitle remember goes through `applySubtitleSelection` (do not persist Disable `-1`). Sidecar path is a real file path, never `content://` |
 
 **Media3 1.11 note:** extractors go through the **`DefaultMediaSourceFactory` constructor**, not
 `setExtractorsFactory`. On **v0.21.0** that constructor call lives inside

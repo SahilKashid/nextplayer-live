@@ -203,6 +203,8 @@ LIVE_ONLY_PATHS=(
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/EbmlProbeTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/MatroskaClusterIndexerTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/IncompleteMatroskaSeekExtractorTest.kt"
+  "feature/player/src/main/java/dev/anilbeesetti/nextplayer/feature/player/service/PreviousRestartResumeStore.kt"
+  "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/service/PreviousRestartResumeStoreTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/LiveSubtitleCueCacheTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/EmbeddedSubtitleCueExtractorTest.kt"
   "feature/player/src/test/java/dev/anilbeesetti/nextplayer/feature/player/utils/subtitle/SubtitleCueParserTest.kt"
@@ -313,7 +315,9 @@ cat <<'TOUCH'
                              expanding-window progressive fill + hardened final-only cue cache: v1.0.5;
                              defaults SYSTEM+high-contrast, sidecar all-files/rescan/auto-select/%20 labels: v1.0.6;
                              media-change panel snap to playhead zone (listResetKey + nearest-cue): v1.0.7;
-                             Previous→previous media item (seekToPreviousMediaItem + maxSeek MAX): v1.0.8;
+                             Previous was seekToPreviousMediaItem + maxSeek MAX in v1.0.8;
+                             v1.2.1 reverts Previous to stock seekToPrevious (default 3s restart)
+                             but PreviousRestartResumeStore keeps the pre-restart position;
                              v1.0.9 keeps the above on upstream v0.18.0.
                              v1.1.0 keeps them on upstream v0.19.0: stay on Koin (do not restore Hilt);
                              v1.1.1: panel cycle off→right→left→off; rotate button closes the panel;
@@ -335,7 +339,8 @@ cat <<'TOUCH'
                              onBeforeRotate on both RotateButtons
                              (regular and compact). Keep settings import/export, URI grant retention,
                              chapters, external audio, NEW badges, watch history, tunneled playback)
-  PlayerService: ExternalAudioMediaSourceFactory(ApiMediaSourceFactory)
+  PlayerService: ExternalAudioMediaSourceFactory(ApiMediaSourceFactory);
+                 Previous is stock seekToPrevious (no maxSeek MAX). Keep PreviousRestartResumeStore.
   ApiMediaSourceFactory: Growing* extractors + GrowingFileLoadErrorHandlingPolicy while incomplete;
                          FfmpegSubtitleExtractorsFactory + withFfmpegSubtitles when settled
   PlayerContentFrame / SubtitleView: showOverlaySubtitles; keep stock setCues / subtitle drag (no SubtitleVerticalPosition)

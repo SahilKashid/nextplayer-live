@@ -130,6 +130,7 @@ class PlayerService : MediaSessionService() {
     private var pendingMediaItemsRequest:
         ListenableFuture<MediaSession.MediaItemsWithStartPosition>? = null
     private var pendingAudioSelection: Pair<String, Uri>? = null
+    private val previousRestartResumeStore = PreviousRestartResumeStore()
 
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private var currentVolumeGain: Int = 0
@@ -265,6 +266,12 @@ class PlayerService : MediaSessionService() {
 
                     val updatedPosition =
                         oldPosition.positionMs.takeIf { reason == DISCONTINUITY_REASON_SEEK }
+                            ?.let { reported ->
+                                previousRestartResumeStore.consumeLeavePosition(
+                                    mediaId = oldMediaItem.mediaId,
+                                    reportedPositionMs = reported,
+                                )
+                            }
                             ?: C.TIME_UNSET
                     mediaSession?.player?.replaceMediaItem(
                         oldPosition.mediaItemIndex,
@@ -518,6 +525,30 @@ class PlayerService : MediaSessionService() {
                 MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS,
             ),
         )
+
+        override fun onPlayerCommandRequest(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            playerCommand: Int,
+        ): Int {
+            val player = session.player
+            when (playerCommand) {
+                Player.COMMAND_SEEK_TO_PREVIOUS ->
+                    previousRestartResumeStore.onSeekToPrevious(
+                        mediaId = player.currentMediaItem?.mediaId,
+                        positionMs = player.currentPosition,
+                        maxSeekToPreviousPositionMs = player.maxSeekToPreviousPosition,
+                    )
+
+                Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                Player.COMMAND_SEEK_TO_MEDIA_ITEM,
+                Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
+                Player.COMMAND_SEEK_BACK,
+                Player.COMMAND_SEEK_FORWARD,
+                -> previousRestartResumeStore.clear()
+            }
+            return SessionResult.RESULT_SUCCESS
+        }
 
         override fun onSetMediaItems(
             mediaSession: MediaSession,
@@ -962,9 +993,6 @@ class PlayerService : MediaSessionService() {
                 playerPreferences.requireAudioFocus,
             )
             .setHandleAudioBecomingNoisy(playerPreferences.pauseOnHeadsetDisconnect)
-            // Default ~3s makes seekToPrevious() restart the current item; media session /
-            // notification Previous should switch playlist items like the in-app control.
-            .setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)
             .build()
             .also {
                 it.setPlaybackSpeed(playerPreferences.defaultPlaybackSpeed)

@@ -24,10 +24,7 @@ internal fun PreviousButton(modifier: Modifier = Modifier, player: Player?) {
         modifier = modifier.size(48.dp),
         enabled = state.isEnabled,
         onClick = {
-            // Always go to the previous playlist item when one exists.
-            // Player.seekToPrevious() restarts the current item when position >
-            // maxSeekToPreviousPosition (~3s by default).
-            player?.seekToPreviousMediaItem()
+            state.onClick()
             controlsVisibilityState?.showControls()
         },
     ) {
